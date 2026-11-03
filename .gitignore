@@ -1,0 +1,16 @@
+node_modules
+out
+dist
+target
+src-tauri/gen
+# 곡·원본 영상/음원 (저작물)
+songs
+노래파일
+bpm_all.csv
+# 서버 런타임 데이터·로그
+server/relay.log
+server/ranks.json
+tmp_gen
+*.log
+.claude
+.env*
