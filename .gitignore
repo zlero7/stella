@@ -14,3 +14,5 @@ tmp_gen
 *.log
 .claude
 .env*
+research_notes
+reports
