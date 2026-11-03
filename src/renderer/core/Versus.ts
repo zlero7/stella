@@ -7,7 +7,7 @@ import { ensureSong, loadSongs } from '../data/Songs'
 // 연결 방법 두 가지: 중계 서버(웹소켓, 기본·인터넷용)와 IP 직접 접속(Tauri의 TCP, 같은 망용)
 // 메시지는 JSON (hello 인사 · pick 곡 선택 · ack 응답 · chart 채보 · ready 준비 · score 진행 · done 끝, 서버가 보내는 r_* 는 방 코드·짝 지어짐·오류)
 export const PORT = 9777
-export const DEFAULT_RELAY = 'stella.zlero.xyz' // 중계 서버 주소: 화면에는 보이지 않는다 (설정 파일의 relay로 바꿀 수 있다)
+export const DEFAULT_RELAY = 'relay.example.com' // 중계 서버 주소: 화면에는 보이지 않는다 (설정 파일의 relay로 바꿀 수 있다)
 export interface Score { s: number; c: number; hp: number; a: number } // 점수 · 콤보 · 체력 · 정확도
 export interface Done { s: number; a: number; mc: number; failed: boolean; rank: string }
 export type Msg = { t: string } & Record<string, unknown>

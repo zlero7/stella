@@ -1,6 +1,6 @@
 // STELLA 대결 중계 서버 (웹소켓): 방장이 방을 만들면 방 코드를 주고, 손님이 그 코드로 들어오면 두 연결을 이어 준다.
 // 이어진 뒤에는 게임이 주고받는 메시지를 그대로 전달만 한다 (내용은 보지 않는다).
-// Cloudflare 터널이 stella.zlero.xyz → http://localhost:9777 로 이 서버에 연결한다. 사용: node server/relay.mjs  (포트는 PORT 환경 변수, 기본 9777)
+// Cloudflare 터널이 relay.example.com → http://localhost:9777 로 이 서버에 연결한다. 사용: node server/relay.mjs  (포트는 PORT 환경 변수, 기본 9777)
 import http from 'node:http'
 import fs from 'node:fs'
 import path from 'node:path'
