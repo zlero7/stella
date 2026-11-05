@@ -56,21 +56,26 @@ export const Collection = (sm: SceneManager): Scene => {
       // 오른쪽: 탭 내용
       card(g, 500, 110, 730, 482, TABS[tab])
       if (tab === 0) {
-        const c = p.cls, last = !c.hi, f = last ? 1 : (c.points - c.lo) / (c.hi - c.lo)
+        const c = p.cls, lo = c.lo ?? 0, last = !c.hi, f = last ? 1 : (c.points - lo) / (c.hi - lo)
         g.textAlign = 'center'; g.font = `700 14px ${FONT}`; g.fillStyle = CYAN; g.fillText('DJ CLASS', 865, 190)
         g.font = `900 66px ${FONT}`; const gr = g.createLinearGradient(700, 0, 1030, 0); gr.addColorStop(0, '#fff'); gr.addColorStop(1, '#bfe6ff')
         glow(g, 'rgba(10,50,140,.65)', 26, () => { g.fillStyle = gr; g.fillText(c.label, 865, 262) })
         g.font = `700 18px ${FONT}`; g.fillStyle = AMBER; g.fillText(`${c.points} PT`, 865, 300)
         meter(g, 600, 330, 530, f)
-        g.font = `600 13px ${FONT}`; g.fillStyle = ICE; g.textAlign = 'left'; g.fillText(`${c.lo}`, 600, 360); g.textAlign = 'right'
+        g.font = `600 13px ${FONT}`; g.fillStyle = ICE; g.textAlign = 'left'; g.fillText(`${lo}`, 600, 360); g.textAlign = 'right'
         g.fillText(last ? 'MAX' : `NEXT  ${c.hi} PT`, 1130, 360)
         g.textAlign = 'center'; g.font = `14px ${FONT}`; g.fillStyle = ICE
         g.fillText('곡마다 최고 점수에 난이도(쉬움 ×0.5 · 보통 ×0.75 · 어려움 ×1 · 스텔라 ×1.25)를 곱해', 865, 430)
         g.fillText('가장 높은 20곡을 더한 값입니다. 온라인 랭킹에 올린 기록이 쌓입니다.', 865, 456)
       } else {
-        const it = items(), cs = cols(), cw = tab === 1 ? 160 : 650, ch = tab === 1 ? 150 : 44, gap = 16
+        const it = items(), cs = cols(), cw = tab === 1 ? 160 : 690, ch = tab === 1 ? 150 : 40, gap = tab === 1 ? 16 : 6
+        const per = tab === 2 ? 8 : it.length, first = tab === 2 ? Math.min(Math.max(0, sel - per + 1), Math.max(0, it.length - per)) : 0 // 칭호가 많으면 카드 안에서 스크롤
+        g.textAlign = 'center'; g.font = `800 14px ${FONT}`; g.fillStyle = AMBER
+        if (first > 0) g.fillText('▲', 865, 142)
+        if (first + per < it.length) g.fillText('▼', 865, 150 + per * (ch + gap) + 6)
         it.forEach((x, i) => {
-          const cx = 520 + (i % cs) * (cw + gap), cy = 150 + Math.floor(i / cs) * (ch + gap), cur = i === sel, k = ease(`colit${tab}-${i}`, cur)
+          if (i < first || i >= first + per) return
+          const r = i - first, cx = 520 + (i % cs) * (cw + gap), cy = 150 + Math.floor(r / cs) * (ch + gap), cur = i === sel, k = ease(`colit${tab}-${i}`, cur)
           const worn = x.id === (tab === 1 ? p.plate : p.title)
           hit(cx, cy, cw, ch, () => { sel = i; void pick() }, () => { sel = i })
           if (tab === 1) {
@@ -83,9 +88,9 @@ export const Collection = (sm: SceneManager): Scene => {
           } else {
             slant(g, cx, cy, cw, ch, 14); g.fillStyle = 'rgba(8,24,70,.74)'; g.fill(); g.strokeStyle = `rgba(255,255,255,${0.3 * (1 - k)})`; g.lineWidth = 1; g.stroke()
             if (k > 0.01) { g.save(); g.globalAlpha *= k; const og = g.createLinearGradient(cx, 0, cx + cw, 0); og.addColorStop(0, '#ffb13b'); og.addColorStop(0.7, '#ff7a59'); og.addColorStop(1, '#ff5c8a'); slant(g, cx, cy, cw, ch, 14); g.fillStyle = og; g.fill(); g.restore() }
-            g.textAlign = 'left'; g.font = `${cur ? 800 : 600} 17px ${FONT}`; g.fillStyle = x.on ? '#fff' : 'rgba(255,255,255,.45)'; g.fillText(fit(g, x.name, 380), cx + 34, cy + 28)
+            g.textAlign = 'left'; g.font = `${cur ? 800 : 600} 17px ${FONT}`; g.fillStyle = x.on ? '#fff' : 'rgba(255,255,255,.45)'; g.fillText(fit(g, x.name, 380), cx + 34, cy + 26)
             g.textAlign = 'right'; g.font = `600 13px ${FONT}`; g.fillStyle = worn ? '#fff' : x.on ? 'rgba(255,255,255,.75)' : '#ffd0d0'
-            g.fillText(worn ? '사용 중' : x.on ? '' : `🔒 ${x.need}`, cx + cw - 30, cy + 27)
+            g.fillText(worn ? '사용 중' : x.on ? '' : `🔒 ${x.need}`, cx + cw - 30, cy + 25)
           }
         })
       }

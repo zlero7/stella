@@ -9,7 +9,9 @@ export interface Profile {
   cls: { idx: number; name: string; sub: number; points: number; lo: number; hi: number; label: string }
   plate: string; title: string; titleName: string; plates: Item[]; titles: Item[]
 }
-export const prof: { v?: Profile } = {}
+// 다른 계정으로 바꾸거나 로그아웃하면 이전 사람의 프로필이 잠깐이라도 보이지 않게, 지금 로그인한 계정의 것일 때만 돌려준다
+let cache: Profile | undefined
+export const prof = { get v() { return account.token && cache?.id === account.id ? cache : undefined }, set v(p: Profile | undefined) { cache = p } }
 
 export const refreshProfile = () => account.token
   ? api<Profile>('profile/me').then(p => { prof.v = p; return p }, () => prof.v)
@@ -22,7 +24,7 @@ export const reportLadder = (mid: string, score: number, failed: boolean) => api
 export const ladderResult = (mid: string) => api<LadderResult>(`ladder/result?mid=${encodeURIComponent(mid)}`)
 
 // 티어·클래스·플레이트 색 (그림용)
-export const TIER_COLOR: Record<string, string> = { IRON: '#9aa3b5', BRONZE: '#d08a4a', SILVER: '#d4deef', GOLD: '#ffcf4a', PLATINUM: '#6fe0d0', DIAMOND: '#7ab8ff', MASTER: '#d98cff' }
+export const TIER_COLOR: Record<string, string> = { UNRANKED: '#aab4c8', IRON: '#9aa3b5', BRONZE: '#d08a4a', SILVER: '#d4deef', GOLD: '#ffcf4a', PLATINUM: '#6fe0d0', DIAMOND: '#7ab8ff', MASTER: '#d98cff' }
 export const PLATE_COLOR: Record<string, [string, string]> = {
   default: ['#2b6ee0', '#7ad8ff'], aurora: ['#1fb88a', '#3a7bff'], nova: ['#ff7a59', '#ff5c8a'], eclipse: ['#3b2a78', '#c06bff'],
   galaxy: ['#1b2b6b', '#7a5bff'], crown: ['#d9a300', '#ffe27a'], supernova: ['#ff3d6e', '#ffb13b']

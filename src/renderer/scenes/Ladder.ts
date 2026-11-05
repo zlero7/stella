@@ -22,11 +22,11 @@ export const Ladder = (sm: SceneManager): Scene => {
 
   // 사람 패널: 보석(티어) · 이름 · 레벨 · LP
   function side(g: CanvasRenderingContext2D, x: number, head: string, p: { nick: string; level: number; tier: string; tierLabel: string; lp: number; titleName?: string } | undefined, on: boolean) {
-    const w = 270, col = TIER_COLOR[p?.tier ?? 'IRON'] ?? '#fff'
+    const w = 270, col = TIER_COLOR[p?.tier ?? 'UNRANKED'] ?? '#fff'
     g.textAlign = 'center'; g.font = `800 14px ${FONT}`; g.fillStyle = on ? AMBER : CYAN; g.fillText(head, x + w / 2, 156)
     gem(g, x + w / 2, 262, 74, col)
-    g.font = `900 26px ${FONT}`; g.lineJoin = 'round'; g.lineWidth = 5; g.strokeStyle = 'rgba(8,24,70,.85)'; g.strokeText(p?.tierLabel ?? 'IRON IV', x + w / 2, 392) // 밝은 배경에서도 티어 글자가 읽히게 어두운 테두리
-    g.fillStyle = col; g.fillText(p?.tierLabel ?? 'IRON IV', x + w / 2, 392)
+    g.font = `900 26px ${FONT}`; g.lineJoin = 'round'; g.lineWidth = 5; g.strokeStyle = 'rgba(8,24,70,.85)'; g.strokeText(p?.tierLabel ?? 'UNRANKED', x + w / 2, 392) // 밝은 배경에서도 티어 글자가 읽히게 어두운 테두리
+    g.fillStyle = col; g.fillText(p?.tierLabel ?? 'UNRANKED', x + w / 2, 392)
     g.font = `700 14px ${FONT}`; g.fillStyle = '#0b2a6b'; g.fillText(`${p?.lp ?? 0} LP`, x + w / 2, 416)
     slant(g, x, 440, w, 64, 16); g.fillStyle = 'rgba(8,24,70,.84)'; g.fill(); g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 1.5; g.stroke()
     g.fillStyle = '#fff'; g.font = `800 22px ${FONT}`; g.fillText(fit(g, p?.nick ?? '…', w - 90), x + w / 2 - 10, 478)

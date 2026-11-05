@@ -13,7 +13,7 @@ import { Lobby } from './scenes/Lobby'
 import { VsResult } from './scenes/VsResult'
 import { Account } from './scenes/Account'
 import { verify } from './data/Account'
-import { refreshProfile } from './data/Profile'
+import { prof, refreshProfile } from './data/Profile'
 import { Ladder } from './scenes/Ladder'
 import { Collection } from './scenes/Collection'
 import { initVersus } from './core/Versus'
@@ -40,7 +40,7 @@ sm.add('collection', Collection(sm))
 initVersus(sm)
 void verify().then(refreshProfile) // 저장된 로그인이 아직 유효한지 (서버에 못 닿으면 그대로 둔다), 그다음 내 프로필
 sm.go('title')
-if (import.meta.env.DEV) (window as unknown as { __sm: SceneManager }).__sm = sm // 개발 중 화면을 바로 열어 보는 용도
+if (import.meta.env.DEV) Object.assign(window, { __sm: sm, __prof: prof }) // 개발 중 화면을 바로 열어 보는 용도 (프로필도 손으로 채워 본다)
 
 // 화면 크기에 맞춰 늘어난 캔버스의 좌표를 1280x720 기준으로 되돌린다
 const pos = (e: MouseEvent) => {

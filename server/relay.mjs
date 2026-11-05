@@ -62,7 +62,8 @@ function sendSong(req, res, dir, file) {
 // 계정: 비밀번호는 솔트를 쳐서 scrypt로만 저장한다 (원문은 저장도 로그도 안 한다). 로그인하면 임의 토큰(32바이트)을 주고, 서버에는 토큰의 sha256만 남긴다.
 // 비밀번호가 오가므로 터널(HTTPS)로만 공개한다는 전제다. 무차별 대입은 아이디+IP·IP별 실패 횟수로 막는다.
 // shortcut: 비밀번호 변경·탈퇴·이메일 복구는 없다 (잊으면 users.json에서 그 계정을 지워야 한다), 필요해지면 /auth/password 를 추가한다
-const USERS = fileURLToPath(new URL('./users.json', import.meta.url)), TOKEN_TTL = 90 * 864e5, MAX_TOKENS = 5, MAX_USERS = 5000
+const DATA = process.env.STELLA_DATA ? path.resolve(process.env.STELLA_DATA) : fileURLToPath(new URL('.', import.meta.url)) // 계정·랭킹 파일 폴더 (시험 서버는 STELLA_DATA로 따로 쓴다: 진짜 계정 파일을 건드리지 않게)
+const USERS = path.join(DATA, 'users.json'), TOKEN_TTL = 90 * 864e5, MAX_TOKENS = 5, MAX_USERS = 5000
 const users = Object.assign(Object.create(null), (() => { try { return JSON.parse(fs.readFileSync(USERS, 'utf8')) } catch { return {} } })()) // 아이디 -> {id, nick, salt, hash, tokens: [{h, at}], at}. 프로토타입 없는 객체: 아이디 "__proto__"가 통과하므로
 const tokenIdx = new Map() // 토큰 해시 -> 아이디
 const reindex = () => { tokenIdx.clear(); for (const u of Object.values(users)) for (const t of u.tokens) tokenIdx.set(t.h, u.id) }
@@ -89,7 +90,8 @@ const userByToken = tok => {
   return u
 }
 const readBody = (req, max) => new Promise(ok => { let b = ''; req.on('data', c => { b += c; if (b.length > max) { req.destroy(); ok(null) } }); req.on('end', () => ok(b)); req.on('error', () => ok(null)) })
-const NICK = /^[\p{L}\p{N}_ -]{2,12}$/u, RESERVED = /^(player|admin|guest|stella|운영자|관리자)$/i
+// 닉네임: 글자나 숫자가 하나는 있어야 한다 ("--" 같은 이름 방지)
+const NICK = /^(?=.*[\p{L}\p{N}])[\p{L}\p{N}_ -]{2,12}$/u, RESERVED = /^(player|admin|guest|stella|운영자|관리자)$/i
 async function authApi(req, res, route) {
   const json = (code, body) => { res.writeHead(code, { ...CORS, 'Cache-Control': 'no-store', 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(body)) }
   if (route === 'me') { const u = userOf(req); return u ? json(200, { id: u.id, nick: u.nick }) : json(401, { error: '로그인이 필요합니다' }) }
@@ -130,7 +132,7 @@ async function authApi(req, res, route) {
 // 온라인 랭킹: 곡·키 수·난이도마다 계정 하나당 최고 점수만 남기고 상위 50명을 ranks.json에 저장한다. 올리려면 로그인해야 하고, 이름은 계정의 닉네임으로 남는다
 // 닉네임은 계정 안에서 겹치지 않으므로 남의 이름으로 올릴 수 없다.
 // shortcut: 점수는 클라이언트가 보낸 값을 그대로 믿는다 (친구끼리 쓰는 규모), 부정 방지가 필요해지면 서버가 판정 기록을 검증하도록 바꾼다
-const RANKS = fileURLToPath(new URL('./ranks.json', import.meta.url)), TOP = 50
+const RANKS = path.join(DATA, 'ranks.json'), TOP = 50
 let ranks = {}
 try { ranks = JSON.parse(fs.readFileSync(RANKS, 'utf8')) } catch { /* 처음엔 없다 */ }
 let saveTimer

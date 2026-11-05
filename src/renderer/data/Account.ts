@@ -2,7 +2,7 @@ import { account, saveAccount, saveSettings, settings } from './Storage'
 import { serverUrl } from './Songs'
 
 // 계정 (서버의 /auth). 비밀번호는 서버로 보낼 때만 쓰고 저장하지 않는다
-export const ID_RE = /^[a-z0-9_]{4,16}$/, NICK_RE = /^[\p{L}\p{N}_ -]{2,12}$/u
+export const ID_RE = /^[a-z0-9_]{4,16}$/, NICK_RE = /^(?=.*[\p{L}\p{N}])[\p{L}\p{N}_ -]{2,12}$/u
 
 // 비밀번호가 오가는 길이라 https(또는 내 컴퓨터)가 아니면 보내지 않는다
 const base = () => {

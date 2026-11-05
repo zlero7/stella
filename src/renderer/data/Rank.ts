@@ -4,7 +4,7 @@ import { serverUrl } from './Songs'
 import { account, settings } from './Storage'
 
 // 온라인 랭킹: 곡·키 수·난이도마다 계정당 최고 점수. 올리려면 로그인해야 한다. 서버에 못 닿으면 조용히 비워 둔다 (게임은 그대로)
-export interface RankRow { nick: string; score: number; acc: number; mc: number; badge: string }
+export interface RankRow { nick: string; score: number; acc: number; mc: number; badge: string; lv?: number }
 
 const url = (dir: string, diff: string, keys: number) => `${serverUrl()}/rank/${encodeURIComponent(dir)}/${keys}k-${diff}`
 const ok = (r: Response) => (r.ok ? (r.json() as Promise<RankRow[]>) : Promise.reject(Object.assign(new Error(String(r.status)), { status: r.status })))

@@ -61,3 +61,7 @@ test('프로필: 해금 안 된 꾸미기는 기본으로 돌아간다', () => {
   const v = profileView({ id: 'x', nick: 'X', exp: 0, plate: 'supernova', title: 'lord' })
   assert.equal(v.plate, 'default'); assert.equal(v.title, ''); assert.equal(v.level, 1)
 })
+test('래더를 한 판도 안 했으면 UNRANKED, 한 판 하면 티어가 보인다', () => {
+  assert.equal(profileView({ id: 'x', nick: 'X' }).tierLabel, 'UNRANKED')
+  assert.equal(profileView({ id: 'x', nick: 'X', losses: 1 }).tierLabel, 'IRON IV')
+})

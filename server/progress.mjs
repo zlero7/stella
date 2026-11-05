@@ -73,12 +73,17 @@ export const TITLES = [
 const open = (list, u) => { const s = stat(u); return list.map(({ id, name, need, ok }) => ({ id, name, need, on: ok(s) })) }
 export const canEquip = (u, kind, id) => open(kind === 'plate' ? PLATES : TITLES, u).some(x => x.id === id && x.on)
 
+// 래더를 한 판도 안 했으면 티어 대신 UNRANKED (LP는 0에서 시작해 첫 판부터 오른다)
+const tierView = u => {
+  const t = tierOf(u.lp ?? 0), placed = (u.wins ?? 0) + (u.losses ?? 0) + (u.draws ?? 0) > 0
+  return placed ? { tier: t.tier, div: t.div, pt: t.pt, tierLabel: t.label } : { tier: 'UNRANKED', div: 0, pt: t.pt, tierLabel: 'UNRANKED' }
+}
 // 앱이 그리는 프로필: 레벨·경험치·티어·클래스·꾸미기와 해금 목록
 export function profileView(u) {
   const lv = levelOf(u.exp ?? 0), pts = classPoints(u.bests), plate = canEquip(u, 'plate', u.plate ?? 'default') ? u.plate ?? 'default' : 'default', title = canEquip(u, 'title', u.title ?? 'rookie') ? u.title ?? 'rookie' : ''
   return {
     id: u.id, nick: u.nick, ...lv, exp: u.exp ?? 0, plays: u.plays ?? 0, fcs: u.fcs ?? 0, aps: u.aps ?? 0,
-    lp: u.lp ?? 0, ...Object.fromEntries(Object.entries(tierOf(u.lp ?? 0)).map(([k, v]) => [k === 'label' ? 'tierLabel' : k, v])),
+    lp: u.lp ?? 0, ...tierView(u),
     wins: u.wins ?? 0, losses: u.losses ?? 0, draws: u.draws ?? 0,
     cls: classOf(pts), plate, title, titleName: TITLES.find(t => t.id === title)?.name ?? '',
     plates: open(PLATES, u), titles: open(TITLES, u)

@@ -148,7 +148,7 @@ export const SongSelect = (sm: SceneManager): Scene => {
         const ci = Math.max(cats.indexOf(cat), 0)
         let px = 270
         g.font = `800 17px ${FONT}`
-        for (let k = -1; k <= 4 && k < cats.length; k++) {
+        for (let k = cats.length > 1 ? -1 : 0; k <= 4 && k < cats.length; k++) { // 분류가 하나뿐이면 같은 탭을 두 번 그리지 않는다
           const c = cats[(ci + k + cats.length) % cats.length], label = fit(g, c === 'ALL' ? '전체' : c, 150), w = g.measureText(label).width + 36
           if (px + w > 930) break
           if (k !== 0) hit(px, 16, w, 36, () => { cat = c; applyCat() }) // 탭을 누르면 그 가수로

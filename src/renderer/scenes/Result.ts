@@ -103,6 +103,7 @@ export const Result = (sm: SceneManager): Scene => {
           g.fillStyle = mine ? 'rgba(255,159,26,.35)' : 'rgba(255,255,255,.08)'; g.beginPath(); g.roundRect(876, y, 348, 34, 8); g.fill()
           g.font = `800 16px ${FONT}`; g.fillStyle = i < 3 ? '#ffe27a' : '#fff'; g.textAlign = 'center'; g.fillText(String(i + 1), 898, y + 23)
           g.textAlign = 'left'; g.font = `700 15px ${FONT}`; g.fillStyle = '#fff'; g.fillText(fit(g, r.nick, 130), 922, y + 22)
+          if (r.lv) { g.font = `700 11px ${FONT}`; g.fillStyle = ICE; g.fillText(`Lv ${r.lv}`, 1086, y + 21) }
           if (r.badge) { g.font = `800 10px ${FONT}`; g.fillStyle = r.badge === 'ALL PERFECT' ? '#f2b705' : '#7ad8ff'; g.fillText(r.badge === 'ALL PERFECT' ? 'AP' : 'FC', 1060, y + 21) }
           g.font = `800 17px ${FONT}`; g.fillStyle = '#fff'; g.textAlign = 'right'; g.fillText(String(r.score).padStart(7, '0'), 1214, y + 23); g.textAlign = 'left'
         })
