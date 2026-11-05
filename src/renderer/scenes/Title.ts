@@ -1,8 +1,8 @@
 import type { Scene, SceneManager } from '../core/SceneManager'
-import { settings } from '../data/Storage'
+import { account, settings } from '../data/Storage'
 import { FONT, AMBER, accentFill, drawBg, slant, glow, hit, press, starPath, ease } from '../render/theme'
 
-const ITEMS: [string, string][] = [['START', '곡 선택'], ['VERSUS', '친구와 대결'], ['SETTINGS', '환경 설정'], ['EXIT', '종료']]
+const ITEMS: [string, string][] = [['START', '곡 선택'], ['VERSUS', '친구와 대결'], ['ACCOUNT', ''], ['SETTINGS', '환경 설정'], ['EXIT', '종료']] // ACCOUNT의 설명은 로그인 상태에 따라 바뀐다
 const ign = (k: string) => /^(Shift|Control|Alt|Meta|CapsLock|NumLock|F\d+)$/.test(k) // 이 키로는 시작 화면을 넘기지 않는다
 let seen = false // 처음 켰을 때만 "PRESS ANY KEY" 화면을 거친다 (설정 등에서 돌아오면 바로 메뉴)
 
@@ -102,7 +102,7 @@ export const Title = (sm: SceneManager): Scene => {
           g.fillStyle = '#fff'; g.font = `${on ? 800 : 600} ${(24 + 3 * k).toFixed(1)}px ${FONT}`
           g.fillText(name.split('').join(' '), x + 46, y + 32)
           g.font = `${(14 + k).toFixed(1)}px ${FONT}`; g.fillStyle = `rgba(255,255,255,${0.65 + 0.35 * k})`
-          g.fillText(sub, x + 46, y + 55)
+          g.fillText(name === 'ACCOUNT' ? (account.token ? `${account.nick}  ·  내 계정` : '로그인 / 회원가입') : sub, x + 46, y + 55)
           if (on) { g.textAlign = 'right'; g.font = `800 22px ${FONT}`; g.fillStyle = '#fff'; g.fillText('▶', x + w - 34, y + 42) }
         })
         g.textAlign = 'center'; g.font = `14px ${FONT}`; g.fillStyle = '#0b2a6b'
@@ -121,6 +121,7 @@ export const Title = (sm: SceneManager): Scene => {
         const name = ITEMS[sel][0]
         if (name === 'START') sm.go('select', { mode: 'play' })
         else if (name === 'VERSUS') sm.go('vs')
+        else if (name === 'ACCOUNT') sm.go('account')
         else if (name === 'SETTINGS') sm.go('settings', { back: 'title' })
         else window.api?.quit?.()
       }

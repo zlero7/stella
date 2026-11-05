@@ -1,6 +1,6 @@
 import type { Scene, SceneManager } from '../core/SceneManager'
 import { DEFAULT_RELAY, PORT, closeVersus, openRelay, vs } from '../core/Versus'
-import { saveSettings, settings } from '../data/Storage'
+import { account, saveSettings, settings } from '../data/Storage'
 import { FONT, AMBER, CYAN, ICE, accentFill, card, chip, drawBg, ease, hit, menuRow, pill, press } from '../render/theme'
 
 // 대결 로비: 닉네임을 정하고, 방을 열거나(방장) 방 코드로 들어간다(손님). 연결되면 방장이 곡을 고른다
@@ -63,6 +63,7 @@ export const Lobby = (sm: SceneManager): Scene => {
   return {
     enter() {
       err = ''
+      if (account.token) settings.nick = account.nick // 로그인했으면 대결에서도 계정 닉네임으로
       if (vs.open) step = 'connected'
       else { step = 'menu'; if (vs.closed) { err = '상대와 연결이 끊어졌습니다'; vs.closed = false } }
     },

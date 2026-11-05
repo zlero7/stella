@@ -16,6 +16,10 @@ if (settings.ui < 2) { settings.align = 1; settings.ui = 2 }
 // 예전 저장값('d', ' ')을 code 형식으로 변환
 settings.keys = settings.keys.map(k => (k.length > 1 ? k : k === ' ' ? 'Space' : `Key${k.toUpperCase()}`))
 export const saveSettings = () => write('rg.settings', settings)
+// 로그인한 계정: token은 서버가 준 세션 토큰이다 (비밀번호는 저장하지 않는다). 비어 있으면 로그아웃 상태
+export interface Account { token: string; id: string; nick: string }
+export const account: Account = read('rg.account', { token: '', id: '', nick: '' })
+export const saveAccount = () => write('rg.account', account)
 export const keyLabel = (k: string) => k.replace(/^(Key|Digit)/, '').replace('Space', 'SPACE').replace('Semicolon', ';').replace('Quote', "'").replace('Comma', ',').replace('Period', '.').replace('Slash', '/').toUpperCase()
 
 // 곡·난이도마다 점수 상위 10개를 남긴다 (랭킹)

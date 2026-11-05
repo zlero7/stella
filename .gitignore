@@ -16,3 +16,5 @@ tmp_gen
 .env*
 research_notes
 reports
+server/users.json
+server/users.json.tmp

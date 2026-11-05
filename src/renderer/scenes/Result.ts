@@ -2,7 +2,7 @@ import type { Scene, SceneManager } from '../core/SceneManager'
 import type { Song } from '../../shared/types'
 import { JUDGES, ScoreKeeper } from '../game/ScoreKeeper'
 import { diffName } from '../data/Songs'
-import { saveSettings, settings } from '../data/Storage'
+import { account, saveSettings, settings } from '../data/Storage'
 import { setBest } from '../data/Storage'
 import { fetchRank, submitRank, type RankRow } from '../data/Rank'
 import { FONT, CYAN, ICE, AMBER, artOf, card, chip, drawBg, drawCover, fit, glow, meter, pill, starPath } from '../render/theme'
@@ -36,7 +36,7 @@ export const Result = (sm: SceneManager): Scene => {
       g.font = `16px ${FONT}`; g.fillStyle = ICE; g.fillText(fit(g, song.meta.artist, 820), 152, 110)
       pill(g, 1240 - 20 - 112, 54, 112, 36, d.failed ? '#c0392b' : '#ff9f1a')
       g.font = `800 16px ${FONT}`; g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText(d.failed ? '실 패' : '결 과', 1240 - 20 - 56, 78)
-      const me = board?.findIndex(r => r.nick === (settings.nick.trim() || 'PLAYER')) ?? -1
+      const me = account.token ? board?.findIndex(r => r.nick === account.nick) ?? -1 : -1
       if (me >= 0) { const w = 128; pill(g, 1240 - 20 - 112 - 12 - w, 54, w, 36, 'rgba(8,24,70,.85)'); g.fillStyle = '#ffe27a'; g.fillText(`ONLINE #${me + 1}`, 1240 - 20 - 112 - 12 - w / 2, 78) }
       g.textAlign = 'left'
 
@@ -88,8 +88,9 @@ export const Result = (sm: SceneManager): Scene => {
       if (showBoard) {
         card(g, 860, 140, 380, 456, 'ONLINE RANKING')
         if (!board?.length) { g.font = `16px ${FONT}`; g.fillStyle = ICE; g.textAlign = 'center'; g.fillText(loading ? '순위를 불러오는 중…' : '순위를 불러오지 못했습니다', 1050, 370); g.textAlign = 'left' }
+        if (!account.token) { g.font = `700 14px ${FONT}`; g.fillStyle = AMBER; g.textAlign = 'center'; g.fillText('로그인하면 내 기록이 순위에 올라갑니다 (메인 화면 ACCOUNT)', 1050, 574); g.textAlign = 'left' }
         board?.forEach((r, i) => {
-          const y = 176 + i * 40, mine = r.nick === (settings.nick.trim() || 'PLAYER')
+          const y = 176 + i * 40, mine = !!account.token && r.nick === account.nick
           g.fillStyle = mine ? 'rgba(255,159,26,.35)' : 'rgba(255,255,255,.08)'; g.beginPath(); g.roundRect(876, y, 348, 34, 8); g.fill()
           g.font = `800 16px ${FONT}`; g.fillStyle = i < 3 ? '#ffe27a' : '#fff'; g.textAlign = 'center'; g.fillText(String(i + 1), 898, y + 23)
           g.textAlign = 'left'; g.font = `700 15px ${FONT}`; g.fillStyle = '#fff'; g.fillText(fit(g, r.nick, 130), 922, y + 22)
