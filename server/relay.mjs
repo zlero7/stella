@@ -7,7 +7,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { WebSocketServer } from 'ws'
-import { applyPlay, canEquip, levelOf, profileView } from './progress.mjs'
+import { applyPlay, canEquip, levelOf, nickKey, profileView } from './progress.mjs'
 import { createLadder } from './ladder.mjs'
 
 const PORT = Number(process.env.PORT) || 9777
@@ -91,7 +91,7 @@ const userByToken = tok => {
 }
 const readBody = (req, max) => new Promise(ok => { let b = ''; req.on('data', c => { b += c; if (b.length > max) { req.destroy(); ok(null) } }); req.on('end', () => ok(b)); req.on('error', () => ok(null)) })
 // 닉네임: 글자나 숫자가 하나는 있어야 한다 ("--" 같은 이름 방지)
-const NICK = /^(?=.*[\p{L}\p{N}])[\p{L}\p{N}_ -]{2,12}$/u, RESERVED = /^(player|admin|guest|stella|운영자|관리자)$/i
+const NICK = /^(?=.*[\p{L}\p{N}])[\p{L}\p{N}_ -]{2,12}$/u, RESERVED = /^(player|admin|guest|stella|운영자|관리자)$/
 async function authApi(req, res, route) {
   const json = (code, body) => { res.writeHead(code, { ...CORS, 'Cache-Control': 'no-store', 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(body)) }
   if (route === 'me') { const u = userOf(req); return u ? json(200, { id: u.id, nick: u.nick }) : json(401, { error: '로그인이 필요합니다' }) }
@@ -110,8 +110,8 @@ async function authApi(req, res, route) {
     if (!/^[a-z0-9_]{4,16}$/.test(id)) return json(400, { error: '아이디는 영문 소문자·숫자·_ 4~16자입니다' })
     if (pw.length < 8 || pw.length > 64) return json(400, { error: '비밀번호는 8~64자입니다' })
     if (pw.toLowerCase() === id) return json(400, { error: '아이디와 같은 비밀번호는 쓸 수 없습니다' })
-    if (!NICK.test(nick) || RESERVED.test(nick)) return json(400, { error: '닉네임은 한글·영문·숫자 2~12자입니다' })
-    const taken = () => (users[id] ? '이미 있는 아이디입니다' : Object.values(users).some(u => u.nick.toLowerCase() === nick.toLowerCase()) ? '이미 있는 닉네임입니다' : '')
+    if (!NICK.test(nick) || RESERVED.test(nickKey(nick))) return json(400, { error: '닉네임은 한글·영문·숫자 2~12자입니다' })
+    const taken = () => (users[id] ? '이미 있는 아이디입니다' : Object.values(users).some(u => nickKey(u.nick) === nickKey(nick)) ? '이미 있는 닉네임입니다' : '')
     if (taken()) return json(409, { error: taken() })
     if (Object.keys(users).length >= MAX_USERS) return json(503, { error: '지금은 가입할 수 없습니다' })
     bump('reg|' + ip, WIN)
@@ -181,6 +181,31 @@ async function playerApi(req, res, url) {
     for (const [kind, key] of [['plate', 'plate'], ['title', 'title']]) if (m[key] !== undefined) { if (typeof m[key] !== 'string' || !canEquip(user, kind, m[key])) return json(400, { error: '아직 쓸 수 없는 항목입니다' }); user[key] = m[key] }
     saveUsersSoon(); return json(200, profileView(user))
   }
+  if (url === '/profile/nick') { // 닉네임 변경: 가입 때와 같은 규칙, 하루에 한 번만. 랭킹에 남은 이름도 같이 바뀐다
+    const nick = String(m.nick ?? '').trim()
+    if (!NICK.test(nick) || RESERVED.test(nickKey(nick))) return json(400, { error: '닉네임은 한글·영문·숫자 2~12자입니다' })
+    if (nick === user.nick) return json(400, { error: '지금 쓰는 닉네임과 같습니다' })
+    if (Object.values(users).some(x => x.id !== user.id && nickKey(x.nick) === nickKey(nick))) return json(409, { error: '이미 있는 닉네임입니다' })
+    const wait = (user.nickAt ?? 0) + 864e5 - Date.now()
+    if (wait > 0) return json(429, { error: `닉네임은 하루에 한 번만 바꿀 수 있습니다 (${Math.ceil(wait / 36e5)}시간 뒤)` })
+    user.nick = nick; user.nickAt = Date.now()
+    for (const list of Object.values(ranks)) for (const r of list) if (r.uid === user.id) r.nick = nick
+    saveRanks(); saveUsersSoon(); log('닉네임 변경', user.id)
+    return json(200, profileView(user))
+  }
+  if (url === '/profile/password') { // 비밀번호 변경: 현재 비밀번호를 확인하고(틀리면 로그인 실패와 같은 횟수 제한), 지금 기기 말고는 모두 로그아웃시킨다. 403: 401은 앱이 "로그아웃됨"으로 읽는다
+    const ip = ipOf(req), kf = `fail|${user.id}|${ip}`, ki = 'failip|' + ip, WIN = 15 * 60 * 1000, old = String(m.old ?? ''), pw = String(m.pw ?? '')
+    if (spent(kf, 8, WIN) || spent(ki, 30, WIN)) return json(429, { error: '실패가 너무 많습니다. 잠시 후 다시 해 주세요' })
+    const same = old.length <= 64 && crypto.timingSafeEqual(await kdf(old, Buffer.from(user.salt, 'hex')), Buffer.from(user.hash, 'hex'))
+    if (!same) { bump(kf, WIN); bump(ki, WIN); return json(403, { error: '현재 비밀번호가 틀렸습니다' }) }
+    if (pw.length < 8 || pw.length > 64) return json(400, { error: '새 비밀번호는 8~64자입니다' })
+    if (pw.toLowerCase() === user.id) return json(400, { error: '아이디와 같은 비밀번호는 쓸 수 없습니다' })
+    if (pw === old) return json(400, { error: '지금 비밀번호와 같습니다' })
+    const salt = crypto.randomBytes(16), hash = (await kdf(pw, salt)).toString('hex'), cur = sha(bearer(req))
+    user.salt = salt.toString('hex'); user.hash = hash
+    user.tokens = user.tokens.filter(t => t.h === cur); reindex(); saveUsers(); log('비밀번호 변경', user.id)
+    return json(200, {})
+  }
   if (url === '/ladder/report') return json(ladder.report(user, m.mid, { score: m.score, failed: m.failed }) ? 200 : 400, {})
   json(404, { error: '없는 주소' })
 }
@@ -188,7 +213,7 @@ async function playerApi(req, res, url) {
 const server = http.createServer((req, res) => {
   const url = req.url?.split('?')[0] ?? '', song = /^\/songs\/([\w-]{1,64})\/([\w.-]{1,80})$/.exec(url), rank = /^\/rank\/([\w-]{1,64})\/([46]k-(?:easy|normal|hard|stella))$/.exec(url)
   if (req.method === 'OPTIONS') { res.writeHead(204, { ...CORS, 'Access-Control-Allow-Methods': 'GET, POST', 'Access-Control-Allow-Headers': 'Content-Type, Authorization' }); res.end(); return }
-  if (/^\/(profile\/(me|equip)|ladder\/(result|report))$/.test(url)) { playerApi(req, res, url).catch(e => { log('API 오류', e.message); if (!res.headersSent) res.writeHead(500, CORS); res.end() }); return }
+  if (/^\/(profile\/(me|equip|nick|password)|ladder\/(result|report))$/.test(url)) { playerApi(req, res, url).catch(e => { log('API 오류', e.message); if (!res.headersSent) res.writeHead(500, CORS); res.end() }); return }
   const auth = /^\/auth\/(register|login|logout|me)$/.exec(url)
   if (auth) { authApi(req, res, auth[1]).catch(e => { log('인증 오류', e.message); if (!res.headersSent) res.writeHead(500, CORS); res.end() }); return }
   if (rank && (req.method === 'GET' || req.method === 'POST')) { rankApi(req, res, rank[1], rank[2]); return }

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { applyLadder, applyPlay, canEquip, classOf, classPoints, duelResult, ladderDelta, levelOf, playExp, profileView, tierOf } from './progress.mjs'
+import { nickKey, applyLadder, applyPlay, canEquip, classOf, classPoints, duelResult, ladderDelta, levelOf, playExp, profileView, tierOf } from './progress.mjs'
 
 test('레벨: 경험치로 레벨과 이번 레벨 진행도를 센다', () => {
   assert.deepEqual(levelOf(0), { level: 1, cur: 0, need: 110 })
@@ -64,4 +64,9 @@ test('프로필: 해금 안 된 꾸미기는 기본으로 돌아간다', () => {
 test('래더를 한 판도 안 했으면 UNRANKED, 한 판 하면 티어가 보인다', () => {
   assert.equal(profileView({ id: 'x', nick: 'X' }).tierLabel, 'UNRANKED')
   assert.equal(profileView({ id: 'x', nick: 'X', losses: 1 }).tierLabel, 'IRON IV')
+})
+test('닉네임 중복 키: 대소문자·공백·전각·_·-만 다른 이름은 같다', () => {
+  for (const n of ['nova', 'NOVA', 'N o v a', 'ｎｏｖａ', 'nova_', 'no-va']) assert.equal(nickKey(n), 'nova')
+  assert.notEqual(nickKey('nova'), nickKey('novb'))
+  assert.equal(nickKey('스텔 라'), nickKey('스텔라'))
 })

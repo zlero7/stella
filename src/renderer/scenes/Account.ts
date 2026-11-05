@@ -1,27 +1,37 @@
 import type { Scene, SceneManager } from '../core/SceneManager'
-import { ID_RE, NICK_RE, login, logout, register } from '../data/Account'
+import { ID_RE, NICK_RE, changeNick, changePassword, login, logout, register } from '../data/Account'
 import { account, settings } from '../data/Storage'
 import { FONT, AMBER, ICE, accentFill, drawBg, ease, fitFont, glow, hit, press, slant, starPath } from '../render/theme'
 
 // 계정: 로그인 · 회원가입 · (로그인 중이면) 내 계정. 타이틀과 같은 디맥식 구성 — 왼쪽에 큰 글자, 오른쪽에 비스듬한 띠 (고른 줄은 주황)
 // 온라인 랭킹은 로그인해야 올라간다
-type Mode = 'login' | 'register' | 'profile'
-type Kind = 'id' | 'pw' | 'pw2' | 'nick' | 'go' | 'switch' | 'logout' | 'back'
+type Mode = 'login' | 'register' | 'profile' | 'nick' | 'pass'
+type Kind = 'id' | 'pw' | 'pw2' | 'pwold' | 'nick' | 'go' | 'switch' | 'logout' | 'back' | 'rename' | 'repass'
 type Row = { kind: Kind; name: string; sub: string } // 글자 칸은 name = 영문 라벨, sub = 한글 라벨 / 버튼은 name = 큰 글자, sub = 설명
 const ID: Row = { kind: 'id', name: 'ID', sub: '아이디' }, PW: Row = { kind: 'pw', name: 'PASSWORD', sub: '비밀번호' }
 const ROWS: Record<Mode, Row[]> = {
   login: [ID, PW, { kind: 'go', name: 'LOGIN', sub: '로그인' }, { kind: 'switch', name: 'CREATE ACCOUNT', sub: '계정이 없나요? 회원가입' }],
   register: [ID, PW, { kind: 'pw2', name: 'CONFIRM', sub: '비밀번호 확인' }, { kind: 'nick', name: 'NICKNAME', sub: '닉네임' }, { kind: 'go', name: 'SIGN UP', sub: '가입하기' }, { kind: 'switch', name: 'BACK TO LOGIN', sub: '이미 계정이 있나요? 로그인' }],
-  profile: [{ kind: 'logout', name: 'LOGOUT', sub: '로그아웃' }, { kind: 'back', name: 'BACK', sub: '타이틀로' }]
+  profile: [{ kind: 'rename', name: 'CHANGE NICKNAME', sub: '닉네임 변경' }, { kind: 'repass', name: 'CHANGE PASSWORD', sub: '비밀번호 변경' }, { kind: 'logout', name: 'LOGOUT', sub: '로그아웃' }, { kind: 'back', name: 'BACK', sub: '타이틀로' }],
+  nick: [{ kind: 'nick', name: 'NEW NICKNAME', sub: '새 닉네임' }, { kind: 'go', name: 'CHANGE', sub: '바꾸기 (하루에 한 번)' }, { kind: 'switch', name: 'CANCEL', sub: '내 계정으로' }],
+  pass: [{ kind: 'pwold', name: 'CURRENT', sub: '현재 비밀번호' }, { kind: 'pw', name: 'NEW PASSWORD', sub: '새 비밀번호' }, { kind: 'pw2', name: 'CONFIRM', sub: '새 비밀번호 확인' }, { kind: 'go', name: 'CHANGE', sub: '바꾸기 · 다른 기기는 로그아웃' }, { kind: 'switch', name: 'CANCEL', sub: '내 계정으로' }]
 }
-const TIPS: Partial<Record<Kind, string>> = { id: '영문 소문자·숫자·_ 4~16자', pw: '8~64자 (아이디와 같으면 안 됩니다)', pw2: '비밀번호를 한 번 더', nick: '한글·영문·숫자 2~12자 · 랭킹에 이 이름으로 올라갑니다' }
-const MAX: Partial<Record<Kind, number>> = { id: 16, pw: 64, pw2: 64, nick: 12 }
-const isField = (k: Kind) => k === 'id' || k === 'pw' || k === 'pw2' || k === 'nick'
-const blank = () => ({ id: '', pw: '', pw2: '', nick: '' })
+const TIPS: Partial<Record<Kind, string>> = { id: '영문 소문자·숫자·_ 4~16자', pw: '8~64자 (아이디와 같으면 안 됩니다)', pw2: '비밀번호를 한 번 더', pwold: '지금 쓰는 비밀번호', nick: '한글·영문·숫자 2~12자 · 랭킹에 이 이름으로 올라갑니다' }
+const MAX: Partial<Record<Kind, number>> = { id: 16, pw: 64, pw2: 64, pwold: 64, nick: 12 }
+const isField = (k: Kind) => k === 'id' || k === 'pw' || k === 'pw2' || k === 'pwold' || k === 'nick'
+const isSecret = (k: Kind) => k === 'pw' || k === 'pw2' || k === 'pwold'
+const blank = () => ({ id: '', pw: '', pw2: '', pwold: '', nick: '' })
 const H = 64, PITCH = 76 // 띠 높이 · 줄 간격
+// 글자를 폭에 맞춰 줄바꿈 (글자 단위, 최대 3줄)
+function wrap(g: CanvasRenderingContext2D, text: string, w: number) {
+  const out: string[] = []; let cur = ''
+  for (const ch of text) { if (g.measureText(cur + ch).width > w && cur) { out.push(cur); cur = ch.trimStart() } else cur += ch }
+  if (cur) out.push(cur)
+  return out.slice(0, 3)
+}
 
 export const Account = (sm: SceneManager): Scene => {
-  let mode: Mode = 'login', focus = 0, msg = '', bad = false, busy = false, vals = blank(), shown = '', since = 0
+  let mode: Mode = 'login', focus = 0, msg = '', bad = false, busy = false, vals = blank(), shown = '', since = 0, msgAt = 0
   const rows = () => ROWS[mode]
   const y0 = () => (720 - (rows().length * PITCH - 12)) / 2 - 6 // 줄이 몇 개든 화면 세로 가운데에
 
@@ -43,15 +53,28 @@ export const Account = (sm: SceneManager): Scene => {
     const e = input(), r = document.getElementById('c')!.getBoundingClientRect(), s = r.width / 1280
     e.style.display = 'block'; e.style.left = `${r.left + 776 * s}px`; e.style.top = `${r.top + (y0() + focus * PITCH + 30) * s}px`; e.style.width = `${370 * s}px`; e.style.height = `${28 * s}px`
     e.style.lineHeight = e.style.height; e.style.fontSize = `${22 * s}px`
-    if (shown !== mode + k) { shown = mode + k; e.type = k === 'pw' || k === 'pw2' ? 'password' : 'text'; e.maxLength = MAX[k]!; e.placeholder = ''; e.value = vals[k as keyof typeof vals]; e.focus() }
+    if (shown !== mode + k) { shown = mode + k; e.type = isSecret(k) ? 'password' : 'text'; e.maxLength = MAX[k]!; e.placeholder = ''; e.value = vals[k as keyof typeof vals]; e.focus() }
   }
-  const say = (m: string, isBad = false) => { msg = m; bad = isBad }
-  const go = (m: Mode) => { mode = m; focus = 0; vals.pw = vals.pw2 = ''; say(''); shown = ''; since = performance.now() }
+  const say = (m: string, isBad = false) => { msg = m; bad = isBad; msgAt = performance.now() }
+  const go = (m: Mode) => { mode = m; focus = 0; vals.pw = vals.pw2 = vals.pwold = ''; vals.nick = ''; say(''); shown = ''; since = performance.now() }
   const leave = () => { hideInput(); vals = blank(); sm.go('title') }
 
   async function submit() {
     if (busy) return
     const id = vals.id.trim().toLowerCase(), { pw, pw2 } = vals, nick = vals.nick.trim()
+    if (mode === 'nick') {
+      if (!NICK_RE.test(nick)) return say('닉네임은 한글·영문·숫자 2~12자입니다', true)
+      busy = true; say('바꾸는 중…')
+      try { await changeNick(nick); go('profile'); say('닉네임을 바꿨습니다') } catch (e) { say((e as Error).message, true) } finally { busy = false }
+      return
+    }
+    if (mode === 'pass') {
+      if (pw.length < 8 || pw.length > 64) return say('새 비밀번호는 8~64자입니다', true)
+      if (pw !== pw2) return say('새 비밀번호가 서로 다릅니다', true)
+      busy = true; say('바꾸는 중…')
+      try { await changePassword(vals.pwold, pw); go('profile'); say('비밀번호를 바꿨습니다. 다른 기기는 로그아웃됩니다') } catch (e) { say((e as Error).message, true); vals.pwold = vals.pw = vals.pw2 = ''; shown = '' } finally { busy = false }
+      return
+    }
     if (!ID_RE.test(id)) return say('아이디는 영문 소문자·숫자·_ 4~16자입니다', true)
     if (mode === 'register') {
       if (pw.length < 8 || pw.length > 64) return say('비밀번호는 8~64자입니다', true)
@@ -86,8 +109,8 @@ export const Account = (sm: SceneManager): Scene => {
       const cx = 380, by = 372
       g.textAlign = 'center'; g.globalAlpha = m
       g.font = `700 15px ${FONT}`; g.fillStyle = '#eaf6ff'
-      g.fillText(mode === 'profile' ? 'P L A Y E R' : 'P L A Y E R   A C C O U N T', cx, by - 108)
-      const big = mode === 'login' ? 'LOGIN' : mode === 'register' ? 'SIGN UP' : account.nick
+      g.fillText(mode === 'profile' ? 'P L A Y E R' : mode === 'nick' || mode === 'pass' ? 'M Y   A C C O U N T' : 'P L A Y E R   A C C O U N T', cx, by - 108)
+      const big = mode === 'login' ? 'LOGIN' : mode === 'register' ? 'SIGN UP' : mode === 'nick' ? 'NICKNAME' : mode === 'pass' ? 'PASSWORD' : account.nick
       const label = fitFont(g, big, 600, 900, mode === 'profile' ? 120 : 132, 40)
       const w = g.measureText(label).width, lx = cx - w / 2, gr = g.createLinearGradient(lx, 0, lx + w, 0)
       gr.addColorStop(0, '#fff'); gr.addColorStop(0.5, '#e8f7ff'); gr.addColorStop(1, '#bfe6ff')
@@ -96,7 +119,7 @@ export const Account = (sm: SceneManager): Scene => {
       glow(g, AMBER, 18, () => { starPath(g, cx + w / 2 + 6, by - 96, 14 * k1); g.fillStyle = '#fff6d6'; g.fill() })
       slant(g, cx - 210, by + 26, 420, 5, 2); g.fillStyle = accentFill(g, cx - 210, 420); g.fill()
       g.font = `15px ${FONT}`; g.fillStyle = '#eaf6ff'
-      g.fillText(mode === 'profile' ? `ID  ${account.id}  ·  ${settings.keyMode}K` : mode === 'login' ? '로그인하면 온라인 랭킹에 기록이 올라갑니다' : '아이디와 비밀번호로 내 계정을 만듭니다', cx, by + 62)
+      g.fillText(mode === 'profile' ? `ID  ${account.id}  ·  ${settings.keyMode}K` : mode === 'nick' ? '랭킹과 래더에 보이는 이름을 바꿉니다 (하루에 한 번)' : mode === 'pass' ? '비밀번호를 바꾸면 다른 기기의 로그인은 풀립니다' : mode === 'login' ? '로그인하면 온라인 랭킹에 기록이 올라갑니다' : '아이디와 비밀번호로 내 계정을 만듭니다', cx, by + 62)
       g.globalAlpha = 1
 
       // 오른쪽: 비스듬한 띠. 고른 줄은 주황으로 길게 뻗는다
@@ -120,7 +143,7 @@ export const Account = (sm: SceneManager): Scene => {
           if (!on0) { // 고른 줄은 진짜 입력 칸이 이 자리에 얹힌다
             const v = vals[r.kind as keyof typeof vals]
             g.font = `700 22px ${FONT}`; g.fillStyle = v ? '#fff' : 'rgba(255,255,255,.3)'
-            g.fillText(v ? (r.kind === 'pw' || r.kind === 'pw2' ? '•'.repeat(v.length) : v) : '—', x + 46, y + 51)
+            g.fillText(v ? (isSecret(r.kind) ? '•'.repeat(v.length) : v) : '—', x + 46, y + 51)
           }
         } else {
           g.fillStyle = r.kind === 'go' && !on ? AMBER : '#fff'; g.font = `${on ? 800 : 600} ${(22 + 3 * k).toFixed(1)}px ${FONT}`
@@ -129,10 +152,19 @@ export const Account = (sm: SceneManager): Scene => {
           if (on) { g.textAlign = 'right'; g.font = `800 22px ${FONT}`; g.fillStyle = '#fff'; g.fillText('▶', x + w - 34, y + 40) }
         }
       })
-      // 안내·오류: 띠 아래
-      g.textAlign = 'left'; g.font = `700 14px ${FONT}`
-      g.fillStyle = msg ? (bad ? '#ffd0d0' : AMBER) : ICE
-      g.fillText(msg || TIPS[rows()[focus]?.kind] || '', 776, top + n * PITCH + 18)
+      // 안내·오류: 띠 아래의 눈에 띄는 상자. 오류는 빨간 상자가 살짝 흔들리며 나타나고, 평소에는 이 칸의 입력 안내를 보여 준다
+      const text = msg || TIPS[rows()[focus]?.kind] || ''
+      if (text) {
+        const age = Math.min(1, (now - msgAt) / 260), shake = msg && bad ? Math.sin(age * 22) * 7 * (1 - age) : 0, bw = 440, pad = 18
+        g.font = `800 ${msg ? 17 : 15}px ${FONT}`
+        const lines = wrap(g, (msg && bad ? '⚠  ' : '') + text, bw - pad * 2 - 10), bh = 22 + lines.length * 24, bx = 770 + shake, by = top + n * PITCH + 4
+        g.globalAlpha = m * (msg ? 0.4 + 0.6 * age : 1)
+        slant(g, bx, by, bw, bh, 14); g.fillStyle = msg ? (bad ? 'rgba(168,28,52,.94)' : 'rgba(8,24,70,.92)') : 'rgba(8,24,70,.78)'; g.fill()
+        g.lineWidth = msg ? 2 : 1; g.strokeStyle = msg ? (bad ? '#ffb3bd' : AMBER) : 'rgba(255,255,255,.3)'; g.stroke()
+        g.textAlign = 'left'; g.fillStyle = msg ? '#fff' : ICE
+        lines.forEach((ln, i) => g.fillText(ln, bx + pad + 10, by + 28 + i * 24))
+        g.globalAlpha = 1
+      }
       g.globalAlpha = 1
 
       g.textAlign = 'center'; g.font = `14px ${FONT}`; g.fillStyle = '#0b2a6b'
@@ -149,7 +181,9 @@ export const Account = (sm: SceneManager): Scene => {
         const kind = rows()[focus].kind
         if (isField(kind)) { if (rows()[focus + 1]?.kind === 'go') void submit(); else focus++ } // 마지막 칸에서 Enter면 바로 보낸다
         else if (kind === 'go') void submit()
-        else if (kind === 'switch') go(mode === 'login' ? 'register' : 'login')
+        else if (kind === 'switch') go(mode === 'nick' || mode === 'pass' ? 'profile' : mode === 'login' ? 'register' : 'login')
+        else if (kind === 'rename') go('nick')
+        else if (kind === 'repass') go('pass')
         else if (kind === 'logout') void logout().then(() => go('login'))
         else leave()
       }

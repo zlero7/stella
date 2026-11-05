@@ -1,6 +1,9 @@
 // 계정 성장: 레벨·경험치, 래더 티어(LP), DJ CLASS, 꾸미기 해금. 값은 전부 서버가 정하고 앱은 받아서 그리기만 한다.
 // 순수 함수라서 progress.test.mjs로 확인한다. user는 {exp, plays, fcs, aps, lp, wins, losses, draws, bests, plate, title} 모양 (없는 칸은 0으로 본다)
 
+// 닉네임 비교용 키: 대소문자·전각/반각·공백·_·-를 무시한다 ("Nova", "nova", "N o v a", "ｎｏｖａ", "nova_"는 같은 이름으로 본다)
+export const nickKey = n => n.normalize('NFKC').toLowerCase().replace(/[\s_-]/g, '')
+
 // ── 레벨 ──
 export const MAX_LEVEL = 999
 export const expToNext = lv => 100 + 10 * lv // 레벨 lv → lv+1 에 필요한 경험치

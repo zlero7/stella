@@ -35,6 +35,9 @@ export const loggedIn = () => !!account.token
 export const forget = () => { account.token = account.id = account.nick = ''; saveAccount() } // 로컬 정보만 지운다 (토큰이 서버에서 만료됐을 때도 쓴다)
 export const register = (id: string, pw: string, nick: string) => call('auth/register', { id, pw, nick }).then(keep)
 export const login = (id: string, pw: string) => call('auth/login', { id, pw }).then(keep)
+// 닉네임·비밀번호 변경 (규칙·중복·횟수 제한은 서버가 확인한다). 비밀번호를 바꾸면 다른 기기는 로그아웃된다
+export const changeNick = (nick: string) => api<{ id: string; nick: string }>('profile/nick', { nick }).then(keep)
+export const changePassword = (old: string, pw: string) => api('profile/password', { old, pw })
 export const logout = async () => { const t = account.token; forget(); if (t) await call('auth/logout', {}, t).catch(() => {}) }
 // 시작할 때: 저장된 토큰이 아직 유효한지 확인한다. 서버가 거절(401)할 때만 로그아웃시키고, 못 닿으면 그대로 둔다
 export const verify = () => account.token
