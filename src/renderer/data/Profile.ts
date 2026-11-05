@@ -1,0 +1,29 @@
+import { api } from './Account'
+import { account } from './Storage'
+
+// 내 프로필(레벨·티어·DJ CLASS·꾸미기). 값은 전부 서버가 계산해서 주고, 앱은 받아서 그리기만 한다. 로그인 안 했거나 서버에 못 닿으면 undefined
+export interface Item { id: string; name: string; need: string; on: boolean }
+export interface Profile {
+  id: string; nick: string; level: number; cur: number; need: number; exp: number; plays: number; fcs: number; aps: number
+  lp: number; tier: string; div: number; pt: number; tierLabel: string; wins: number; losses: number; draws: number
+  cls: { idx: number; name: string; sub: number; points: number; lo: number; hi: number; label: string }
+  plate: string; title: string; titleName: string; plates: Item[]; titles: Item[]
+}
+export const prof: { v?: Profile } = {}
+
+export const refreshProfile = () => account.token
+  ? api<Profile>('profile/me').then(p => { prof.v = p; return p }, () => prof.v)
+  : Promise.resolve(((prof.v = undefined), undefined))
+export const equip = (kind: 'plate' | 'title', id: string) => api<Profile>('profile/equip', { [kind]: id }).then(p => { prof.v = p; return p })
+
+// 래더 결과: 판이 끝나면 내 결과를 올리고, 상대 결과가 올 때까지 조금씩 물어본다
+export interface LadderResult { state: 'wait' | 'none' | 'done'; result?: 'WIN' | 'LOSE' | 'DRAW'; delta?: number; lp?: number; tierLabel?: string }
+export const reportLadder = (mid: string, score: number, failed: boolean) => api('ladder/report', { mid, score, failed })
+export const ladderResult = (mid: string) => api<LadderResult>(`ladder/result?mid=${encodeURIComponent(mid)}`)
+
+// 티어·클래스·플레이트 색 (그림용)
+export const TIER_COLOR: Record<string, string> = { IRON: '#9aa3b5', BRONZE: '#d08a4a', SILVER: '#d4deef', GOLD: '#ffcf4a', PLATINUM: '#6fe0d0', DIAMOND: '#7ab8ff', MASTER: '#d98cff' }
+export const PLATE_COLOR: Record<string, [string, string]> = {
+  default: ['#2b6ee0', '#7ad8ff'], aurora: ['#1fb88a', '#3a7bff'], nova: ['#ff7a59', '#ff5c8a'], eclipse: ['#3b2a78', '#c06bff'],
+  galaxy: ['#1b2b6b', '#7a5bff'], crown: ['#d9a300', '#ffe27a'], supernova: ['#ff3d6e', '#ffb13b']
+}

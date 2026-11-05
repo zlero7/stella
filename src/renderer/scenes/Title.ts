@@ -1,8 +1,10 @@
 import type { Scene, SceneManager } from '../core/SceneManager'
 import { account, settings } from '../data/Storage'
+import { prof, refreshProfile } from '../data/Profile'
+import { profileCard } from '../render/profileCard'
 import { FONT, AMBER, accentFill, drawBg, slant, glow, hit, press, starPath, ease } from '../render/theme'
 
-const ITEMS: [string, string][] = [['START', '곡 선택'], ['VERSUS', '친구와 대결'], ['ACCOUNT', ''], ['SETTINGS', '환경 설정'], ['EXIT', '종료']] // ACCOUNT의 설명은 로그인 상태에 따라 바뀐다
+const ITEMS: [string, string][] = [['START', '곡 선택'], ['LADDER', '랭크 매치 · 밴픽'], ['VERSUS', '친구와 대결'], ['COLLECTION', '프로필 · DJ CLASS · 꾸미기'], ['ACCOUNT', ''], ['SETTINGS', '환경 설정'], ['EXIT', '종료']] // ACCOUNT의 설명은 로그인 상태에 따라 바뀐다
 const ign = (k: string) => /^(Shift|Control|Alt|Meta|CapsLock|NumLock|F\d+)$/.test(k) // 이 키로는 시작 화면을 넘기지 않는다
 let seen = false // 처음 켰을 때만 "PRESS ANY KEY" 화면을 거친다 (설정 등에서 돌아오면 바로 메뉴)
 
@@ -10,7 +12,7 @@ export const Title = (sm: SceneManager): Scene => {
   let sel = 0, menu = false, since = 0
   const open = (v: boolean) => { menu = seen = v; since = performance.now() }
   return {
-    enter() { menu = seen; since = performance.now() - 1000 },
+    enter() { menu = seen; since = performance.now() - 1000; void refreshProfile() },
     render(g) {
       drawBg(g)
       if (!menu) hit(0, 0, 1280, 720, () => press(' ')) // 시작 화면: 아무 데나 누르면 메뉴로
@@ -87,8 +89,9 @@ export const Title = (sm: SceneManager): Scene => {
       // 메뉴: 오른쪽에서 밀려 들어오는 비스듬한 세로 띠. 고른 줄은 주황으로 길게 뻗는다
       if (m > 0) {
         g.globalAlpha = m
+        profileCard(g, 40, 24, prof.v)
         ITEMS.forEach(([name, sub], i) => {
-          const k = ease('title' + i, i === sel), on = k > 0.5, h = 68, w = 440 + 40 * k, x = 770 - 40 * k + (1 - m) * 160, y = 196 + i * (h + 14)
+          const k = ease('title' + i, i === sel), on = k > 0.5, h = 58, w = 440 + 40 * k, x = 770 - 40 * k + (1 - m) * 160, y = 360 - (ITEMS.length * 68 - 10) / 2 + i * 68
           slant(g, x, y, w, h, 22); g.fillStyle = 'rgba(8,24,70,.74)'; g.fill()
           g.strokeStyle = `rgba(255,255,255,${0.3 * (1 - k)})`; g.lineWidth = 1; g.stroke()
           if (k > 0.01) {
@@ -100,10 +103,10 @@ export const Title = (sm: SceneManager): Scene => {
           if (m > 0.6) hit(x, y, w, h, () => { sel = i; press('Enter') }, () => { sel = i }) // 위에 올리면 고르고, 누르면 실행
           g.textAlign = 'left'
           g.fillStyle = '#fff'; g.font = `${on ? 800 : 600} ${(24 + 3 * k).toFixed(1)}px ${FONT}`
-          g.fillText(name.split('').join(' '), x + 46, y + 32)
+          g.fillText(name.split('').join(' '), x + 46, y + 29)
           g.font = `${(14 + k).toFixed(1)}px ${FONT}`; g.fillStyle = `rgba(255,255,255,${0.65 + 0.35 * k})`
-          g.fillText(name === 'ACCOUNT' ? (account.token ? `${account.nick}  ·  내 계정` : '로그인 / 회원가입') : sub, x + 46, y + 55)
-          if (on) { g.textAlign = 'right'; g.font = `800 22px ${FONT}`; g.fillStyle = '#fff'; g.fillText('▶', x + w - 34, y + 42) }
+          g.fillText(name === 'ACCOUNT' ? (account.token ? `${account.nick}  ·  내 계정` : '로그인 / 회원가입') : sub, x + 46, y + 49)
+          if (on) { g.textAlign = 'right'; g.font = `800 22px ${FONT}`; g.fillStyle = '#fff'; g.fillText('▶', x + w - 34, y + 37) }
         })
         g.textAlign = 'center'; g.font = `14px ${FONT}`; g.fillStyle = '#0b2a6b'
         g.fillText('↑ ↓  선택   ·   Enter  확인   ·   Esc  뒤로', 640, 696)
@@ -120,6 +123,8 @@ export const Title = (sm: SceneManager): Scene => {
       else if (e.key === 'Enter') {
         const name = ITEMS[sel][0]
         if (name === 'START') sm.go('select', { mode: 'play' })
+        else if (name === 'LADDER') sm.go('ladder')
+        else if (name === 'COLLECTION') sm.go('collection')
         else if (name === 'VERSUS') sm.go('vs')
         else if (name === 'ACCOUNT') sm.go('account')
         else if (name === 'SETTINGS') sm.go('settings', { back: 'title' })

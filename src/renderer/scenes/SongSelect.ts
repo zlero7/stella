@@ -1,5 +1,7 @@
 import type { Scene, SceneManager } from '../core/SceneManager'
 import type { Chart, Song } from '../../shared/types'
+import { prof } from '../data/Profile'
+import { profileCard } from '../render/profileCard'
 import { FONT, CYAN, AMBER, NOTE_COLORS, accentFill, artOf, drawBg, drawCover, ease, fit, glow, hit, marquee, overRect, pill, press, starPath, chip } from '../render/theme'
 import { chartFile, diffName, diffsOf, ensureSong, loadSongs, songUrl } from '../data/Songs'
 import { needsRegen } from '../game/AutoChart'
@@ -135,20 +137,20 @@ export const SongSelect = (sm: SceneManager): Scene => {
       glow(g, AMBER, 10, () => { starPath(g, 52, 34, 13); g.fillStyle = '#fff6d6'; g.fill() })
       g.font = `900 28px ${FONT}`; g.fillStyle = '#fff'; g.fillText('STELLA', 78, 44)
       if (searching || query) {
-        hit(232, 16, 778, 36, () => openSearch(true))
-        pill(g, 232, 16, 778, 36, 'rgba(8,24,70,.7)'); g.strokeStyle = searching ? CYAN : 'rgba(255,255,255,.45)'; g.lineWidth = searching ? 2.5 : 1.5; g.stroke()
+        hit(232, 16, 698, 36, () => openSearch(true))
+        pill(g, 232, 16, 698, 36, 'rgba(8,24,70,.7)'); g.strokeStyle = searching ? CYAN : 'rgba(255,255,255,.45)'; g.lineWidth = searching ? 2.5 : 1.5; g.stroke()
         g.font = `800 14px ${FONT}`; g.fillStyle = CYAN; g.fillText('SEARCH', 252, 40)
         g.font = `700 18px ${FONT}`; g.fillStyle = '#fff'
         const shown = fit(g, query, 560) + (searching && Math.floor(performance.now() / 500) % 2 === 0 ? '|' : '')
         g.fillText(shown || (searching ? '' : '(검색어 없음)'), 330, 41)
-        g.font = `700 13px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.7)'; g.textAlign = 'right'; g.fillText(`${songs.length}곡  ·  ${searching ? 'Enter 확인  Esc 지우기' : 'F2 수정  Esc 지우기'}`, 996, 40); g.textAlign = 'left'
+        g.font = `700 13px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.7)'; g.textAlign = 'right'; g.fillText(`${songs.length}곡  ·  ${searching ? 'Enter 확인  Esc 지우기' : 'F2 수정  Esc 지우기'}`, 916, 40); g.textAlign = 'left'
       } else {
         const ci = Math.max(cats.indexOf(cat), 0)
         let px = 270
         g.font = `800 17px ${FONT}`
         for (let k = -1; k <= 4 && k < cats.length; k++) {
           const c = cats[(ci + k + cats.length) % cats.length], label = fit(g, c === 'ALL' ? '전체' : c, 150), w = g.measureText(label).width + 36
-          if (px + w > 1010) break
+          if (px + w > 930) break
           if (k !== 0) hit(px, 16, w, 36, () => { cat = c; applyCat() }) // 탭을 누르면 그 가수로
           if (k === 0) glow(g, CYAN, 12, () => pill(g, px, 16, w, 36, accentFill(g, px, w)))
           else { pill(g, px, 16, w, 36, 'rgba(8,24,70,.55)'); g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 1.5; g.stroke() }
@@ -157,7 +159,8 @@ export const SongSelect = (sm: SceneManager): Scene => {
         }
         g.font = `700 14px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.7)'; g.fillText('TAB', 232, 40)
       }
-      g.font = `800 16px ${FONT}`; g.textAlign = 'right'; g.fillStyle = AMBER; g.fillText(`${vsMode ? 'VERSUS' : 'FREESTYLE'}  ·  ${settings.keyMode}K`, 1240, 36); g.textAlign = 'left'
+      hit(940, 2, 300, 64, () => leave('collection')) // 오른쪽 위 프로필 카드 (디맥처럼): 누르면 컬렉션
+      profileCard(g, 940, 2, prof.v); g.textAlign = 'left'
 
       if (!song) {
         g.font = `24px ${FONT}`; g.fillStyle = '#9ab'; g.textAlign = 'center'

@@ -1,7 +1,9 @@
 import type { Scene, SceneManager } from '../core/SceneManager'
 import type { Song } from '../../shared/types'
 import { ScoreKeeper } from '../game/ScoreKeeper'
-import { closeVersus, send, vs } from '../core/Versus'
+import { closeVersus, send, sleep, vs } from '../core/Versus'
+import { TIER_COLOR, ladderResult, refreshProfile, reportLadder, type LadderResult } from '../data/Profile'
+import { gem } from '../render/profileCard'
 import { settings } from '../data/Storage'
 import { diffName } from '../data/Songs'
 import { FONT, AMBER, CYAN, ICE, artOf, card, chip, drawBg, drawCover, fit, glow, meter, pill } from '../render/theme'
@@ -11,11 +13,12 @@ interface D { song: Song; diff: string; sk: ScoreKeeper; failed?: boolean; keys:
 const fmt = (n: number) => String(n).padStart(7, '0')
 
 export const VsResult = (sm: SceneManager): Scene => {
-  let d: D
+  let d: D, lad: LadderResult | undefined, polling = 0 // lad: 래더면 서버가 판정한 결과 (LP 변화)
   const mine = () => ({ s: d.sk.score, a: d.sk.accuracy, mc: d.sk.maxCombo, failed: !!d.failed, rank: d.failed ? 'F' : d.sk.rank })
   // 상대가 끝났거나 연결이 끊겼으면 판정 가능
   const ready = () => !!vs.peerDone || vs.closed
   const verdict = () => {
+    if (lad?.result) return lad.result // 래더는 서버의 판정이 기준
     const m = mine(), p = vs.peerDone
     if (!p) return m.failed ? 'LOSE' : 'WIN' // 상대가 끊김: 끝까지 친 쪽이 이긴다
     if (m.failed !== p.failed) return m.failed ? 'LOSE' : 'WIN'
@@ -26,6 +29,12 @@ export const VsResult = (sm: SceneManager): Scene => {
     enter(data) {
       d = data as D
       send({ t: 'done', ...mine() })
+      lad = undefined
+      const mid = vs.l?.mid, my = ++polling
+      if (mid) { // 래더: 내 결과를 서버에 올리고, 상대 결과까지 모이면 서버가 판정한다 (2초마다 물어본다)
+        void reportLadder(mid, d.sk.score, !!d.failed).catch(() => {})
+        void (async () => { for (let i = 0; i < 90 && my === polling; i++) { await sleep(2000); try { const r = await ladderResult(mid); if (r.state === 'done') { lad = r; void refreshProfile(); return } if (r.state === 'none') return } catch { /* 다음에 다시 */ } } })()
+      }
     },
     render(g) {
       const { song } = d, t = performance.now() / 1000
@@ -46,7 +55,11 @@ export const VsResult = (sm: SceneManager): Scene => {
       glow(g, v === 'WIN' ? '#ff9f1a' : 'rgba(0,0,0,0)', 22, () => pill(g, 500, 140, 280, 64, fin ? bg : 'rgba(255,255,255,.18)'))
       g.textAlign = 'center'; g.font = `900 34px ${FONT}`; g.fillStyle = '#fff'
       g.fillText(fin ? v : '상대가 치는 중…', 640, 184)
-      if (fin && !vs.peerDone) { g.font = `13px ${FONT}`; g.fillStyle = ICE; g.fillText('상대와 연결이 끊어졌습니다', 640, 226) }
+      if (fin && vs.l?.mid) { // 래더: LP 변화
+        g.font = `800 20px ${FONT}`; g.textAlign = 'center'
+        if (lad) { const c = TIER_COLOR[lad.tierLabel?.split(' ')[0] ?? ''] ?? '#fff'; gem(g, 540, 222, 12, c); g.fillStyle = (lad.delta ?? 0) >= 0 ? AMBER : '#9ab'; g.fillText(`${(lad.delta ?? 0) >= 0 ? '+' : ''}${lad.delta} LP   ·   ${lad.tierLabel}`, 650, 230) }
+        else { g.fillStyle = ICE; g.font = `700 15px ${FONT}`; g.fillText('래더 결과를 확인하는 중…', 640, 230) }
+      } else if (fin && !vs.peerDone) { g.font = `13px ${FONT}`; g.fillStyle = ICE; g.fillText('상대와 연결이 끊어졌습니다', 640, 226) }
 
       const side = (x: number, head: string, nick: string, s: { s: number; a: number; mc?: number; failed?: boolean; rank?: string }, live: boolean) => {
         card(g, x, 240, 560, 380, head)
@@ -73,11 +86,13 @@ export const VsResult = (sm: SceneManager): Scene => {
         g.fillText(`${diff >= 0 ? '+' : '-'}${Math.abs(diff).toLocaleString()}`, 640, 330 + 4 * Math.sin(t * 3))
       }
       let kx = 48
-      if (fin && !vs.closed) kx = chip(g, kx, 684, 'Enter', vs.role === 'host' ? '한 판 더 (곡 고르기)' : '로비로 (방장이 곡을 고름)')
+      if (fin && !vs.closed && vs.l) kx = chip(g, kx, 684, 'Enter', '다시 찾기')
+      else if (fin && !vs.closed) kx = chip(g, kx, 684, 'Enter', vs.role === 'host' ? '한 판 더 (곡 고르기)' : '로비로 (방장이 곡을 고름)')
       chip(g, kx, 684, 'Esc', '나가기')
     },
     keydown(e) {
       if (e.key === 'Escape') { closeVersus(); sm.go('title') }
+      else if (e.key === 'Enter' && ready() && vs.l) sm.go('ladder')
       else if (e.key === 'Enter' && ready() && !vs.closed) { if (vs.role === 'host') sm.go('select', { mode: 'versus' }); else sm.go('vs') }
     }
   }

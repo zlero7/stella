@@ -20,8 +20,19 @@ export const vs = {
   peer: fresh(), peerDone: undefined as Done | undefined, peerReady: false,
   chart: undefined as Chart | undefined, // 방장이 보낸 채보 (손님은 이걸로 친다)
   ack: undefined as boolean | undefined,
-  code: '', relayErr: '' // 중계 서버가 준 방 코드 · 서버가 알린 오류
+  code: '', relayErr: '', // 중계 서버가 준 방 코드 · 서버가 알린 오류
+  l: undefined as Ladder | undefined // 래더 진행 (대결이 아니면 없다)
 }
+// 래더: 서버가 짝을 지어 주고(l_match) 밴(l_ban)을 번갈아 한 뒤 곡이 정해지면(l_start) 곡을 받고 준비한다. l_go가 오면 대결과 같은 연결로 친다
+export interface LadderSong { dir: string; diff: string; title: string; artist: string }
+export interface LadderOpp { nick: string; level: number; tier: string; div: number; tierLabel: string; lp: number; cls: string; plate: string; titleName: string }
+export interface Ladder {
+  state: 'queue' | 'ban' | 'prep' | 'go' | 'cancel'
+  mid: string; opp?: LadderOpp; songs: LadderSong[]; banned: number[]; turn: 'you' | 'opp' | 'none'; deadline: number // deadline: 이 차례가 끝나는 시각(ms)
+  pick: number; msg: string; starting: boolean
+}
+export const newLadder = (): Ladder => ({ state: 'queue', mid: '', songs: [], banned: [], turn: 'none', deadline: 0, pick: -1, msg: '', starting: false })
+export const relayAddr = () => { const r = settings.relay?.trim(); return !r || r === '-' ? DEFAULT_RELAY : r }
 
 let sm: SceneManager
 let ws: WebSocket | undefined // 중계 서버 연결 (없으면 직접 접속)
@@ -40,7 +51,7 @@ export async function waitFor(cond: () => unknown, ms: number) {
 export function resetRound() { vs.peer = fresh(); vs.peerDone = undefined; vs.peerReady = false; vs.chart = undefined; vs.ack = undefined }
 export function closeVersus() {
   if (ws) { const s = ws; ws = undefined; s.close() }
-  window.api?.net?.close(); vs.open = false; vs.closed = false; vs.peerNick = ''; vs.code = ''; vs.relayErr = ''; resetRound()
+  window.api?.net?.close(); vs.open = false; vs.closed = false; vs.peerNick = ''; vs.code = ''; vs.relayErr = ''; vs.l = undefined; resetRound()
 }
 
 // 서버 주소를 웹소켓 주소로: 도메인은 wss(터널의 HTTPS), localhost·IP는 ws(시험용, 포트 없으면 9777)
@@ -83,6 +94,25 @@ async function onMsg(m: Msg) {
     case 'r_room': vs.code = String(m.code ?? ''); break
     case 'r_paired': vs.open = true; vs.closed = false; send({ t: 'hello', nick: settings.nick }); break
     case 'r_err': vs.relayErr = String(m.msg ?? '연결하지 못했습니다'); break
+    case 'l_wait': vs.l ??= newLadder(); break
+    case 'l_match': {
+      const l = vs.l ??= newLadder(), songs = Array.isArray(m.songs) ? (m.songs as LadderSong[]).slice(0, 5) : []
+      Object.assign(l, { state: 'ban', mid: String(m.mid ?? ''), opp: m.opp as LadderOpp, songs, banned: [], turn: m.turn === 'you' ? 'you' : 'opp', deadline: performance.now() + num(m.tleft, 15) * 1000 })
+      vs.peerNick = l.opp?.nick ?? ''
+      break
+    }
+    case 'l_ban': if (vs.l) { vs.l.banned.push(num(m.idx, -1)); vs.l.turn = m.turn === 'you' ? 'you' : m.turn === 'opp' ? 'opp' : 'none'; vs.l.deadline = performance.now() + num(m.tleft) * 1000 } break
+    case 'l_start': { // 곡이 정해졌다: 이 PC에 없으면 서버에서 받고 준비를 알린다
+      const l = vs.l; if (!l) break
+      l.state = 'prep'; l.pick = num(m.idx, -1); l.starting = true
+      const song = (await loadSongs()).find(s => s.dir === m.dir)
+      let ok = !!song && !!song.meta.audio
+      if (ok) try { await ensureSong(song!, () => {}) } catch { ok = false }
+      if (!ok) { l.state = 'cancel'; l.msg = '곡을 받지 못했습니다'; break }
+      send({ t: 'l_ready' }); break
+    }
+    case 'l_cancel': if (vs.l) { vs.l.state = 'cancel'; vs.l.msg = String(m.msg ?? '매치가 취소됐습니다') } break
+    case 'l_go': if (vs.l) { vs.role = m.role === 'host' ? 'host' : 'guest'; vs.l.state = 'go' } break
     case 'hello': vs.peerNick = String(m.nick ?? '').slice(0, 16) || 'PLAYER'; break
     case 'pick': { // 손님: 방장이 곡을 골랐다. 이 PC에 있으면 바로 플레이로 들어간다 (채보는 곧 방장이 보내 준다)
       const song = (await loadSongs()).find(s => s.dir === m.dir), keys = num(m.keys)

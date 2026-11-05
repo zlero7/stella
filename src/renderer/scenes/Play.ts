@@ -24,7 +24,7 @@ const isBlue =(lane: number) => lane === 0 || lane === LANES - 1
 // wait: 아직 안 침 / hold: 롱노트 누르는 중 / done: 처리 끝
 interface N extends Note { state: 'wait' | 'hold' | 'done' }
 // vs: 대결 중 (키 수는 방장이 정한 keys, 채보도 방장이 보낸 것)
-export interface PlayData { song: Song; diff: string; from?: number; vs?: boolean; keys?: number }
+export interface PlayData { song: Song; diff: string; from?: number; vs?: boolean; keys?: number; ladder?: boolean }
 
 // 노트 그림은 한 번만 만들어 두고 drawImage로 찍는다: 노트마다 shadowBlur/그라데이션을 새로 만드는 비용이 없다
 // 바깥 두 레인은 시안, 안쪽 두 레인은 흰색 (디맥 4K의 색 구분)
@@ -172,7 +172,7 @@ export const Play = (sm: SceneManager): Scene => {
     if (data.vs && vs.role === 'guest') { // 손님: 방장이 보내는 채보로 친다 (두 사람이 똑같은 채보여야 공정하다)
       await waitFor(() => vs.chart, 15000)
       chart = vs.chart
-      if (!chart) { if (my === token) leave('vs'); return }
+      if (!chart) { if (my === token) leave(data.ladder ? 'ladder' : 'vs'); return }
     } else try { chart = JSON.parse(new TextDecoder().decode(await window.api.readFile(song.dir, chartFile(data.diff)))) } catch { /* 채보 없음 */ }
     if (!chart && buf) { // 채보가 없으면 음원에서 자동 생성해 저장
       chart = buildChart(buf, data.diff, song.meta.highlights, LANES)
@@ -193,7 +193,7 @@ export const Play = (sm: SceneManager): Scene => {
     clock.volume = settings.volume
     if (data.vs) { // 둘 다 준비될 때까지 기다렸다가 같이 출발
       send({ t: 'ready' })
-      if (!(await waitFor(() => vs.peerReady, 20000)) || my !== token) { if (my === token) leave('vs'); return }
+      if (!(await waitFor(() => vs.peerReady, 20000)) || my !== token) { if (my === token) leave(data.ladder ? 'ladder' : 'vs'); return }
     }
     if (buf) clock.play(buf, 2, from ?? 0); else clock.start(2, from ?? 0)
     ready = true

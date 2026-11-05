@@ -13,6 +13,9 @@ import { Lobby } from './scenes/Lobby'
 import { VsResult } from './scenes/VsResult'
 import { Account } from './scenes/Account'
 import { verify } from './data/Account'
+import { refreshProfile } from './data/Profile'
+import { Ladder } from './scenes/Ladder'
+import { Collection } from './scenes/Collection'
 import { initVersus } from './core/Versus'
 import { clearHits, hitAt, mouse, setDispatch } from './render/theme'
 import { uiSound } from './core/Sfx'
@@ -32,8 +35,10 @@ sm.add('calib', Calibrate(sm))
 sm.add('vs', Lobby(sm))
 sm.add('vsresult', VsResult(sm))
 sm.add('account', Account(sm))
+sm.add('ladder', Ladder(sm))
+sm.add('collection', Collection(sm))
 initVersus(sm)
-void verify() // 저장된 로그인이 아직 유효한지 (서버에 못 닿으면 그대로 둔다)
+void verify().then(refreshProfile) // 저장된 로그인이 아직 유효한지 (서버에 못 닿으면 그대로 둔다), 그다음 내 프로필
 sm.go('title')
 if (import.meta.env.DEV) (window as unknown as { __sm: SceneManager }).__sm = sm // 개발 중 화면을 바로 열어 보는 용도
 

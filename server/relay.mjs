@@ -7,6 +7,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { WebSocketServer } from 'ws'
+import { applyPlay, canEquip, levelOf, profileView } from './progress.mjs'
+import { createLadder } from './ladder.mjs'
 
 const PORT = Number(process.env.PORT) || 9777
 const MAX_ROOMS = 200, WAIT_MS = 10 * 60 * 1000 // 짝이 안 맞는 방은 10분 뒤에 닫는다
@@ -76,8 +78,11 @@ const bump = (key, win) => { const now = Date.now(), b = buckets.get(key); if (!
 setInterval(() => { const now = Date.now(); for (const [k, b] of buckets) if (now - b[0] > 36e5) buckets.delete(k) }, 10 * 60 * 1000).unref()
 const issue = u => { const tok = crypto.randomBytes(32).toString('base64url'); u.tokens.push({ h: sha(tok), at: Date.now() }); while (u.tokens.length > MAX_TOKENS) u.tokens.shift(); reindex(); saveUsers(); return tok }
 const bearer = req => /^Bearer ([\w-]{43})$/.exec(req.headers.authorization ?? '')?.[1]
-const userOf = req => {
-  const tok = bearer(req); if (!tok) return null
+let usersTimer
+const saveUsersSoon = () => { clearTimeout(usersTimer); usersTimer = setTimeout(() => { try { saveUsers() } catch (e) { log('계정 저장 실패', e.message) } }, 2000) } // 경험치처럼 자주 바뀌는 값은 모아서 쓴다
+const userOf = req => userByToken(bearer(req))
+const userByToken = tok => {
+  if (!tok) return null
   const h = sha(tok), u = users[tokenIdx.get(h)], t = u?.tokens.find(t => t.h === h)
   if (!t) return null
   if (Date.now() - t.at > TOKEN_TTL) { u.tokens = u.tokens.filter(x => x !== t); reindex(); saveUsers(); return null }
@@ -136,7 +141,7 @@ const BADGES = ['ALL PERFECT', 'FULL COMBO']
 function rankApi(req, res, dir, key) {
   const json = (code, body) => { res.writeHead(code, { ...CORS, 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(body)) }
   if (!fs.existsSync(path.join(SONGS, dir, key + '.json'))) { json(404, { error: '없는 곡' }); return }
-  const id = dir + '/' + key, list = (ranks[id] ??= []), top = () => list.slice(0, 10).map(({ uid, ...r }) => r) // 계정 id는 내보내지 않는다
+  const id = dir + '/' + key, list = (ranks[id] ??= []), top = () => list.slice(0, 10).map(({ uid, ...r }) => ({ ...r, lv: levelOf(users[uid]?.exp ?? 0).level })) // 계정 id는 내보내지 않고 레벨을 붙인다
   if (req.method === 'GET') { json(200, top()); return }
   const user = userOf(req)
   if (!user) { json(401, { error: '로그인이 필요합니다' }); return }
@@ -150,13 +155,38 @@ function rankApi(req, res, dir, key) {
     const rec = { uid: user.id, nick, score, acc: +acc.toFixed(2), mc, badge: BADGES.includes(m.badge) ? m.badge : '', at: Date.now() }, cur = list.find(r => r.uid === user.id)
     if (!cur) list.push(rec); else if (score > cur.score) Object.assign(cur, rec)
     list.sort((a, b) => b.score - a.score || a.at - b.at); list.length = Math.min(list.length, TOP)
-    saveRanks(); json(200, top())
+    if (!user.lastPlay || Date.now() - user.lastPlay > 20000) { applyPlay(user, id, score, rec.badge); user.lastPlay = Date.now() } // 경험치·기록: 20초 안에 또 오는 건 세지 않는다 (곡 하나가 그보다 길다)
+    saveRanks(); saveUsersSoon(); json(200, top())
   })
+}
+
+// 프로필(레벨·티어·DJ CLASS·꾸미기)과 래더 결과 API. 모두 로그인(Bearer 토큰)이 필요하다
+const ladder = createLadder({
+  pool: () => JSON.parse(songIndex()).filter(s => s.meta.charts?.includes('4k-hard.json') && s.meta.title).map(s => ({ dir: s.dir, diff: 'hard', title: s.meta.title, artist: s.meta.artist ?? '' })),
+  save: () => saveUsersSoon(), log
+})
+setInterval(() => ladder.tick(), 2000).unref()
+async function playerApi(req, res, url) {
+  const json = (code, body) => { res.writeHead(code, { ...CORS, 'Cache-Control': 'no-store', 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(body)) }
+  const user = userOf(req)
+  if (!user) return json(401, { error: '로그인이 필요합니다' })
+  if (url === '/profile/me' && req.method === 'GET') return json(200, profileView(user))
+  if (url === '/ladder/result' && req.method === 'GET') return json(200, ladder.result(user, new URL(req.url, 'http://x').searchParams.get('mid')))
+  if (req.method !== 'POST') return json(405, { error: 'POST만 됩니다' })
+  let m; try { m = JSON.parse(await readBody(req, 512)) } catch { return json(400, { error: '형식이 올바르지 않습니다' }) }
+  if (!m || typeof m !== 'object') return json(400, { error: '형식이 올바르지 않습니다' })
+  if (url === '/profile/equip') { // 해금한 플레이트·칭호만 낄 수 있다
+    for (const [kind, key] of [['plate', 'plate'], ['title', 'title']]) if (m[key] !== undefined) { if (typeof m[key] !== 'string' || !canEquip(user, kind, m[key])) return json(400, { error: '아직 쓸 수 없는 항목입니다' }); user[key] = m[key] }
+    saveUsersSoon(); return json(200, profileView(user))
+  }
+  if (url === '/ladder/report') return json(ladder.report(user, m.mid, { score: m.score, failed: m.failed }) ? 200 : 400, {})
+  json(404, { error: '없는 주소' })
 }
 
 const server = http.createServer((req, res) => {
   const url = req.url?.split('?')[0] ?? '', song = /^\/songs\/([\w-]{1,64})\/([\w.-]{1,80})$/.exec(url), rank = /^\/rank\/([\w-]{1,64})\/([46]k-(?:easy|normal|hard|stella))$/.exec(url)
   if (req.method === 'OPTIONS') { res.writeHead(204, { ...CORS, 'Access-Control-Allow-Methods': 'GET, POST', 'Access-Control-Allow-Headers': 'Content-Type, Authorization' }); res.end(); return }
+  if (/^\/(profile\/(me|equip)|ladder\/(result|report))$/.test(url)) { playerApi(req, res, url).catch(e => { log('API 오류', e.message); if (!res.headersSent) res.writeHead(500, CORS); res.end() }); return }
   const auth = /^\/auth\/(register|login|logout|me)$/.exec(url)
   if (auth) { authApi(req, res, auth[1]).catch(e => { log('인증 오류', e.message); if (!res.headersSent) res.writeHead(500, CORS); res.end() }); return }
   if (rank && (req.method === 'GET' || req.method === 'POST')) { rankApi(req, res, rank[1], rank[2]); return }
@@ -174,11 +204,12 @@ wss.on('connection', sock => {
   sock.on('pong', () => { st.alive = true })
   sock.on('error', () => sock.terminate())
   sock.on('close', () => {
+    ladder.close(sock)
     clearTimeout(st.timer)
     if (st.code && rooms.get(st.code) === sock) rooms.delete(st.code)
     if (st.peer) { st.peer.st.peer = null; st.peer.close(); st.peer = null }
   })
-  const hello = setTimeout(() => { if (!st.code && !st.peer) sock.terminate() }, 15000) // 요청도 안 보내고 붙어 있는 연결은 끊는다
+  const hello = setTimeout(() => { if (!st.code && !st.peer && !st.ladder) sock.terminate() }, 15000) // 요청도 안 보내고 붙어 있는 연결은 끊는다
   sock.on('close', () => clearTimeout(hello))
 
   sock.on('message', (data, isBinary) => {
@@ -186,7 +217,12 @@ wss.on('connection', sock => {
     let m
     try { m = JSON.parse(data.toString()) } catch { sock.terminate(); return }
     if (st.code) return // 방장은 손님이 올 때까지 말이 없어야 한다
-    if (m.t === 'host') {
+    if (st.ladder) { ladder.message(sock, m); return } // 래더 중: 대기열·밴·준비
+    if (m.t === 'ladder') { // 래더 입장: 로그인한 계정만 (토큰은 연결 첫 메시지로 받는다)
+      const u = userByToken(typeof m.token === 'string' ? m.token : '')
+      if (!u) { send(sock, { t: 'r_err', msg: '로그인이 필요합니다' }); sock.close(); return }
+      ladder.join(sock, u)
+    } else if (m.t === 'host') {
       if (rooms.size >= MAX_ROOMS) { send(sock, { t: 'r_err', msg: '서버가 가득 찼습니다' }); sock.close(); return }
       st.code = newCode(); rooms.set(st.code, sock)
       st.timer = setTimeout(() => sock.terminate(), WAIT_MS)

@@ -9,7 +9,7 @@
     "web:build": "vite build",
     "relay": "node server/relay.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "node --test \"src/**/*.test.ts\"",
+    "test": "node --test \"src/**/*.test.ts\" server/progress.test.mjs server/ladder.test.mjs",
     "tauri": "tauri"
   },
   "devDependencies": {

@@ -5,6 +5,7 @@ import { diffName } from '../data/Songs'
 import { account, saveSettings, settings } from '../data/Storage'
 import { setBest } from '../data/Storage'
 import { fetchRank, submitRank, type RankRow } from '../data/Rank'
+import { prof, refreshProfile } from '../data/Profile'
 import { FONT, CYAN, ICE, AMBER, artOf, card, chip, drawBg, drawCover, fit, glow, meter, pill, starPath } from '../render/theme'
 
 const COLORS = [ICE, '#7dff9a', '#ffe27a', '#ffb066', '#ff8a8a', '#ff4d6d']
@@ -12,15 +13,19 @@ const COLORS = [ICE, '#7dff9a', '#ffe27a', '#ffb066', '#ff8a8a', '#ff4d6d']
 export const Result = (sm: SceneManager): Scene => {
   let applied: number | undefined // O 키로 맞춘 뒤의 판정 오프셋
   let d: { song: Song; diff: string; sk: ScoreKeeper; failed?: boolean }, isNew = false
+  let gain = 0, lvUp = 0 // 이번 판으로 받은 경험치 · 오른 레벨 (로그인했고 서버가 받아 준 경우)
   let board: RankRow[] | undefined, loading = false, showBoard = false // 온라인 순위: 서버 응답 · 받는 중 · 오른쪽 카드를 순위로 볼지(Tab)
   return {
     enter(data) {
       d = data as typeof d
       applied = undefined
       isNew = d.failed ? false : setBest(d.song.dir, d.diff, d.sk) // 체력이 다해 끝난 플레이는 기록하지 않는다
-      board = undefined; loading = true; showBoard = false
-      const mine = d // 받는 동안 화면을 떠났다 돌아와도 이전 응답이 덮지 않게
-      ;(d.failed ? fetchRank(d.song.dir, d.diff) : submitRank(d.song.dir, d.diff, d.sk)).then(b => { if (mine === d) { board = b; loading = false } })
+      board = undefined; loading = true; showBoard = false; gain = lvUp = 0
+      const mine = d, before = prof.v // 받는 동안 화면을 떠났다 돌아와도 이전 응답이 덮지 않게
+      ;(d.failed ? fetchRank(d.song.dir, d.diff) : submitRank(d.song.dir, d.diff, d.sk)).then(b => {
+        if (mine === d) { board = b; loading = false }
+        if (!d.failed && b) void refreshProfile().then(after => { if (mine === d && before && after && after.exp > before.exp) { gain = after.exp - before.exp; lvUp = after.level - before.level } })
+      })
     },
     render(g) {
       const { song, sk } = d, t = performance.now() / 1000
@@ -76,6 +81,10 @@ export const Result = (sm: SceneManager): Scene => {
         g.fillStyle = tag === 'ALL PERFECT' ? '#3a2a00' : '#fff'; g.fillText(tag, cx, 378)
       }
       card(g, 460, 418, 360, 178, 'SCORE')
+      if (gain) { // 경험치 칩 (레벨이 오르면 함께)
+        g.font = `800 13px ${FONT}`; const t1 = lvUp > 0 ? `EXP +${gain}  ·  LEVEL UP  Lv ${prof.v?.level}` : `EXP +${gain}`, w = g.measureText(t1).width + 28
+        pill(g, 480, 430, w, 26, lvUp > 0 ? '#9b6bff' : 'rgba(155,107,255,.75)'); g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText(t1, 480 + w / 2, 448)
+      }
       if (isNew) { // 신기록 칩: 디맥처럼 주황
         g.font = `800 13px ${FONT}`; const w = g.measureText('NEW RECORD').width + 28
         pill(g, 460 + 360 - 20 - w, 430, w, 26, '#ff9f1a'); g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText('NEW RECORD', 460 + 360 - 20 - w / 2, 448)
