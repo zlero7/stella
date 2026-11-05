@@ -33,8 +33,8 @@ export function profileCard(g: CanvasRenderingContext2D, x: number, y: number, p
   g.font = `600 ${big ? 13 : 11}px ${FONT}`; g.fillStyle = p ? AMBER : 'rgba(255,255,255,.7)'
   g.fillText(fit(g, p ? p.titleName || 'STELLA' : '로그인하면 레벨이 올라갑니다', tw), tx, y + (big ? 60 : 41))
   if (p) {
-    g.font = `800 ${big ? 15 : 12}px ${FONT}`; g.fillStyle = '#fff'; g.fillText(`Lv ${p.level}`, tx, y + (big ? 86 : 57))
-    const bx = tx + (big ? 56 : 42), bw = x + w - bx - (big ? 20 : 26), f = p.need ? p.cur / p.need : 1
+    g.font = `800 ${big ? 15 : 12}px ${FONT}`; g.fillStyle = '#fff'; const lvText = `Lv ${p.level}`; g.fillText(lvText, tx, y + (big ? 86 : 57))
+    const bx = tx + g.measureText(lvText).width + 10, bw = Math.max(20, x + w - bx - (big ? 20 : 26)), f = p.need ? p.cur / p.need : 1 // 레벨 글자 폭을 재서 막대를 그 뒤에 (Lv 999여도 겹치지 않게)
     g.fillStyle = 'rgba(255,255,255,.22)'; g.beginPath(); g.roundRect(bx, y + (big ? 76 : 50), bw, big ? 10 : 7, 5); g.fill()
     const eg = g.createLinearGradient(bx, 0, bx + bw, 0); eg.addColorStop(0, '#9b6bff'); eg.addColorStop(1, '#ff7ad8')
     g.fillStyle = eg; g.beginPath(); g.roundRect(bx, y + (big ? 76 : 50), Math.max(bw * f, 6), big ? 10 : 7, 5); g.fill()
