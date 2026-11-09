@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { ScoreKeeper, judgeOf, pickTarget, MISS } from './ScoreKeeper.ts'
+import { ScoreKeeper, judgeOf, pickTarget, comboMult, MISS } from './ScoreKeeper.ts'
 
 test('판정 경계', () => {
   assert.equal(judgeOf(0.055), 0)
@@ -24,7 +24,9 @@ test('미스는 콤보를 끊고 비중 0', () => {
   s.add(0); s.add(0); s.add(MISS); s.add(1)
   assert.equal(s.maxCombo, 2)
   assert.equal(s.combo, 1)
-  assert.equal(s.score, Math.round(1_000_000 * 2.7 / 4))
+  const m = comboMult, den = m(1) + m(2) + m(3) + m(4)
+  assert.equal(s.score, Math.round(1_000_000 * (m(1) + m(2) + 0.7 * m(1)) / den))
+  assert.equal(s.accuracy, 100 * 2.7 / 4)
   assert.equal(s.badge, '')
 })
 
@@ -79,4 +81,11 @@ test('같은 시각에 놓친 동타는 체력을 최대 8까지만 깎는다', 
   assert.equal(s.hp, 87)
   s.add(MISS) // 시각을 모르면 제한 없이 -5
   assert.equal(s.hp, 82)
+})
+
+test('콤보가 높을수록 같은 판정도 점수가 크다 (끊긴 판이 더 낮다)', () => {
+  const a = new ScoreKeeper(10), b = new ScoreKeeper(10)
+  for (let i = 0; i < 10; i++) { a.add(i === 5 ? 1 : 0); b.add(i === 1 ? MISS : 0) }
+  assert.ok(a.score < 1_000_000 && a.score > b.score)
+  assert.equal(new ScoreKeeper(0).score, 0)
 })

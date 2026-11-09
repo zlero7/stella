@@ -29,6 +29,7 @@ export const SongSelect = (sm: SceneManager): Scene => {
   let query = '', searching = false, sortMode = 0 // 검색어(제목·가수 포함) · F2로 입력 중인지 · F4 정렬: 0 서버 순서, 1 제목, 2 가수
   let inp: HTMLInputElement | undefined // 한글(IME)도 받으려고 화면 밖 입력칸을 쓴다. 캔버스에는 검색창만 그린다
   const SORTS = ['기본 순서', '제목순', '가수순']
+  const PRACTICE = [0, 0.25, 0.5, 0.75]; let prac = 0 // F5: 연습 시작 위치 (곡의 0·25·50·75%). 0이 아니면 점수·EXP는 기록되지 않는다
   const pending = new Set<string>() // 워커가 만드는 중인 곡+난이도+키 수
   const pk = (dir: string, d: string, keys = settings.keyMode) => `${keys}|${dir}|${d}`
   let media: HTMLMediaElement | undefined
@@ -276,7 +277,7 @@ export const SongSelect = (sm: SceneManager): Scene => {
       // 아래 안내
       g.fillStyle = 'rgba(6,18,56,.55)'; g.fillRect(0, 676, 1280, 44); g.fillStyle = 'rgba(255,255,255,.25)'; g.fillRect(0, 676, 1280, 1)
       {
-        const hints: [string, string][] = [['↑↓', '곡'], ['←→', '난이도'], ['Tab', '가수'], ['F2', '검색'], ['F4', '정렬'], ['F3', '4/6키'], ['Enter', '시작'], ['F1', '설정'], ['Esc', '뒤로']]
+        const hints: [string, string][] = [['↑↓', '곡'], ['←→', '난이도'], ['Tab', '가수'], ['F2', '검색'], ['F4', '정렬'], ['F3', '4/6키'], ['F5', '연습'], ['Enter', '시작'], ['F1', '설정'], ['Esc', '뒤로']]
         let hx = 440
         for (const [k, label] of hints) hx = chip(g, hx, 692, k, label, '#fff', k === '↑↓' || k === '←→' ? null : undefined)
       }
@@ -311,9 +312,10 @@ export const SongSelect = (sm: SceneManager): Scene => {
       else if (e.key === 'Tab') { e.preventDefault(); if (!e.repeat) { cat = cats[(cats.indexOf(cat) + (e.shiftKey ? cats.length - 1 : 1)) % cats.length]; applyCat() } }
       else if (e.key === 'Enter' && songs[idx]) { // 서버에서 받아야 하는 곡·대결은 로딩 화면을 거친다 (대결은 손님에게 곡을 알리고, 손님이 받아 두면 시작)
         const s = songs[idx], d = diffs()[di], keys = settings.keyMode
-        if (!s.remote && !vsMode) { leave('play', { song: s, diff: d }); return }
+        const fromPct = vsMode ? 0 : PRACTICE[prac]
+        if (!s.remote && !vsMode) { leave('play', { song: s, diff: d, fromPct }); return }
         leave('loading', {
-          song: s, sub: `${keys}K · ${diffName(d)}`, next: 'play', nextData: vsMode ? { song: s, diff: d, vs: true, keys } : { song: s, diff: d },
+          song: s, sub: `${keys}K · ${diffName(d)}`, next: 'play', nextData: vsMode ? { song: s, diff: d, vs: true, keys } : { song: s, diff: d, fromPct },
           back: 'select', backData: { mode: vsMode ? 'versus' : 'play', focus: s.dir },
           run: async (progress: (p: number) => void, signal: AbortSignal) => {
             await ensureSong(s, progress, signal)
@@ -322,6 +324,7 @@ export const SongSelect = (sm: SceneManager): Scene => {
         })
       }
       else if (e.key === 'F3') { settings.keyMode = settings.keyMode === 6 ? 4 : 6; saveSettings(); di = Math.min(di, diffs().length - 1); schedulePreview() } // 4키 ↔ 6키
+      else if (e.key === 'F5' && !vsMode) { prac = (prac + 1) % PRACTICE.length; note = prac ? `연습: 곡의 ${PRACTICE[prac] * 100}%부터 (기록 안 됨)` : '연습 끔'; noteAt = performance.now() + 1500 }
       else if (e.key === 'F1') leave('settings', { back: 'select', backData: vsMode ? { mode: 'versus' } : undefined })
       else if (e.key === 'Escape') leave(vsMode ? 'vs' : 'title')
       else if (/^[a-z0-9]$/i.test(e.key) && !e.ctrlKey && !e.altKey && !e.metaKey && songs.length > 1) { // 글자·숫자 키: 그 글자로 시작하는 다음 곡으로 건너뛴다

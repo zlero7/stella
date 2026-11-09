@@ -25,7 +25,7 @@ const isBlue =(lane: number) => lane === 0 || lane === LANES - 1
 // wait: 아직 안 침 / hold: 롱노트 누르는 중 / done: 처리 끝
 interface N extends Note { state: 'wait' | 'hold' | 'done' }
 // vs: 대결 중 (키 수는 방장이 정한 keys, 채보도 방장이 보낸 것)
-export interface PlayData { song: Song; diff: string; from?: number; vs?: boolean; keys?: number; ladder?: boolean }
+export interface PlayData { song: Song; diff: string; from?: number; fromPct?: number; vs?: boolean; keys?: number; ladder?: boolean }
 
 // 노트 그림은 한 번만 만들어 두고 drawImage로 찍는다: 노트마다 shadowBlur/그라데이션을 새로 만드는 비용이 없다
 // 바깥 두 레인은 시안, 안쪽 두 레인은 흰색 (디맥 4K의 색 구분)
@@ -66,7 +66,7 @@ const demoNotes = (): Note[] =>
 export const Play = (sm: SceneManager): Scene => {
   const clock = new AudioClock()
   let data: PlayData, song: Song, ns: N[] = [], endTime = 1, dur = 1, sk = new ScoreKeeper(0)
-  let ready = false, finished = false, paused = false, pSel = 0, token = 0
+  let practice = false, ready = false, finished = false, paused = false, pSel = 0, token = 0
   // 체력이 다하면 DIE_S초 동안 노트 속도와 소리가 점점 느려지다가 결과 화면으로 넘어간다. dying = 시작한 시각(ms), dyT0 = 그때의 곡 시각
   const DIE_S = 1.6
   let dying = 0, dyT0 = 0, sentAt = 0
@@ -182,9 +182,10 @@ export const Play = (sm: SceneManager): Scene => {
     }
     if (my !== token) return // 로딩 중 나갔음
     if (data.vs && vs.role === 'host' && chart) send({ t: 'chart', chart })
-    const from = data.from
+    const from = data.from ?? (data.fromPct ? Math.floor((buf?.duration ?? 0) * data.fromPct) : undefined) // 연습: 곡의 몇 %부터
+    practice = from !== undefined
     spd = speedTable(chart?.speeds)
-    const notes = cleanChart(chart?.notes ?? demoNotes(), LANES).notes.filter(n => from === undefined || n.time >= from + 0.5)
+    const notes = cleanChart(chart?.notes ?? demoNotes(), LANES).notes.filter(n => from === undefined || n.time >= from + 0.5).map(n => settings.mirror ? { ...n, lane: LANES - 1 - n.lane } : n) // 미러: 좌우 반전
     ns = notes.map(n => ({ ...n, state: 'wait' as const })).sort((a, b) => a.time - b.time)
     head = 0
     sk = new ScoreKeeper(ns.reduce((s, n) => s + (n.duration ? 2 : 1), 0))
@@ -232,7 +233,7 @@ export const Play = (sm: SceneManager): Scene => {
       if (resumeAt && performance.now() >= resumeAt) { resumeAt = 0; clock.resume() }
       if (!ready || paused || resumeAt || finished) return
       if (dying) { // 느려지는 중: 판정은 멈추고, 끝나면 결과로
-        if (performance.now() - dying > (DIE_S + 0.4) * 1000) { finished = true; clock.stop(); dropVideo(); sm.go(data.vs ? 'vsresult' : 'result', { song, diff: data.diff, sk, failed: true, keys: LANES }) }
+        if (performance.now() - dying > (DIE_S + 0.4) * 1000) { finished = true; clock.stop(); dropVideo(); sm.go(data.vs ? 'vsresult' : 'result', { song, diff: data.diff, sk, failed: true, keys: LANES, practice }) }
         return
       }
       if (data.vs) { // 점수를 상대에게 알린다 (0.15초마다). 상대가 나가 버리면 지금까지의 결과로 끝낸다
@@ -254,7 +255,7 @@ export const Play = (sm: SceneManager): Scene => {
       if (sk.failed) { dying = performance.now(); dyT0 = t; down.clear(); clock.slowStop(DIE_S); return }
       if (t > endTime) {
         finished = true; clock.stop(); dropVideo()
-        sm.go(data.vs ? 'vsresult' : 'result', { song, diff: data.diff, sk, keys: LANES })
+        sm.go(data.vs ? 'vsresult' : 'result', { song, diff: data.diff, sk, keys: LANES, practice })
       }
     },
     render(g) {
@@ -282,7 +283,7 @@ export const Play = (sm: SceneManager): Scene => {
       g.fillStyle = edgeGr!; g.fillRect(FIELD_X - 4, 0, 2, 720); g.fillRect(FIELD_X + fw + 2, 0, 2, 720)
       g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(FIELD_X - 16, 0, 1, 720); g.fillRect(FIELD_X + fw + 15, 0, 1, 720)
       g.save(); g.font = `900 30px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.06)'; g.textAlign = 'center'
-      for (const [sx, dir] of [[FIELD_X + 20, -1], [FIELD_X + fw - 20, 1]] as const) { g.save(); g.translate(sx, 340); g.rotate(dir * Math.PI / 2); g.fillText('C O M B O   X ' + Math.max(1, Math.floor(sk.combo / 50) + 1), 0, 10); g.restore() }
+      for (const [sx, dir] of [[FIELD_X + 20, -1], [FIELD_X + fw - 20, 1]] as const) { g.save(); g.translate(sx, 340); g.rotate(dir * Math.PI / 2); g.fillText('C O M B O   X ' + sk.mult.toFixed(2), 0, 10); g.restore() }
       g.restore()
       g.fillStyle = 'rgba(255,255,255,.07)'
       for (let l = 1; l < LANES; l++) g.fillRect(FIELD_X + l * LANE_W, 0, 1, 720)

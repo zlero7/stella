@@ -12,19 +12,19 @@ const COLORS = [ICE, '#7dff9a', '#ffe27a', '#ffb066', '#ff8a8a', '#ff4d6d']
 
 export const Result = (sm: SceneManager): Scene => {
   let applied: number | undefined // O 키로 맞춘 뒤의 판정 오프셋
-  let d: { song: Song; diff: string; sk: ScoreKeeper; failed?: boolean }, isNew = false
+  let d: { song: Song; diff: string; sk: ScoreKeeper; failed?: boolean; practice?: boolean }, isNew = false
   let gain = 0, lvUp = 0 // 이번 판으로 받은 경험치 · 오른 레벨 (로그인했고 서버가 받아 준 경우)
   let board: RankRow[] | undefined, loading = false, showBoard = false // 온라인 순위: 서버 응답 · 받는 중 · 오른쪽 카드를 순위로 볼지(Tab)
   return {
     enter(data) {
       d = data as typeof d
       applied = undefined
-      isNew = d.failed ? false : setBest(d.song.dir, d.diff, d.sk) // 체력이 다해 끝난 플레이는 기록하지 않는다
+      isNew = d.failed || d.practice ? false : setBest(d.song.dir, d.diff, d.sk) // 체력이 다해 끝난 플레이는 기록하지 않는다
       board = undefined; loading = true; showBoard = false; gain = lvUp = 0
       const mine = d, before = prof.v // 받는 동안 화면을 떠났다 돌아와도 이전 응답이 덮지 않게
-      ;(d.failed ? fetchRank(d.song.dir, d.diff) : submitRank(d.song.dir, d.diff, d.sk)).then(b => {
+      ;(d.failed || d.practice ? fetchRank(d.song.dir, d.diff) : submitRank(d.song.dir, d.diff, d.sk)).then(b => {
         if (mine === d) { board = b; loading = false }
-        if (!d.failed && b) void refreshProfile().then(after => { if (mine === d && before && after && after.exp > before.exp) { gain = after.exp - before.exp; lvUp = after.level - before.level } })
+        if (!d.failed && !d.practice && b) void refreshProfile().then(after => { if (mine === d && before && after && after.exp > before.exp) { gain = after.exp - before.exp; lvUp = after.level - before.level } })
       })
     },
     render(g) {

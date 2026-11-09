@@ -25,6 +25,7 @@ const CATS: { name: string; items: Item[] }[] = [
     { label: '스크롤 속도', value: () => `${settings.scroll.toFixed(1)}  ·  ${visibleMs()}ms`, frac: () => (settings.scroll - 1) / 19, change: d => { settings.scroll = clamp(Math.round((settings.scroll + d * 0.5) * 10) / 10, 1, 20) } },
     { label: '필드 위치', value: () => ALIGNS[settings.align], change: d => { settings.align = clamp(settings.align + d, 0, 2) } },
     { label: 'FAST/SLOW 표시', value: () => (settings.fastSlow ? '켜짐' : '꺼짐'), change: () => { settings.fastSlow = settings.fastSlow ? 0 : 1 } },
+    { label: '미러', value: () => (settings.mirror ? '켜짐' : '꺼짐'), change: () => { settings.mirror = settings.mirror ? 0 : 1 } },
     { label: '싱크 보정', go: 'calib', value: () => '메트로놈으로 측정' },
     { label: '싱크 오프셋', value: () => `${settings.offset > 0 ? '+' : ''}${settings.offset} ms`, change: d => { settings.offset = clamp(settings.offset + d * 5, -300, 300) } },
     { label: '판정 오프셋', value: () => `${settings.judgeOffset > 0 ? '+' : ''}${settings.judgeOffset} ms`, change: d => { settings.judgeOffset = clamp(settings.judgeOffset + d * 5, -100, 100) } }
@@ -47,6 +48,7 @@ const DESC: Record<string, string> = {
   '스크롤 속도': '노트가 내려오는 속도입니다. 오른쪽 미리보기의 노트 가시 시간이 짧을수록 빠릅니다. 플레이 중에도 위아래 키로 바꿀 수 있습니다.',
   '필드 위치': '플레이 화면에서 노트 필드를 왼쪽, 가운데, 오른쪽 중 어디에 둘지 정합니다.',
   'FAST/SLOW 표시': '판정할 때마다 빠르게(FAST) 또는 느리게(SLOW) 쳤는지 글자로 보여 줍니다.',
+  '미러': '노트의 좌우를 뒤집습니다. 같은 채보도 다른 손 순서로 칠 수 있어 연습에 좋습니다. 랭킹 점수는 그대로 올라갑니다.',
   '싱크 보정': 'Enter를 누르면 메트로놈 소리에 맞춰 키를 눌러 판정 오프셋을 자동으로 맞춥니다. 유선 이어폰을 권장합니다.',
   '싱크 오프셋': '소리가 화면보다 늦게 들리면 +, 빠르게 들리면 − 로 맞춥니다. (5ms 단위)',
   '판정 오프셋': '쳤는데 SLOW가 많이 나오면 +, FAST가 많으면 − 로 맞춥니다. 결과 화면의 O 키로 자동 적용할 수도 있습니다.',
