@@ -324,7 +324,7 @@ export const Play = (sm: SceneManager): Scene => {
         g.textAlign = 'right'; g.font = `700 11px ${FONT}`; g.fillStyle = ICE; g.fillText('SPEED', FIELD_X + fw - 44, by + 18)
         g.font = `900 16px ${FONT}`; g.fillStyle = '#fff'; g.fillText(settings.scroll.toFixed(1), FIELD_X + fw - 4, by + 19)
         g.textAlign = 'center'; g.font = `900 22px ${FONT}`; g.fillStyle = sk.accuracy >= 100 ? '#ffe27a' : 'rgba(255,255,255,.85)'
-        g.fillText(`${sk.accuracy >= 100 ? 'MAX ' : ''}${sk.accuracy.toFixed(sk.accuracy >= 100 ? 0 : 1)}%`, FIELD_X + fw / 2, JUDGE_Y - 36); g.textAlign = 'left' }
+        if (sk.counts.some(n => n)) g.fillText(`${sk.accuracy >= 100 ? 'MAX ' : ''}${sk.accuracy.toFixed(sk.accuracy >= 100 ? 0 : 1)}%`, FIELD_X + fw / 2, JUDGE_Y - 36); g.textAlign = 'left' }
       // 체력 게이지: 기어 양옆 틀 안의 세로 막대 두 줄. 가득 → 하늘색, 절반 아래 → 금색, 25% 아래 → 깜빡이는 빨강
       dispHp += (sk.hp - dispHp) * 0.2
       const hy = 90, hh = JUDGE_Y - hy, fillH = (hh * dispHp) / 100
