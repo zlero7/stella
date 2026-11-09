@@ -4,7 +4,8 @@ import crypto from 'node:crypto'
 import { applyLadder, duelResult, publicView, tierOf } from './progress.mjs'
 
 export const TURN_MS = 15000 // 밴 한 번에 주는 시간 (넘으면 아무거나 대신 밴)
-export const READY_MS = 120000 // 곡 받는 시간
+export const READY_MS = 5 * 60 * 1000 // 곡 받는 시간 (곡 하나가 30~100MB라 느린 회선도 받을 수 있게)
+export const MIN_PLAY = 0.8 // 끝까지 친 결과는 곡 길이의 이만큼이 지나야 받는다 (치기 전에 만점을 올리는 걸 막는다)
 export const MATCH_MAX_MS = 12 * 60 * 1000 // 이 시간이 지나도록 결과가 안 오면 접는다
 export const POOL = 5, KEYS = 4
 
@@ -19,8 +20,8 @@ export function findPair(queue, now) {
 const shuffle = a => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = crypto.randomInt(i + 1);[a[i], a[j]] = [a[j], a[i]] } return a }
 const tx = (sock, o) => { try { sock.send(JSON.stringify(o)) } catch { /* 이미 끊김 */ } }
 
-// pool(): 래더에 쓸 수 있는 곡 [{dir, diff, title, artist}] · save(): 계정 저장 · now(): 시각(시험용)
-export function createLadder({ pool, save, log = () => {}, now = Date.now }) {
+// pool(): 래더에 쓸 수 있는 곡 [{dir, diff, title, artist}] · len(dir, diff): 곡을 끝까지 치는 데 걸리는 초 · save(): 계정 저장 · now(): 시각(시험용)
+export function createLadder({ pool, len = () => 0, save, log = () => {}, now = Date.now }) {
   const queue = [] // {sock, user, since}
   const matches = new Map() // mid -> 판
   const busy = id => queue.some(q => q.user.id === id) || [...matches.values()].some(m => m.phase !== 'done' && m.players.some(p => p.user.id === id))
@@ -131,6 +132,8 @@ export function createLadder({ pool, save, log = () => {}, now = Date.now }) {
       const m = matches.get(String(mid)), p = m?.players.find(p => p.user.id === user.id)
       if (!p || m.phase !== 'play' || p.rep) return false
       if (!Number.isInteger(r.score) || r.score < 0 || r.score > 1_000_000 || typeof r.failed !== 'boolean') return false
+      const s = m.songs[m.pick]
+      if (!r.failed && now() - m.playAt < len(s.dir, s.diff) * 1000 * MIN_PLAY) return false // 실패(포기)는 일찍 올 수 있다: 자기에게 불리한 쪽이라
       p.rep = { score: r.score, failed: r.failed }
       if (settled(m)) finish(m)
       return true

@@ -235,7 +235,6 @@ export function menuRow(g: CanvasRenderingContext2D, x: number, y: number, w: nu
     g.save(); g.globalAlpha *= k
     const og = g.createLinearGradient(x, 0, x + w, 0); og.addColorStop(0, '#ffb13b'); og.addColorStop(0.7, '#ff7a59'); og.addColorStop(1, '#ff5c8a')
     g.fillStyle = og; glow(g, '#ff9f1a', 18, () => { g.beginPath(); g.roundRect(x, y, w, h, 14); g.fill() })
-    g.beginPath(); g.roundRect(x, y, w, h, 14); g.clip(); g.fillStyle = '#fff'; g.fillRect(x, y, 6 * k, h) // 왼쪽 흰 띠는 둥근 모서리 안에서만
     g.restore()
   }
 }
@@ -316,5 +315,43 @@ export function marquee(g: CanvasRenderingContext2D, text: string, x: number, y:
   const span = w + 60, off = Math.max(0, (performance.now() - since) / 1000 - 0.9) * 45 % span
   g.save(); g.beginPath(); g.rect(x, y - fs * 1.1, maxW, fs * 1.5); g.clip()
   g.fillText(text, x - off, y); g.fillText(text, x - off + span, y)
+  g.restore()
+}
+
+// ---- 디맥식 화면 공통 부품: 머리띠 · 옵션 줄 · 칸 막대 · 아이콘 ----
+// 화면 위의 머리띠: 어두운 띠 + 아래 무지개빛 선 + 별. 곡 선택 화면의 머리와 같은 모양
+export function header(g: CanvasRenderingContext2D, title: string, sub = '') {
+  g.fillStyle = 'rgba(8,24,70,.86)'; g.fillRect(0, 0, 1280, 66)
+  const lg = g.createLinearGradient(0, 0, 1280, 0); lg.addColorStop(0, '#7ad8ff'); lg.addColorStop(0.6, '#b9a4ff'); lg.addColorStop(1, '#ff9ad0')
+  g.fillStyle = lg; g.fillRect(0, 64, 1280, 2)
+  glow(g, AMBER, 12, () => { starPath(g, 70, 33, 11); g.fillStyle = '#fff6d6'; g.fill() })
+  g.textAlign = 'left'; g.font = `900 26px ${FONT}`; g.fillStyle = '#fff'; g.fillText(title, 94, 42)
+  if (sub) { const tw = g.measureText(title).width; g.font = `600 13px ${FONT}`; g.fillStyle = 'rgba(230,246,255,.75)'; g.fillText(sub, 94 + tw + 16, 41) }
+}
+// 비스듬한 옵션 줄. k: 0(어두운 띠) ~ 1(주황 띠: 왼쪽 흰 줄과 빛)
+export function optRow(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, k: number) {
+  slant(g, x, y, w, h, 14); g.fillStyle = 'rgba(8,24,70,.78)'; g.fill()
+  g.strokeStyle = `rgba(255,255,255,${0.28 * (1 - k)})`; g.lineWidth = 1; g.stroke()
+  if (k < 0.01) return
+  g.save(); g.globalAlpha *= k
+  const og = g.createLinearGradient(x, 0, x + w, 0); og.addColorStop(0, '#ffb13b'); og.addColorStop(0.7, '#ff7a59'); og.addColorStop(1, '#ff5c8a')
+  glow(g, 'rgba(255,140,60,.6)', 14, () => { slant(g, x, y, w, h, 14); g.fillStyle = og; g.fill() })
+  g.restore()
+}
+// 칸이 나뉜 값 막대 (디맥의 속도 막대처럼). 고른 줄에서는 흰색, 아니면 금색
+export function segBar(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, f: number, on: boolean, n = 20) {
+  const gap = 3, bw = (w - gap * (n - 1)) / n, lit = Math.round(Math.min(Math.max(f, 0), 1) * n)
+  for (let i = 0; i < n; i++) { g.fillStyle = i < lit ? (on ? '#fff' : AMBER) : 'rgba(255,255,255,.2)'; g.beginPath(); g.roundRect(x + i * (bw + gap), y, bw, h, 2); g.fill() }
+}
+export function chevron(g: CanvasRenderingContext2D, cx: number, cy: number, dir: -1 | 1, color: string) {
+  g.beginPath(); g.moveTo(cx - 3 * dir, cy - 8); g.lineTo(cx + 5 * dir, cy); g.lineTo(cx - 3 * dir, cy + 8); g.lineWidth = 3; g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = color; g.stroke()
+}
+// 작은 선 그림 아이콘 (분류 탭용)
+export function icon(g: CanvasRenderingContext2D, kind: 'display' | 'game' | 'sound' | 'control', cx: number, cy: number, s = 1, color = '#fff') {
+  g.save(); g.translate(cx, cy); g.scale(s, s); g.strokeStyle = color; g.fillStyle = color; g.lineWidth = 2; g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath()
+  if (kind === 'display') { g.roundRect(-11, -9, 22, 15, 2); g.moveTo(0, 6); g.lineTo(0, 10); g.moveTo(-6, 10); g.lineTo(6, 10); g.stroke() }
+  else if (kind === 'game') { g.roundRect(-12, -7, 24, 14, 6); g.moveTo(-7, -2); g.lineTo(-7, 3); g.moveTo(-9.5, 0.5); g.lineTo(-4.5, 0.5); g.stroke(); g.beginPath(); g.arc(5, -1, 1.6, 0, 7); g.arc(8.5, 2, 1.6, 0, 7); g.fill() }
+  else if (kind === 'sound') { g.moveTo(-10, -3); g.lineTo(-5, -3); g.lineTo(1, -8); g.lineTo(1, 8); g.lineTo(-5, 3); g.lineTo(-10, 3); g.closePath(); g.stroke(); g.beginPath(); g.arc(2, 0, 6, -0.9, 0.9); g.stroke(); g.beginPath(); g.arc(2, 0, 10, -0.9, 0.9); g.stroke() }
+  else { g.roundRect(-12, -8, 24, 16, 3); g.stroke(); for (const [x, y] of [[-7, -3], [-2, -3], [3, -3], [8, -3], [-6, 2]]) g.fillRect(x - 1.5, y - 1.5, 3, 3); g.fillRect(-1, 2, 9, 3) }
   g.restore()
 }

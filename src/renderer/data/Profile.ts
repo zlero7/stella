@@ -7,7 +7,7 @@ export interface Profile {
   id: string; nick: string; level: number; cur: number; need: number; exp: number; plays: number; fcs: number; aps: number
   lp: number; tier: string; div: number; pt: number; tierLabel: string; wins: number; losses: number; draws: number
   cls: { idx: number; name: string; sub: number; points: number; lo: number; hi: number; label: string }
-  plate: string; title: string; titleName: string; plates: Item[]; titles: Item[]
+  avatar: string; plate: string; title: string; titleName: string; plates: Item[]; titles: Item[]
 }
 // 다른 계정으로 바꾸거나 로그아웃하면 이전 사람의 프로필이 잠깐이라도 보이지 않게, 지금 로그인한 계정의 것일 때만 돌려준다
 let cache: Profile | undefined
@@ -16,6 +16,9 @@ export const prof = { get v() { return account.token && cache?.id === account.id
 export const refreshProfile = () => account.token
   ? api<Profile>('profile/me').then(p => { prof.v = p; return p }, () => prof.v)
   : Promise.resolve(((prof.v = undefined), undefined))
+// 프로필 이미지 올리기(160px JPEG)·지우기: 바뀐 프로필을 돌려받아 바로 쓴다
+export const setAvatar = (jpeg: Blob) => api<Profile>('profile/avatar', jpeg).then(p => { prof.v = p; return p })
+export const clearAvatar = () => api<Profile>('profile/avatar', undefined, 'DELETE').then(p => { prof.v = p; return p })
 export const equip = (kind: 'plate' | 'title', id: string) => api<Profile>('profile/equip', { [kind]: id }).then(p => { prof.v = p; return p })
 
 // 래더 결과: 판이 끝나면 내 결과를 올리고, 상대 결과가 올 때까지 조금씩 물어본다

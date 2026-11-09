@@ -257,8 +257,12 @@ fn main() {
             let mode = map.get("rg.settings").and_then(|t| serde_json::from_str::<Value>(t).ok()).and_then(|v| v["screen"].as_u64()).unwrap_or(2) as u8;
             app.manage(StateStore { path, map: Mutex::new(map) });
             app.manage(Net { writer: Mutex::new(None), gen: AtomicU64::new(0) });
-            let win = WebviewWindowBuilder::new(app, "main", WebviewUrl::default()).title("STELLA").inner_size(1280.0, 720.0)
-                .fullscreen(mode == 2).decorations(mode != 1).initialization_script(init).build()?;
+            let builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::default()).title("STELLA").inner_size(1280.0, 720.0)
+                .fullscreen(mode == 2).decorations(mode != 1).initialization_script(init);
+            // 서버(Cloudflare 터널)에서 곡을 받을 때 HTTP/3(QUIC)가 막혀 초당 수십 KB로 느려지는 PC가 있다: QUIC를 끄고 TCP(HTTP/2)로만 받는다. 앞 부분은 Tauri 기본 인자
+            #[cfg(windows)]
+            let builder = builder.additional_browser_args("--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --disable-quic");
+            let win = builder.build()?;
             if mode == 1 { let _ = apply_screen(&win, 1); }
             Ok(())
         })

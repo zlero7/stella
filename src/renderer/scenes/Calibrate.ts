@@ -1,6 +1,6 @@
 import type { Scene, SceneManager } from '../core/SceneManager'
 import { saveSettings, settings } from '../data/Storage'
-import { FONT, AMBER, CYAN, ICE, accentFill, card, chip, drawBg, meter, pill } from '../render/theme'
+import { FONT, AMBER, CYAN, ICE, accentFill, card, chip, drawBg, header, meter, pill } from '../render/theme'
 
 // 캘리브레이션: 메트로놈(120BPM) 소리에 맞춰 아무 키나 12번 누르면, 평균 오차로 판정 오프셋을 정한다 (처음 2번은 버린다)
 // 게임과 같은 식으로 잰다: 누른 시각 = AudioContext 시각 - 출력 지연. 평균이 +면 소리보다 늦게 누른 것이라 판정 오프셋도 +
@@ -32,8 +32,8 @@ export const Calibrate = (sm: SceneManager): Scene => {
     },
     render(g) {
       drawBg(g)
-      pill(g, 40, 22, 180, 44, accentFill(g, 40, 180))
-      g.font = `800 22px ${FONT}`; g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText('싱크 보정', 130, 52)
+      header(g, 'SYNC', '싱크 보정')
+      g.textAlign = 'center'
       const cx = 640
       card(g, 340, 100, 600, 520, 'CALIBRATION')
       g.textAlign = 'center'

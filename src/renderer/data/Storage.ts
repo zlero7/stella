@@ -9,8 +9,8 @@ const write = (k: string, v: unknown) => {
 }
 
 // 키는 e.code('KeyD')로 저장한다: 한글 IME가 켜져 있어도 e.key는 'ㅇ'/'Process'가 되어 입력이 안 먹기 때문
-export interface Settings { screen: number; nick: string; lastIp: string; relay: string; ui: number; keyMode: number; keys6: string[]; keys: string[]; scroll: number; volume: number; offset: number; align: number; judgeOffset: number; bg: number; noteColor: number; bgBright: number; panelA: number; fx: number; fastSlow: number; sfx: number } // align: 0 왼쪽, 1 가운데, 2 오른쪽
-export const settings: Settings = read('rg.settings', { screen: 2, nick: 'PLAYER', lastIp: '', relay: '', ui: 0, keyMode: 4, keys6: ['KeyS', 'KeyD', 'KeyF', 'KeyJ', 'KeyK', 'KeyL'], keys: ['KeyD', 'KeyF', 'KeyJ', 'KeyK'], scroll: 6.5, volume: 0.8, offset: 0, align: 0, judgeOffset: 0, bg: 1, noteColor: 0, bgBright: 70, panelA: 80, fx: 2, fastSlow: 1, sfx: 1 }) // bgBright: 배경 밝기 30~100(%), panelA: 레인 패널 불투명도 50~95(%), fx: 이펙트 0 끔·1 약·2 보통, fastSlow: FAST/SLOW 표시 1/0 // bg: 플레이 배경 1 켜짐/0 꺼짐, noteColor: NOTE_COLORS 번호
+export interface Settings { screen: number; nick: string; lastIp: string; relay: string; ui: number; keyMode: number; keys6: string[]; keys: string[]; scroll: number; volume: number; offset: number; align: number; judgeOffset: number; bg: number; noteColor: number; bgBright: number; panelA: number; fx: number; fastSlow: number; sfx: number; hit: number } // align: 0 왼쪽, 1 가운데, 2 오른쪽
+export const settings: Settings = read('rg.settings', { screen: 2, nick: 'PLAYER', lastIp: '', relay: '', ui: 0, keyMode: 4, keys6: ['KeyS', 'KeyD', 'KeyF', 'KeyJ', 'KeyK', 'KeyL'], keys: ['KeyD', 'KeyF', 'KeyJ', 'KeyK'], scroll: 6.5, volume: 0.8, offset: 0, align: 0, judgeOffset: 0, bg: 1, noteColor: 0, bgBright: 70, panelA: 80, fx: 2, fastSlow: 1, sfx: 1, hit: 1 }) // bgBright: 배경 밝기 30~100(%), panelA: 레인 패널 불투명도 50~95(%), fx: 이펙트 0 끔·1 약·2 보통, fastSlow: FAST/SLOW 표시 1/0 // bg: 플레이 배경 1 켜짐/0 꺼짐, noteColor: NOTE_COLORS 번호
 // UI 개편(2): 디맥처럼 기어를 화면 가운데에 두는 것을 기본으로 한다. 예전에 저장된 설정에도 한 번만 적용한다 (이후 설정에서 바꾸면 그대로 둔다)
 if (settings.ui < 2) { settings.align = 1; settings.ui = 2 }
 // 예전 저장값('d', ' ')을 code 형식으로 변환

@@ -25,7 +25,7 @@ export const vs = {
 }
 // 래더: 서버가 짝을 지어 주고(l_match) 밴(l_ban)을 번갈아 한 뒤 곡이 정해지면(l_start) 곡을 받고 준비한다. l_go가 오면 대결과 같은 연결로 친다
 export interface LadderSong { dir: string; diff: string; title: string; artist: string }
-export interface LadderOpp { nick: string; level: number; tier: string; div: number; tierLabel: string; lp: number; cls: string; plate: string; titleName: string }
+export interface LadderOpp { nick: string; level: number; tier: string; div: number; tierLabel: string; lp: number; titleName: string; avatar: string }
 export interface Ladder {
   state: 'queue' | 'ban' | 'prep' | 'go' | 'cancel'
   mid: string; opp?: LadderOpp; songs: LadderSong[]; banned: number[]; turn: 'you' | 'opp' | 'none'; deadline: number // deadline: 이 차례가 끝나는 시각(ms)
@@ -101,7 +101,10 @@ async function onMsg(m: Msg) {
       vs.peerNick = l.opp?.nick ?? ''
       break
     }
-    case 'l_ban': if (vs.l) { vs.l.banned.push(num(m.idx, -1)); vs.l.turn = m.turn === 'you' ? 'you' : m.turn === 'opp' ? 'opp' : 'none'; vs.l.deadline = performance.now() + num(m.tleft) * 1000 } break
+    case 'l_ban': if (vs.l) { vs.l.banned.push(num(m.idx, -1)); vs.l.turn = m.turn === 'you' ? 'you' : m.turn === 'opp' ? 'opp' : 'none'; vs.l.deadline = performance.now() + num(m.tleft) * 1000
+      const left = vs.l.songs.filter((_, i) => !vs.l!.banned.includes(i)) // 후보가 둘 남으면 미리 받아 둔다: 곡이 정해진 뒤에 받는 시간을 줄인다
+      if (left.length === 2) void loadSongs().then(all => left.forEach(x => { const s = all.find(y => y.dir === x.dir); if (s?.remote) void ensureSong(s, () => {}).catch(() => {}) }))
+    } break
     case 'l_start': { // 곡이 정해졌다: 이 PC에 없으면 서버에서 받고 준비를 알린다
       const l = vs.l; if (!l) break
       l.state = 'prep'; l.pick = num(m.idx, -1); l.starting = true

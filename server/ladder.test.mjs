@@ -70,6 +70,18 @@ test('결과: 둘 다 올리면 점수로 가르고 LP를 바꾼다', () => {
   assert.ok(ua.exp > 0 && ub.exp > 0)
 })
 
+test('결과: 곡 길이의 80%가 지나기 전 "끝까지 쳤다"는 결과는 받지 않는다 (포기는 받는다)', () => {
+  let t = 1000
+  const L = createLadder({ pool: () => songs, len: () => 100, save() {}, now: () => t })
+  const ua = user('a'), ub = user('b'), [a, b] = pairUp(L, ua, ub), m = last(a, 'l_match')
+  const first = m.turn === 'you' ? [a, b] : [b, a]
+  for (let i = 0; i < POOL - 1; i++) L.message(first[i % 2], { t: 'l_ban', idx: i })
+  L.message(a, { t: 'l_ready' }); L.message(b, { t: 'l_ready' })
+  t += 50_000; assert.equal(L.report(ua, m.mid, { score: 1_000_000, failed: false }), false)
+  assert.equal(L.report(ub, m.mid, { score: 0, failed: true }), true)
+  t += 30_000; assert.equal(L.report(ua, m.mid, { score: 1_000_000, failed: false }), true)
+})
+
 test('결과: 상대가 나가면(연결 끊김) 끝까지 친 쪽이 이긴다. 남의 판에는 못 올린다', () => {
   const { L } = setup()
   const ua = user('a', 0), ub = user('b', 0), uc = user('c', 0)

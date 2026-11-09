@@ -243,9 +243,9 @@ export const SongSelect = (sm: SceneManager): Scene => {
         g.globalAlpha = Math.max(0, 1 - ad * 0.13)
         if (sel) {
           const og = g.createLinearGradient(x, 0, x + w, 0); og.addColorStop(0, '#ffb13b'); og.addColorStop(0.7, '#ff7a59'); og.addColorStop(1, '#ff5c8a')
-          const cut = () => { g.beginPath(); g.moveTo(x + 18, y); g.lineTo(x + w, y); g.lineTo(x + w, y + h); g.lineTo(x, y + h); g.closePath() } // 디맥처럼 왼쪽 위가 비스듬하다
+          const cut = () => { g.beginPath(); g.roundRect(x, y, w, h, 14) } // 다른 줄과 같은 둥근 모양
           g.fillStyle = og; glow(g, '#ff9f1a', 18, () => { cut(); g.fill() })
-          g.save(); cut(); g.clip(); g.fillStyle = '#fff'; g.fillRect(x, y, 6, h) // 왼쪽 흰 띠는 둥근 모서리 안에서만
+          g.save(); cut(); g.clip()
           // 지나가는 빛줄기
           const sx = x - 100 + ((t * 300) % 900)
           g.fillStyle = 'rgba(255,255,255,.25)'; g.beginPath(); g.moveTo(sx, y); g.lineTo(sx + 40, y); g.lineTo(sx + 6, y + h); g.lineTo(sx - 34, y + h); g.fill()

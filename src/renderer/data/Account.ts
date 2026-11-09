@@ -10,20 +10,21 @@ const base = () => {
   if (!/^https:\/\//.test(u) && !/^http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/.test(u)) throw new Error('보안 연결(https)이 아닌 서버에는 로그인할 수 없습니다')
   return u
 }
-async function call<T = { token: string; id: string; nick: string }>(path: string, body?: object, token?: string) {
+async function call<T = { token: string; id: string; nick: string }>(path: string, body?: object | Blob, token?: string, method = body ? 'POST' : 'GET') {
+  const raw = body instanceof Blob // 프로필 이미지(JPEG)는 그대로, 나머지는 JSON
   const r = await fetch(`${base()}/${path}`, {
-    method: body ? 'POST' : 'GET', signal: AbortSignal.timeout(10000),
-    headers: { ...(body && { 'Content-Type': 'application/json' }), ...(token && { Authorization: `Bearer ${token}` }) },
-    body: body && JSON.stringify(body)
-  }).catch(() => { throw new Error('서버에 연결할 수 없습니다') })
+    method, signal: AbortSignal.timeout(10000),
+    headers: { ...(body && { 'Content-Type': raw ? 'image/jpeg' : 'application/json' }), ...(token && { Authorization: `Bearer ${token}` }) },
+    body: raw ? body : body && JSON.stringify(body)
+  }).catch(() => { throw new Error(navigator.onLine ? '서버에 연결할 수 없습니다. 서버가 꺼져 있거나 점검 중일 수 있으니 잠시 후 다시 해 주세요' : '인터넷에 연결되어 있지 않습니다') })
   const j = await r.json().catch(() => ({}))
   if (!r.ok) throw Object.assign(new Error(j.error ?? `오류 (${r.status})`), { status: r.status })
   return j as T
 }
 // 로그인한 계정으로 서버 API를 부른다 (프로필·래더). 토큰이 없거나 만료(401)면 로컬 로그인 정보를 지운다
-export async function api<T>(path: string, body?: object) {
+export async function api<T>(path: string, body?: object | Blob, method?: string) {
   if (!account.token) throw Object.assign(new Error('로그인이 필요합니다'), { status: 401 })
-  try { return await call<T>(path, body, account.token) } catch (e) { if ((e as { status?: number }).status === 401) forget(); throw e }
+  try { return await call<T>(path, body, account.token, method) } catch (e) { if ((e as { status?: number }).status === 401) forget(); throw e }
 }
 const keep = (j: { token?: string; id: string; nick: string }) => {
   if (j.token) account.token = j.token
@@ -31,7 +32,6 @@ const keep = (j: { token?: string; id: string; nick: string }) => {
   saveAccount(); saveSettings()
 }
 
-export const loggedIn = () => !!account.token
 export const forget = () => { account.token = account.id = account.nick = ''; saveAccount() } // 로컬 정보만 지운다 (토큰이 서버에서 만료됐을 때도 쓴다)
 export const register = (id: string, pw: string, nick: string) => call('auth/register', { id, pw, nick }).then(keep)
 export const login = (id: string, pw: string) => call('auth/login', { id, pw }).then(keep)

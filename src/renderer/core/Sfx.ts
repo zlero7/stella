@@ -18,7 +18,8 @@ export const sfx = {
   move: () => tone(900, 700, 55, 0.5),
   ok: () => tone(620, 1240, 130, 0.7, 'triangle'),
   back: () => tone(700, 380, 110, 0.55, 'triangle'),
-  hit: () => tone(1500, 900, 45, 0.45, 'square')
+  // 타격음: 사각파 삑 소리는 매 노트마다 귀를 찔러서, 낮고 짧은 사인파 "톡"으로 (크기는 설정의 타격음: 약/보통)
+  hit: () => { if (settings.hit) tone(620, 300, 32, settings.hit === 2 ? 0.3 : 0.15) }
 }
 
 // 메뉴에서 누른 키에 맞는 소리 (플레이 화면은 제외하고 SceneManager가 부른다)

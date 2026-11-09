@@ -1,7 +1,7 @@
 import type { Scene, SceneManager } from '../core/SceneManager'
 import { DEFAULT_RELAY, PORT, closeVersus, openRelay, vs } from '../core/Versus'
 import { account, saveSettings, settings } from '../data/Storage'
-import { FONT, AMBER, CYAN, ICE, accentFill, card, chip, drawBg, ease, hit, menuRow, pill, press } from '../render/theme'
+import { FONT, AMBER, CYAN, ICE, accentFill, card, chip, drawBg, ease, header, hit, menuRow, pill, press } from '../render/theme'
 
 // 대결 로비: 닉네임을 정하고, 방을 열거나(방장) 방 코드로 들어간다(손님). 연결되면 방장이 곡을 고른다
 // 중계 서버(웹소켓)를 거쳐 방 코드로 만난다. 서버 주소는 화면에 보이지 않는다 (바꾸려면 설정 파일의 relay, '-'면 IP 직접 접속)
@@ -31,7 +31,7 @@ export const Lobby = (sm: SceneManager): Scene => {
   }
   const hideInput = () => { if (el) el.style.display = 'none'; shown = -1 }
   function place() { // 입력 칸을 고른 줄의 오른쪽 값 자리에 맞춘다 (화면 크기에 따라 캔버스가 늘어나므로 비율을 곱한다)
-    if (step !== 'menu' || !FIELDS[focus]) { hideInput(); return }
+    if (step !== 'menu' || !FIELDS[focus] || (focus === 0 && account.token)) { hideInput(); return } // 로그인했으면 닉네임은 계정 것이라 고치지 못한다
     const e = input(), r = document.getElementById('c')!.getBoundingClientRect(), k = r.width / 1280, y = RY(focus), f = FIELDS[focus]
     e.style.display = 'block'; e.style.left = `${r.left + 520 * k}px`; e.style.top = `${r.top + (y + 11) * k}px`; e.style.width = `${370 * k}px`; e.style.height = `${36 * k}px`
     e.style.lineHeight = e.style.height; e.style.fontSize = `${18 * k}px`
@@ -76,8 +76,8 @@ export const Lobby = (sm: SceneManager): Scene => {
     },
     render(g) {
       drawBg(g)
-      pill(g, 40, 22, 180, 44, accentFill(g, 40, 180))
-      g.font = `800 22px ${FONT}`; g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText('VERSUS', 130, 52)
+      header(g, 'VERSUS', '친구 대결')
+      g.textAlign = 'center'
       const cx = 640
       if (step === 'menu') {
         card(g, 340, 100, 600, 400, 'FRIENDLY MATCH'); g.textAlign = 'center'
@@ -91,7 +91,7 @@ export const Lobby = (sm: SceneManager): Scene => {
           if (!on || i === 1) g.fillText(i === 1 ? (relay() ? '방 코드를 만듭니다' : '내 IP로 직접 엽니다') : FIELDS[i].get() || FIELDS[i].hint, 890, y + 36)
         })
         g.textAlign = 'center'; g.font = `14px ${FONT}`; g.fillStyle = AMBER
-        const tip = focus === 0 ? '닉네임 (한글·영문·숫자, 최대 12자)'
+        const tip = focus === 0 ? (account.token ? '로그인한 계정의 닉네임입니다 (계정 화면에서 바꿀 수 있습니다)' : '닉네임 (한글·영문·숫자, 최대 12자)')
           : focus === 2 ? (relay() ? '친구가 알려 준 방 코드를 입력하고 Enter' : '상대가 알려 준 IP를 입력하고 Enter')
           : 'Enter로 방을 엽니다'
         g.fillText(err || tip, cx, 470)

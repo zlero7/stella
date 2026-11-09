@@ -1,10 +1,11 @@
 import type { Scene, SceneManager } from '../core/SceneManager'
-import { FONT, AMBER, CYAN, ICE, NAVY, NOTE_COLORS, accentFill, card, chip, drawBg, fit, glow, hit, menuRow, meter, pill, press, slant, ease, overRect } from '../render/theme'
+import { FONT, CYAN, ICE, NAVY, NOTE_COLORS, accentFill, card, chevron, chip, drawBg, fit, glow, header, hit, icon, optRow, pill, press, segBar, slant, ease, overRect } from '../render/theme'
 import { settings, saveSettings, keyLabel } from '../data/Storage'
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi)
 const ALIGNS = ['왼쪽', '가운데', '오른쪽']
 const FX = ['끔', '약', '보통']
+const HITS = FX
 const SCREENS = ['창모드', '전체화면 창모드', '전체화면']
 const applyScreen = () => window.api?.setScreen?.(settings.screen) // 화면 모드를 바로 적용한다 (Rust가 창을 바꾼다)
 const visibleMs = () => Math.round((590 / (settings.scroll * 100)) * 1000) // 노트가 나타나서 판정선에 닿기까지(ms). Play의 판정선 위치와 같은 590px 기준
@@ -30,6 +31,7 @@ const CATS: { name: string; items: Item[] }[] = [
   ] },
   { name: 'SOUND', items: [
     { label: '볼륨', value: () => `${Math.round(settings.volume * 100)}%`, frac: () => settings.volume, change: d => { settings.volume = clamp(Math.round((settings.volume + d * 0.1) * 10) / 10, 0, 1) } },
+    { label: '타격음', value: () => HITS[settings.hit] ?? HITS[1], change: d => { settings.hit = clamp(settings.hit + d, 0, 2) } },
     { label: '효과음', value: () => (settings.sfx ? '켜짐' : '꺼짐'), change: () => { settings.sfx = settings.sfx ? 0 : 1 } }
   ] },
   { name: 'CONTROL', items: [ // Enter를 누르면 키 설정 화면으로
@@ -48,6 +50,7 @@ const DESC: Record<string, string> = {
   '싱크 보정': 'Enter를 누르면 메트로놈 소리에 맞춰 키를 눌러 판정 오프셋을 자동으로 맞춥니다. 유선 이어폰을 권장합니다.',
   '싱크 오프셋': '소리가 화면보다 늦게 들리면 +, 빠르게 들리면 − 로 맞춥니다. (5ms 단위)',
   '판정 오프셋': '쳤는데 SLOW가 많이 나오면 +, FAST가 많으면 − 로 맞춥니다. 결과 화면의 O 키로 자동 적용할 수도 있습니다.',
+  '타격음': '플레이 중 노트를 칠 때 나는 "톡" 소리의 크기입니다. 곡이 안 들리거나 거슬리면 약으로 줄이거나 끄세요.',
   '효과음': '메뉴를 움직이거나 고를 때 나는 소리와, 플레이 중 건반을 눌러 노트를 맞출 때 나는 타격음입니다.',
   '화면 모드': '창모드는 일반 창, 전체화면 창모드는 테두리 없는 창으로 화면을 채우고, 전체화면은 화면 전체를 씁니다. 기본값은 전체화면입니다.',
   '플레이 배경': '플레이 화면에 곡 영상·표지 배경을 보일지 정합니다. 끄면 하늘 배경만 나옵니다.',
@@ -66,7 +69,7 @@ function wrapText(g: CanvasRenderingContext2D, text: string, maxW: number) {
 }
 
 // 오른쪽 미리보기: 실제 플레이와 같은 속도·노트 색·레인 불투명도·배경 밝기로 노트가 흐른다 (0.6배 축소)
-const PV = { x: 900, y: 118, w: 340, h: 392, s: 0.6, loop: 3.36 }
+const PV = { x: 884, y: 140, w: 340, h: 392, s: 0.6, loop: 3.36 }
 const PATTERN = [0, 1, 3, 2, 1, 2, 0, 3, 1, 3, 0, 2] // 0.28초 간격, 열두 개가 한 바퀴 (6키는 5·4번 레인으로 옮겨 쓴다)
 function drawPreview(g: CanvasRenderingContext2D) {
   const { x, y, w, h, s } = PV, L = settings.keyMode, laneW = (L === 6 ? 64 : 80) * s, fieldX = x + (w - L * laneW) / 2, judgeY = y + 590 * s - 80
@@ -90,9 +93,11 @@ function drawPreview(g: CanvasRenderingContext2D) {
   g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 1.5; g.beginPath(); g.roundRect(x, y, w, h, 14); g.stroke()
 }
 
-// 디맥의 옵션 화면처럼: 분류 제목 아래에 항목이 한 줄씩, 고른 줄만 금색 테두리, 값은 ◀ ▶ 사이에
+// 디맥의 옵션 화면처럼: 위쪽 머리띠에 분류 탭, 항목은 비스듬한 띠 한 줄씩 (고른 줄은 주황), 값은 ◀ ▶ 사이나 칸이 나뉜 막대
 const FLAT = CATS.flatMap((c, ci) => c.items.map(item => ({ ci, item })))
 const firstOf = (ci: number) => FLAT.findIndex(f => f.ci === ci)
+const CAT_SUB = ['화면 · 플레이 배경', '스크롤 · 판정 · 싱크', '소리', '키 배치']
+const ICONS = ['display', 'game', 'sound', 'control'] as const
 
 export const Settings = (sm: SceneManager): Scene => {
   let sel = 0, back = 'title', backData: unknown, since = 0
@@ -104,52 +109,53 @@ export const Settings = (sm: SceneManager): Scene => {
     render(g) {
       drawBg(g)
       const ci = FLAT[sel].ci, mine = FLAT.map((f, i) => (f.ci === ci ? i : -1)).filter(i => i >= 0)
-      const X = 60, W = 760, LW = 296, GAP = 4, RH = 46
+      const X = 48, W = 800, LW = 290, RH = 50, GAP = 8
+      header(g, 'SETTINGS', '환경 설정')
 
-      // 위쪽: 가로로 긴 탭 줄 (양끝 Shift 키로도 넘긴다). 고른 탭은 아래에 주황 밑줄
-      const TW = (W - 3 * 6) / CATS.length
-      g.font = `700 13px ${FONT}`
-      for (const [x, d, label] of [[X - 52, -1, 'Shift'], [X + W + 10, 1, 'Shift']] as const) { hit(x, 66, 44, 22, () => jump(d)); pill(g, x, 66, 44, 22, 'rgba(8,24,70,.7)'); g.fillStyle = 'rgba(255,255,255,.85)'; g.textAlign = 'center'; g.fillText(label, x + 22, 82); g.textAlign = 'left' }
+      // 머리띠 오른쪽: 분류 탭 (알약). 고른 탭은 하늘색으로 빛난다
+      g.font = `800 15px ${FONT}`
+      let tx = 330
       CATS.forEach((c, i) => {
-        const x = X + i * (TW + 6), on = i === ci, hv = ease('tab' + i, on || overRect(x, 58, TW, 44))
-        hit(x, 58, TW, 44, () => { sel = firstOf(i); since = performance.now() })
-        g.fillStyle = `rgba(${8 + 30 * hv},${24 + 50 * hv},${70 + 90 * hv},${0.62 + 0.2 * hv})`; g.fillRect(x, 58, TW, 44)
-        if (on) { g.fillStyle = AMBER; g.fillRect(x, 99, TW, 3) }
-        g.font = `${on ? 800 : 700} 19px ${FONT}`; g.fillStyle = on ? '#fff' : 'rgba(255,255,255,.7)'; g.textAlign = 'center'; g.fillText(c.name, x + TW / 2, 88); g.textAlign = 'left'
+        const on = i === ci, w = 138, hv = ease('tab' + i, on || overRect(tx, 14, w, 38))
+        hit(tx, 14, w, 38, () => { sel = firstOf(i); since = performance.now() })
+        pill(g, tx, 14, w, 38, on ? accentFill(g, tx, w) : `rgba(255,255,255,${0.08 + 0.12 * hv})`)
+        if (on) glow(g, CYAN, 14, () => pill(g, tx, 14, w, 38, accentFill(g, tx, w)))
+        icon(g, ICONS[i], tx + 26, 33, 0.9, on ? '#fff' : 'rgba(255,255,255,.75)')
+        g.font = `${on ? 800 : 700} 15px ${FONT}`; g.fillStyle = on ? '#fff' : 'rgba(255,255,255,.8)'; g.textAlign = 'left'; g.fillText(c.name, tx + 46, 39)
+        tx += w + 10
       })
 
-      // 제목: 연한 큰 글씨 (탭을 바꾸면 위에서 내려온다)
+      // 분류 이름 (탭을 바꾸면 위에서 내려온다)
       const e = Math.min(1, (performance.now() - since) / 220)
-      g.save(); g.globalAlpha = e; g.font = `300 44px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.82)'; g.fillText(`${CATS[ci].name} SETTING`, X - 2, 154 - 8 * (1 - e)); g.restore()
+      g.save(); g.globalAlpha = e; g.textAlign = 'left'
+      g.font = `800 30px ${FONT}`; g.fillStyle = '#fff'; g.fillText(CATS[ci].name, X, 112 - 8 * (1 - e))
+      const nw = g.measureText(CATS[ci].name).width
+      g.font = `600 14px ${FONT}`; g.fillStyle = ICE; g.fillText(CAT_SUB[ci], X + nw + 16, 110 - 8 * (1 - e)); g.restore()
 
-      // 항목: 왼쪽 이름 칸 + 오른쪽 값 칸이 붙은 납작한 띠. 고른 띠는 주황 테두리와 노란 글씨
+      // 항목: 비스듬한 띠. 고른 띠는 주황, 값은 ◀ ▶ 사이 또는 칸이 나뉜 막대
       mine.forEach((fi, r) => {
-        const it = FLAT[fi].item, on = fi === sel, y = 176 + r * (RH + GAP), vx = X + LW + GAP, vw = W - LW - GAP
+        const it = FLAT[fi].item, on = fi === sel, y = 134 + r * (RH + GAP), vx = X + LW + 14, vw = W - LW - 14
         hit(X, y, W, RH, () => { sel = fi; if (on && it.go) press('Enter') }, () => { sel = fi })
         const k = ease('opt' + fi, on)
-        for (const [px, pw] of [[X, LW], [vx, vw]]) {
-          g.fillStyle = `rgba(${8 + 24 * k},${24 + 40 * k},${70 + 70 * k},${0.74 + 0.1 * k})`; g.fillRect(px, y, pw, RH)
-          if (k > 0.02) { g.strokeStyle = `rgba(255,177,59,${k})`; g.lineWidth = 2.5; g.strokeRect(px + 1.25, y + 1.25, pw - 2.5, RH - 2.5) }
-        }
-        g.font = `${on ? 800 : 600} 19px ${FONT}`; g.fillStyle = on ? '#ffe27a' : '#fff'; g.textAlign = 'left'; g.fillText(it.label, X + 20, y + 30)
-        const mid = vx + vw / 2
-        if (it.frac) { // 막대형: 값은 이름 칸 오른쪽 끝, 값 칸에는 막대와 손잡이
-          g.textAlign = 'right'; g.font = `700 17px ${FONT}`; g.fillStyle = on ? '#ffe27a' : '#fff'; g.fillText(it.value(), X + LW - 16, y + 30); g.textAlign = 'left'
-          const tx = vx + 40, tw = vw - 80, fr = clamp(it.frac(), 0, 1)
-          g.fillStyle = 'rgba(255,255,255,.28)'; g.fillRect(tx, y + RH / 2 - 2, tw, 4)
-          g.fillStyle = on ? AMBER : '#fff'; g.fillRect(tx, y + RH / 2 - 2, tw * fr, 4)
-          g.beginPath(); g.arc(tx + tw * fr, y + RH / 2, 7, 0, Math.PI * 2); g.fillStyle = '#fff'; g.fill()
+        optRow(g, X + 10 * k, y, W - 10 * k, RH, k)
+        g.fillStyle = `rgba(255,255,255,${0.2 * (1 - k)})`; g.fillRect(X + LW + 4, y + 8, 1, RH - 16) // 이름 | 값 구분선
+        g.font = `${on ? 800 : 600} 18px ${FONT}`; g.fillStyle = '#fff'; g.textAlign = 'left'; g.fillText(it.label, X + 30 + 10 * k, y + 31)
+        const mid = vx + vw / 2, hot = on ? '#fff' : ICE
+        if (it.frac) { // 막대형: 값 글자는 오른쪽 위, 막대는 칸이 나뉜 모양
+          g.font = `800 16px ${FONT}`; const tw = Math.max(g.measureText(it.value()).width, 44) // 값 글자 폭에 맞춰 막대를 줄인다 ("7.5 · 787ms"처럼 긴 값이 막대를 덮지 않게)
+          segBar(g, vx + 14, y + RH / 2 - 7, vw - tw - 62, 14, clamp(it.frac(), 0, 1), on)
+          g.textAlign = 'right'; g.fillStyle = hot; g.fillText(it.value(), vx + vw - 18, y + 31); g.textAlign = 'left'
         } else if (it.bind !== undefined) { // 키 배치: 키캡 알약
           const keys = it.bind === 6 ? settings.keys6 : settings.keys
           g.font = `800 14px ${FONT}`
           const ws = keys.map(k2 => Math.max(g.measureText(keyLabel(k2)).width + 18, 30)), total = ws.reduce((a, b) => a + b + 6, -6)
           let kx = mid - total / 2
-          keys.forEach((k2, i) => { pill(g, kx, y + 9, ws[i], 28, '#fff'); g.fillStyle = '#0b2a6b'; g.textAlign = 'center'; g.fillText(keyLabel(k2), kx + ws[i] / 2, y + 29); g.textAlign = 'left'; kx += ws[i] + 6 })
+          keys.forEach((k2, i) => { pill(g, kx, y + 11, ws[i], 28, '#fff'); g.fillStyle = '#0b2a6b'; g.textAlign = 'center'; g.fillText(keyLabel(k2), kx + ws[i] / 2, y + 31); g.textAlign = 'left'; kx += ws[i] + 6 })
         } else if (it.go) {
-          g.font = `800 16px ${FONT}`; g.fillStyle = on ? '#ffe27a' : '#fff'; g.textAlign = 'center'; g.fillText(`${it.value()}  ▶`, mid, y + 30); g.textAlign = 'left'
+          g.font = `800 16px ${FONT}`; g.fillStyle = hot; g.textAlign = 'center'; g.fillText(`${it.value()}  ▶`, mid, y + 31); g.textAlign = 'left'
         } else {
-          g.font = `800 18px ${FONT}`; g.fillStyle = on ? '#ffe27a' : '#fff'; g.textAlign = 'center'; g.fillText(fit(g, it.value(), vw - 120), mid, y + 30)
-          if (on && it.change) { g.fillText('◀', vx + 24, y + 30); g.fillText('▶', vx + vw - 24, y + 30) }
+          g.font = `800 18px ${FONT}`; g.fillStyle = hot; g.textAlign = 'center'; g.fillText(fit(g, it.value(), vw - 120), mid, y + 31)
+          if (it.change) { g.globalAlpha = on ? 1 : 0.35; chevron(g, vx + 28, y + RH / 2, -1, hot); chevron(g, vx + vw - 28, y + RH / 2, 1, hot); g.globalAlpha = 1 }
           g.textAlign = 'left'
         }
         if (it.change) {
@@ -160,18 +166,18 @@ export const Settings = (sm: SceneManager): Scene => {
       })
 
       // 아래: 고른 항목 설명
-      const iy = 176 + mine.length * (RH + GAP) + 14
-      if (iy < 640) {
-        card(g, X, iy, W, Math.min(656 - iy, 120), 'INFO')
+      const iy = 134 + mine.length * (RH + GAP) + 10
+      if (iy < 600) {
+        card(g, X, iy, W, Math.min(660 - iy, 124), 'INFO')
         g.font = `15px ${FONT}`; g.fillStyle = '#fff'; g.textAlign = 'left'
         wrapText(g, DESC[FLAT[sel].item.label] ?? '', W - 48).forEach((ln, i) => g.fillText(ln, X + 24, iy + 58 + i * 23))
       }
 
       // 오른쪽: 실시간 미리보기 (노트 속도·색·불투명도를 바꾸는 분류에서만)
       if (CATS[ci].name === 'DISPLAY' || CATS[ci].name === 'GAME') {
-        card(g, 880, 58, 380, 600, 'PREVIEW')
+        card(g, 868, 90, 372, 572, 'PREVIEW')
         drawPreview(g)
-        g.font = `700 16px ${FONT}`; g.fillStyle = '#fff'; g.fillText(`노트 가시 시간 ${visibleMs()}ms`, PV.x, PV.y + PV.h + 34); g.font = `13px ${FONT}`; g.fillStyle = ICE; g.fillText('IIDX 플레이어는 보통 450~520ms로 맞춥니다', PV.x, PV.y + PV.h + 58)
+        g.font = `700 16px ${FONT}`; g.fillStyle = '#fff'; g.fillText(`노트 가시 시간 ${visibleMs()}ms`, PV.x, PV.y + PV.h + 30); g.font = `13px ${FONT}`; g.fillStyle = ICE; g.fillText('IIDX 플레이어는 보통 450~520ms로 맞춥니다', PV.x, PV.y + PV.h + 52)
       }
 
       // 아래 안내 (알약 키캡, 눌러도 된다)

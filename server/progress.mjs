@@ -39,7 +39,8 @@ export function duelResult(a, b) {
 // ── DJ CLASS: 곡마다 최고 점수를 난이도 가중치로 곱해 상위 20곡을 더한 값 (최대 2500점) ──
 const DIFF_W = { easy: 0.5, normal: 0.75, hard: 1, stella: 1.25 }
 export function classPoints(bests = {}) {
-  const pts = Object.entries(bests).map(([k, s]) => (s / 10000) * (DIFF_W[k.split('-')[1]] ?? 1)).sort((a, b) => b - a).slice(0, 20)
+  // 키는 "곡폴더/4k-hard": 곡 폴더 이름에도 -가 있으므로 난이도는 마지막 - 뒤
+  const pts = Object.entries(bests).map(([k, s]) => (s / 10000) * (DIFF_W[k.slice(k.lastIndexOf('-') + 1)] ?? 1)).sort((a, b) => b - a).slice(0, 20)
   return Math.round(pts.reduce((a, b) => a + b, 0))
 }
 export const CLASSES = [['BEGINNER', 0], ['ROOKIE', 150], ['CHALLENGER', 400], ['EXPERT', 700], ['MASTER', 1000], ['STELLAR', 1400], ['THE STELLA', 1900]]
@@ -81,6 +82,8 @@ const tierView = u => {
   const t = tierOf(u.lp ?? 0), placed = (u.wins ?? 0) + (u.losses ?? 0) + (u.draws ?? 0) > 0
   return placed ? { tier: t.tier, div: t.div, pt: t.pt, tierLabel: t.label } : { tier: 'UNRANKED', div: 0, pt: t.pt, tierLabel: 'UNRANKED' }
 }
+// 프로필 이미지 키: "공개번호.올린시각" (없으면 ''). 번호는 로그인 아이디와 따로 만든 무작위 값이라 이미지 주소로 아이디가 새지 않는다
+export const avatarKey = u => (u.pid && u.avatarAt ? `${u.pid}.${u.avatarAt}` : '')
 // 앱이 그리는 프로필: 레벨·경험치·티어·클래스·꾸미기와 해금 목록
 export function profileView(u) {
   const lv = levelOf(u.exp ?? 0), pts = classPoints(u.bests), plate = canEquip(u, 'plate', u.plate ?? 'default') ? u.plate ?? 'default' : 'default', title = canEquip(u, 'title', u.title ?? 'rookie') ? u.title ?? 'rookie' : ''
@@ -88,12 +91,12 @@ export function profileView(u) {
     id: u.id, nick: u.nick, ...lv, exp: u.exp ?? 0, plays: u.plays ?? 0, fcs: u.fcs ?? 0, aps: u.aps ?? 0,
     lp: u.lp ?? 0, ...tierView(u),
     wins: u.wins ?? 0, losses: u.losses ?? 0, draws: u.draws ?? 0,
-    cls: classOf(pts), plate, title, titleName: TITLES.find(t => t.id === title)?.name ?? '',
+    avatar: avatarKey(u), cls: classOf(pts), plate, title, titleName: TITLES.find(t => t.id === title)?.name ?? '',
     plates: open(PLATES, u), titles: open(TITLES, u)
   }
 }
 // 남에게 보이는 줄임 프로필 (랭킹·래더 상대)
-export const publicView = u => { const v = profileView(u); return { nick: v.nick, level: v.level, tier: v.tier, div: v.div, tierLabel: v.tierLabel, lp: v.lp, cls: v.cls.label, plate: v.plate, titleName: v.titleName } }
+export const publicView = u => { const v = profileView(u); return { nick: v.nick, level: v.level, tier: v.tier, div: v.div, tierLabel: v.tierLabel, lp: v.lp, titleName: v.titleName, avatar: v.avatar } }
 
 // 한 판의 결과를 계정에 쌓는다: 경험치·플레이 수·풀콤보/올퍼펙트·곡별 최고 점수. 받은 경험치를 돌려준다
 export function applyPlay(u, boardKey, score, badge) {

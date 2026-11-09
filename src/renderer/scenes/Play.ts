@@ -8,6 +8,7 @@ import { chartFile, diffName } from '../data/Songs'
 import { keyLabel, saveSettings, settings } from '../data/Storage'
 import { sfx } from '../core/Sfx'
 import { send, vs, waitFor } from '../core/Versus'
+import { startPlay } from '../data/Rank'
 import { drawLoading } from '../render/loading'
 import { FONT, CYAN, AMBER, accentFill, ICE, NOTE_COLORS, artOf, drawBg, fit, fitFont, lighten, menuRow, rgbOf, slant, glow, card, meter, starPath, hit, press as pressKey, ease } from '../render/theme'
 
@@ -30,12 +31,13 @@ export interface PlayData { song: Song; diff: string; from?: number; vs?: boolea
 // 바깥 두 레인은 시안, 안쪽 두 레인은 흰색 (디맥 4K의 색 구분)
 const sprites: Record<string, HTMLCanvasElement> = {}
 const noteColor = () => (NOTE_COLORS[settings.noteColor] ?? NOTE_COLORS[0])[1]
-function noteSprite(outer: boolean) {
-  const col = noteColor(), k = outer ? col : 'inner'
+// 스프라이트는 화면에 찍히는 크기(캔버스 배율 × 레인 배율)로 만든다: 92x44로 만들어 늘려 찍으면 큰 화면에서 가장자리가 계단져 보인다. 배율은 0.25 단위로 맞춰 캐시한다
+function noteSprite(outer: boolean, scale: number) {
+  const col = noteColor(), s = Math.max(1, Math.round(scale * 4) / 4), k = (outer ? col : 'inner') + '@' + s
   let c = sprites[k]
   if (!c) {
-    c = sprites[k] = document.createElement('canvas'); c.width = 92; c.height = 44
-    const x = c.getContext('2d')!
+    c = sprites[k] = document.createElement('canvas'); c.width = Math.ceil(92 * s); c.height = Math.ceil(44 * s)
+    const x = c.getContext('2d')!; x.scale(c.width / 92, c.height / 44)
     x.shadowColor = outer ? lighten(col, 0.3) : '#ffffff'; x.shadowBlur = 10
     const gr = x.createLinearGradient(0, 15, 0, 29) // 얇은 막대(높이 14px): 위가 밝고 아래로 갈수록 색이 진해진다
     gr.addColorStop(0, outer ? lighten(col, 0.7) : '#ffffff'); gr.addColorStop(1, outer ? col : '#b7d3ff')
@@ -191,11 +193,14 @@ export const Play = (sm: SceneManager): Scene => {
     chartOffset = chart?.offset ?? 0
     clock.offset = chartOffset + settings.offset / 1000
     clock.volume = settings.volume
+    if (video) await waitFor(() => (video?.readyState ?? 4) >= 2, 4000) // 배경 영상의 첫 장면이 뜰 때까지 로딩 화면을 유지한다 (필드가 먼저 나오고 배경이 뒤늦게 켜지지 않게)
+    if (my !== token) return
     if (data.vs) { // 둘 다 준비될 때까지 기다렸다가 같이 출발
       send({ t: 'ready' })
       if (!(await waitFor(() => vs.peerReady, 20000)) || my !== token) { if (my === token) leave(data.ladder ? 'ladder' : 'vs'); return }
     }
     if (buf) clock.play(buf, 2, from ?? 0); else clock.start(2, from ?? 0)
+    if (!data.vs && from === undefined) startPlay(song.dir, data.diff, LANES) // 랭킹 점수는 시작 기록이 있어야 받는다 (연습 구간 재생은 기록하지 않는다)
     ready = true
   }
 
@@ -258,6 +263,7 @@ export const Play = (sm: SceneManager): Scene => {
         return
       }
       const t = dying ? dieTime(performance.now()) : clock.songTime, speed = settings.scroll * BASE_PX
+      g.fillStyle = '#0a1a50'; g.fillRect(0, 0, 1280, 720) // 바닥을 먼저 칠한다: 배경 영상이 아직 첫 장면을 못 그렸을 때 앞 화면(로딩)이 비쳐 보이지 않게
       if (!settings.bg) drawBg(g) // 배경 끄기: 곡 영상·표지 없이 하늘 배경만
       else if (video && video.readyState >= 2 && video.videoWidth) blurred(g, video, video.videoWidth, video.videoHeight, !lowQ)
       else { const a = artOf(song); if (a) blurred(g, a.bg, 1280, 720, !lowQ); else drawBg(g) }
@@ -295,7 +301,7 @@ export const Play = (sm: SceneManager): Scene => {
         const len = n.duration ? (posOf(n.time + n.duration) - (holding ? curPos : posOf(n.time))) * speed : 0
         if (y - len > 740) continue
         if (len > 0) { g.fillStyle = isBlue(n.lane) ? `rgba(${rgbOf(noteColor())},.55)` : 'rgba(255,255,255,.4)'; g.fillRect(x + 14 * sc, y - len, LANE_W - 36 * sc, len) }
-        g.drawImage(noteSprite(isBlue(n.lane)), x - 10 * sc, y - 22, 92 * sc, 44)
+        g.drawImage(noteSprite(isBlue(n.lane), g.getTransform().a * Math.max(sc, 1)), x - 10 * sc, y - 22, 92 * sc, 44)
       }
       drawFx(g, t)
       activeKeys().slice(0, LANES).forEach((k, i) => {

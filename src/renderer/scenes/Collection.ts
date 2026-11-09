@@ -1,7 +1,7 @@
 import type { Scene, SceneManager } from '../core/SceneManager'
 import { account } from '../data/Storage'
 import { PLATE_COLOR, TIER_COLOR, equip, prof, refreshProfile, type Item } from '../data/Profile'
-import { FONT, AMBER, CYAN, ICE, accentFill, card, chip, drawBg, ease, fit, glow, hit, meter, pill, press, slant } from '../render/theme'
+import { FONT, AMBER, CYAN, ICE, accentFill, card, chip, drawBg, ease, fit, glow, header, hit, meter, pill, press, slant } from '../render/theme'
 import { gem, profileCard } from '../render/profileCard'
 
 // 컬렉션: 디맥의 COLLECTION처럼 내 프로필을 보고 꾸민다. 탭 — DJ CLASS(등급·전적) · PLATE(카드 색) · TITLE(칭호). 해금은 서버가 정한다
@@ -28,7 +28,8 @@ export const Collection = (sm: SceneManager): Scene => {
     render(g) {
       drawBg(g)
       const p = prof.v
-      pill(g, 40, 22, 220, 44, accentFill(g, 40, 220)); g.font = `800 22px ${FONT}`; g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText('COLLECTION', 150, 52)
+      header(g, 'COLLECTION')
+      g.textAlign = 'center'; g.fillStyle = '#fff'
       if (!p) { // 로그인 전
         g.font = `800 26px ${FONT}`; g.fillText(account.token ? '프로필을 불러오는 중…' : '로그인하면 프로필과 꾸미기를 쓸 수 있습니다', 640, 330)
         g.font = `15px ${FONT}`; g.fillStyle = ICE; g.fillText(account.token ? '서버에 연결하지 못하면 잠시 후 다시 들어와 주세요' : 'Enter 로그인하러 가기', 640, 372)
@@ -49,9 +50,9 @@ export const Collection = (sm: SceneManager): Scene => {
       stat(g, 76, 430, '경험치 합계', p.exp.toLocaleString())
       g.fillStyle = 'rgba(255,255,255,.2)'; g.fillRect(76, 450, 340, 1)
       g.textAlign = 'left'; g.font = `700 13px ${FONT}`; g.fillStyle = CYAN; g.fillText('LADDER', 76, 480)
-      gem(g, 110, 530, 28, TIER_COLOR[p.tier] ?? '#fff')
-      g.font = `900 22px ${FONT}`; g.fillStyle = TIER_COLOR[p.tier] ?? '#fff'; g.fillText(p.tierLabel, 150, 524)
-      g.font = `600 14px ${FONT}`; g.fillStyle = ICE; g.fillText(`${p.lp} LP   ·   ${p.wins}승 ${p.losses}패 ${p.draws}무`, 150, 550)
+      gem(g, 120, 526, 26, p.tierLabel)
+      g.font = `900 22px ${FONT}`; g.fillStyle = TIER_COLOR[p.tier] ?? '#fff'; g.fillText(p.tierLabel, 184, 524)
+      g.font = `600 14px ${FONT}`; g.fillStyle = ICE; g.fillText(`${p.lp} LP   ·   ${p.wins}승 ${p.losses}패 ${p.draws}무`, 184, 550)
 
       // 오른쪽: 탭 내용
       card(g, 500, 110, 730, 482, TABS[tab])

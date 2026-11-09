@@ -3,9 +3,9 @@ import type { Song } from '../../shared/types'
 import { closeVersus, newLadder, openRelay, relayAddr, send, vs } from '../core/Versus'
 import { loadSongs } from '../data/Songs'
 import { account } from '../data/Storage'
-import { TIER_COLOR, prof, refreshProfile } from '../data/Profile'
-import { FONT, AMBER, CYAN, ICE, accentFill, artOf, chip, drawBg, drawCover, ease, fit, glow, hit, pill, press, slant } from '../render/theme'
-import { gem } from '../render/profileCard'
+import { PLATE_COLOR, TIER_COLOR, prof, refreshProfile } from '../data/Profile'
+import { FONT, AMBER, CYAN, ICE, accentFill, artOf, chip, drawBg, drawCover, ease, fit, glow, header, hit, pill, press, slant } from '../render/theme'
+import { avatarCircle, gem } from '../render/profileCard'
 
 // 래더 매치: 대기열 → 상대 확정 → 곡 5개를 번갈아 밴 → 남은 한 곡으로 한 판 (결과는 서버가 판정해 LP가 바뀐다). 디맥 래더처럼 양옆에 두 사람, 가운데에 곡 카드
 const KEYS = 4
@@ -21,15 +21,16 @@ export const Ladder = (sm: SceneManager): Scene => {
   const free = () => (vs.l?.songs ?? []).map((_, i) => i).filter(i => !vs.l!.banned.includes(i))
 
   // 사람 패널: 보석(티어) · 이름 · 레벨 · LP
-  function side(g: CanvasRenderingContext2D, x: number, head: string, p: { nick: string; level: number; tier: string; tierLabel: string; lp: number; titleName?: string } | undefined, on: boolean) {
+  function side(g: CanvasRenderingContext2D, x: number, head: string, p: { nick: string; level: number; tier: string; tierLabel: string; lp: number; titleName?: string; avatar?: string } | undefined, on: boolean) {
     const w = 270, col = TIER_COLOR[p?.tier ?? 'UNRANKED'] ?? '#fff'
     g.textAlign = 'center'; g.font = `800 14px ${FONT}`; g.fillStyle = on ? AMBER : CYAN; g.fillText(head, x + w / 2, 156)
-    gem(g, x + w / 2, 262, 74, col)
+    gem(g, x + w / 2, 262, 72, p?.tierLabel ?? 'UNRANKED')
     g.font = `900 26px ${FONT}`; g.lineJoin = 'round'; g.lineWidth = 5; g.strokeStyle = 'rgba(8,24,70,.85)'; g.strokeText(p?.tierLabel ?? 'UNRANKED', x + w / 2, 392) // 밝은 배경에서도 티어 글자가 읽히게 어두운 테두리
     g.fillStyle = col; g.fillText(p?.tierLabel ?? 'UNRANKED', x + w / 2, 392)
     g.font = `700 14px ${FONT}`; g.fillStyle = '#0b2a6b'; g.fillText(`${p?.lp ?? 0} LP`, x + w / 2, 416)
     slant(g, x, 440, w, 64, 16); g.fillStyle = 'rgba(8,24,70,.84)'; g.fill(); g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 1.5; g.stroke()
-    g.fillStyle = '#fff'; g.font = `800 22px ${FONT}`; g.fillText(fit(g, p?.nick ?? '…', w - 90), x + w / 2 - 10, 478)
+    const [c1, c2] = PLATE_COLOR.default; avatarCircle(g, x + 36, 472, 22, p?.nick, p?.avatar, c1, c2)
+    g.fillStyle = '#fff'; g.font = `800 20px ${FONT}`; g.textAlign = 'left'; g.fillText(fit(g, p?.nick ?? '…', w - 150), x + 70, 478); g.textAlign = 'center'
     g.textAlign = 'right'; g.font = `800 15px ${FONT}`; g.fillStyle = AMBER; g.fillText(`Lv ${p?.level ?? 1}`, x + w - 24, 478)
     if (p?.titleName) { g.textAlign = 'center'; g.font = `600 12px ${FONT}`; g.fillStyle = ICE; g.fillText(p.titleName, x + w / 2, 524) }
   }
@@ -54,7 +55,8 @@ export const Ladder = (sm: SceneManager): Scene => {
     render(g) {
       drawBg(g)
       const l = vs.l, me = prof.v, now = performance.now(), t = now / 1000
-      pill(g, 40, 22, 200, 44, accentFill(g, 40, 200)); g.font = `800 22px ${FONT}`; g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText('LADDER MATCH', 140, 52)
+      header(g, 'LADDER MATCH', '랭크 대전')
+      g.textAlign = 'center'; g.fillStyle = '#fff'
       const state = err ? 'err' : l?.state ?? 'queue'
 
       if (state === 'err' || state === 'cancel') {

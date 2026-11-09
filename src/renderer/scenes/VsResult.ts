@@ -2,7 +2,7 @@ import type { Scene, SceneManager } from '../core/SceneManager'
 import type { Song } from '../../shared/types'
 import { ScoreKeeper } from '../game/ScoreKeeper'
 import { closeVersus, send, sleep, vs } from '../core/Versus'
-import { TIER_COLOR, ladderResult, refreshProfile, reportLadder, type LadderResult } from '../data/Profile'
+import { ladderResult, refreshProfile, reportLadder, type LadderResult } from '../data/Profile'
 import { gem } from '../render/profileCard'
 import { settings } from '../data/Storage'
 import { diffName } from '../data/Songs'
@@ -57,7 +57,7 @@ export const VsResult = (sm: SceneManager): Scene => {
       g.fillText(fin ? v : '상대가 치는 중…', 640, 184)
       if (fin && vs.l?.mid) { // 래더: LP 변화
         g.font = `800 20px ${FONT}`; g.textAlign = 'center'
-        if (lad) { const c = TIER_COLOR[lad.tierLabel?.split(' ')[0] ?? ''] ?? '#fff'; gem(g, 540, 222, 12, c); g.fillStyle = (lad.delta ?? 0) >= 0 ? AMBER : '#9ab'; g.fillText(`${(lad.delta ?? 0) >= 0 ? '+' : ''}${lad.delta} LP   ·   ${lad.tierLabel}`, 650, 230) }
+        if (lad) { gem(g, 540, 222, 12, lad.tierLabel ?? 'UNRANKED'); g.fillStyle = (lad.delta ?? 0) >= 0 ? AMBER : '#9ab'; g.fillText(`${(lad.delta ?? 0) >= 0 ? '+' : ''}${lad.delta} LP   ·   ${lad.tierLabel}`, 650, 230) }
         else { g.fillStyle = ICE; g.font = `700 15px ${FONT}`; g.fillText('래더 결과를 확인하는 중…', 640, 230) }
       } else if (fin && !vs.peerDone) { g.font = `13px ${FONT}`; g.fillStyle = ICE; g.fillText('상대와 연결이 끊어졌습니다', 640, 226) }
 

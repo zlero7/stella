@@ -1,5 +1,5 @@
 import type { Scene, SceneManager } from '../core/SceneManager'
-import { FONT, AMBER, NAVY, accentFill, drawBg, ease, hit, pill, press, chip, overRect } from '../render/theme'
+import { FONT, AMBER, NAVY, accentFill, drawBg, ease, hit, pill, press, chip, header, optRow, overRect } from '../render/theme'
 import { settings, saveSettings, keyLabel } from '../data/Storage'
 
 // 키 설정: 4K / 6K 탭, 위쪽 키캡 그림, 레인마다 한 줄씩 (ACTION | KEYBOARD). 줄을 고르고 Enter → 새 키를 누르면 바뀐다 (이미 쓰는 키면 서로 자리를 바꾼다)
@@ -15,15 +15,15 @@ export const Keys = (sm: SceneManager): Scene => {
     render(g) {
       drawBg(g)
       const keys = list(), t = performance.now() / 1000
-      g.font = `800 16px ${FONT}`; g.fillStyle = '#fff'; g.fillText('INPUT SETTING', 40, 44)
+      header(g, 'INPUT SETTING', '키 설정')
 
       // 위쪽: 4K / 6K 탭
       for (const [i, k] of ([4, 6] as const).entries()) {
         const x = 420 + i * 224, on = n === k
-        hit(x, 62, 216, 42, () => tab(k))
-        if (on) pill(g, x, 62, 216, 42, accentFill(g, x, 216))
-        else { const hv = ease('ktab' + k, overRect(x, 62, 216, 42)); pill(g, x, 62, 216, 42, `rgba(${8 + 40 * hv},${24 + 66 * hv},${70 + 130 * hv},.7)`); g.strokeStyle = 'rgba(255,255,255,.4)'; g.lineWidth = 1.5; g.stroke() }
-        g.font = `800 19px ${FONT}`; g.fillStyle = on ? '#fff' : 'rgba(255,255,255,.78)'; g.textAlign = 'center'; g.fillText(`${k}K KEYS`, x + 108, 90); g.textAlign = 'left'
+        hit(x, 14, 216, 38, () => tab(k))
+        if (on) { pill(g, x, 14, 216, 38, accentFill(g, x, 216)) }
+        else { const hv = ease('ktab' + k, overRect(x, 14, 216, 38)); pill(g, x, 14, 216, 38, `rgba(${8 + 40 * hv},${24 + 66 * hv},${70 + 130 * hv},.7)`); g.strokeStyle = 'rgba(255,255,255,.4)'; g.lineWidth = 1.5; g.stroke() }
+        g.font = `800 19px ${FONT}`; g.fillStyle = on ? '#fff' : 'rgba(255,255,255,.78)'; g.textAlign = 'center'; g.fillText(`${k}K KEYS`, x + 108, 40); g.textAlign = 'left'
       }
 
       // 키캡 그림: 고른 레인의 키가 주황으로 빛난다
@@ -43,14 +43,12 @@ export const Keys = (sm: SceneManager): Scene => {
       keys.forEach((code, i) => {
         const y = TOP + i * (RH + 4), on = i === sel, k = ease('krow' + i, on)
         hit(AX, y, AW + 4 + KW, RH, () => { if (i === sel && !binding) press('Enter'); sel = i }, () => { if (!binding) sel = i })
-        for (const [px, pw] of [[AX, AW], [KX, KW]]) {
-          g.fillStyle = `rgba(${8 + 24 * k},${24 + 40 * k},${70 + 70 * k},${0.74 + 0.1 * k})`; g.fillRect(px, y, pw, RH)
-          if (k > 0.02) { g.strokeStyle = `rgba(255,177,59,${k})`; g.lineWidth = 2.5; g.strokeRect(px + 1.25, y + 1.25, pw - 2.5, RH - 2.5) }
-        }
+        optRow(g, AX + 8 * k, y, AW + 4 + KW - 8 * k, RH, k)
+        g.fillStyle = `rgba(255,255,255,${0.2 * (1 - k)})`; g.fillRect(KX - 2, y + 8, 1, RH - 16)
         g.textAlign = 'center'
-        g.font = `${on ? 800 : 700} 18px ${FONT}`; g.fillStyle = on ? '#ffe27a' : 'rgba(255,255,255,.88)'; g.fillText(`TRACK ${i + 1}`, AX + AW / 2, y + 29)
+        g.font = `${on ? 800 : 700} 18px ${FONT}`; g.fillStyle = on ? '#fff' : 'rgba(255,255,255,.88)'; g.fillText(`TRACK ${i + 1}`, AX + AW / 2, y + 29)
         const asking = binding && on
-        g.fillStyle = asking ? `rgba(255,226,122,${0.55 + 0.45 * Math.abs(Math.sin(t * 5))})` : on ? '#ffe27a' : '#fff'
+        g.fillStyle = asking ? `rgba(255,255,255,${0.55 + 0.45 * Math.abs(Math.sin(t * 5))})` : '#fff'
         g.fillText(asking ? '키를 누르세요' : keyLabel(code), KX + KW / 2, y + 29)
         g.textAlign = 'left'
       })

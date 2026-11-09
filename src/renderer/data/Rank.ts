@@ -9,6 +9,11 @@ export interface RankRow { nick: string; score: number; acc: number; mc: number;
 const url = (dir: string, diff: string, keys: number) => `${serverUrl()}/rank/${encodeURIComponent(dir)}/${keys}k-${diff}`
 const ok = (r: Response) => (r.ok ? (r.json() as Promise<RankRow[]>) : Promise.reject(Object.assign(new Error(String(r.status)), { status: r.status })))
 
+// 곡을 시작했다고 서버에 알린다: 서버는 이 기록이 있고 곡 길이만큼 지난 뒤에만 점수를 받는다
+export const startPlay = (dir: string, diff: string, keys: number) => {
+  if (account.token) void fetch(`${serverUrl()}/play/start`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${account.token}` }, body: JSON.stringify({ board: `${dir}/${keys}k-${diff}` }), signal: AbortSignal.timeout(6000) }).catch(() => {})
+}
+
 export const fetchRank = (dir: string, diff: string, keys = settings.keyMode) =>
   fetch(url(dir, diff, keys), { signal: AbortSignal.timeout(6000) }).then(ok).catch(() => undefined)
 

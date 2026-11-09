@@ -37,6 +37,7 @@ test('승패: 실패한 쪽이 지고, 같은 상태면 점수', () => {
 test('DJ CLASS: 상위 20곡만 더하고 난이도 가중치를 곱한다', () => {
   assert.equal(classPoints({ 'a/4k-hard': 1_000_000 }), 100)
   assert.equal(classPoints({ 'a/4k-stella': 1_000_000 }), 125)
+  assert.equal(classPoints({ 'imp-0116c57d38/4k-easy': 1_000_000, 'imp-0292531b9c/4k-stella': 1_000_000 }), 175) // 곡 폴더 이름에도 -가 있다
   const many = Object.fromEntries(Array.from({ length: 30 }, (_, i) => [`s${i}/4k-hard`, 1_000_000]))
   assert.equal(classPoints(many), 2000)
   assert.equal(classOf(0).label, 'BEGINNER IV')

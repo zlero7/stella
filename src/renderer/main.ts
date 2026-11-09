@@ -74,10 +74,15 @@ addEventListener('contextmenu', e => e.preventDefault())
 cv.style.cursor = 'none' // 시스템 포인터 대신 게임 전용 포인터(별)를 그린다. 입력 칸 같은 HTML 위에서는 시스템 포인터가 그대로 보인다
 cv.addEventListener('mouseleave', () => { pointerLeave(); mouse.x = mouse.y = -99 })
 addEventListener('mousemove', e => { [mouse.x, mouse.y] = pos(e) })
-// 화면 크기에 맞춰 캔버스의 실제 해상도를 정한다(1280~1920폭): 큰 화면에서 글자와 선이 뭉개지지 않는다. 그림은 계속 1280x720 좌표로 그린다
+// 화면 크기에 맞춰 캔버스의 실제 해상도를 정한다(1280폭 이상, 화면 픽셀 그대로): 그림을 늘려 붙이면 비스듬한 선이 계단처럼 보이고 글자가 뭉개진다. 그림은 계속 1280x720 좌표로 그린다
+// 4K 화면에서 느려지면(프레임 시간 평균이 22ms 넘게 한동안 계속) 해상도 상한을 3840 → 2560 → 1920으로 한 단계씩 낮춘다
+let cap = 3840, frameMs = 16.7, lastT = 0, slow = 0
 function fitCanvas() {
-  const w = Math.min(1920, Math.max(1280, Math.round(cv.clientWidth * devicePixelRatio)))
+  const w = Math.min(cap, Math.max(1280, Math.round(cv.clientWidth * devicePixelRatio)))
   if (cv.width !== w) { cv.width = w; cv.height = Math.round(w * 9 / 16) }
   g.setTransform(w / 1280, 0, 0, w / 1280, 0, 0)
+  g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high' // 기본값(low)은 큰 커버·배경을 줄여 그릴 때 가장자리가 계단져 보인다. 캔버스 크기를 바꾸면 초기화되므로 매 프레임 지정
+  const now = performance.now(), dt = now - lastT; lastT = now
+  if (dt < 100) { frameMs += (dt - frameMs) * 0.05; slow = frameMs > 22 ? slow + 1 : 0; if (slow > 120 && cap > 1920) { cap = cap > 2560 ? 2560 : 1920; slow = 0; frameMs = 16.7 } } // 창이 가려졌다 돌아온 큰 dt는 느린 탓이 아니므로 제외
 }
 startLoop(dt => sm.update(dt), () => { fitCanvas(); clearHits(); sm.render(g); drawPointer(g, !!hitAt(mouse.x, mouse.y)) })

@@ -19,7 +19,7 @@ const send = (s, o) => s.send(JSON.stringify(o))
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a)
 
 // 곡 목록·파일 배포: songs/ 폴더가 모든 유저가 보는 곡 목록의 원본이다. 앱은 /songs/index.json 에 있는 곡만 보여 주고, 고를 때 파일을 받아 간다
-const SONGS = fileURLToPath(new URL('../songs/', import.meta.url))
+const SONGS = process.env.STELLA_SONGS ? path.resolve(process.env.STELLA_SONGS) : fileURLToPath(new URL('../songs/', import.meta.url)) // STELLA_SONGS: 시험 서버는 작은 곡 폴더를 따로 쓴다
 const IMG = ['png', 'jpg', 'jpeg', 'webp', 'svg'], AUDIO = ['wav', 'mp3', 'ogg', 'flac', 'm4a', 'aac', 'mp4']
 const TYPES = { mp4: 'video/mp4', mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg', flac: 'audio/flac', m4a: 'audio/mp4', aac: 'audio/aac', json: 'application/json', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', svg: 'image/svg+xml' }
 const CORS = { 'Access-Control-Allow-Origin': '*', 'X-Content-Type-Options': 'nosniff' } // 로그인은 쿠키가 아니라 Authorization 헤더로 하므로 *여도 다른 사이트가 세션을 쓸 수 없다
@@ -49,26 +49,32 @@ function sendSong(req, res, dir, file) {
   const p = path.join(SONGS, dir, file)
   let st; try { st = fs.statSync(p) } catch { /* 없음 */ }
   if (!st?.isFile() || !servable(file)) { res.writeHead(404, CORS); res.end(); return }
+  const media = AUDIO.includes(file.split('.').pop().toLowerCase()) // 음원·영상(저작물)은 로그인한 계정에게만: 앱의 <video>는 헤더를 못 붙이므로 ?t=토큰 도 받는다. 표지·채보·목록은 공개
+  if (media && !userByToken(bearer(req) ?? new URL(req.url, 'http://x').searchParams.get('t'))) return json(res, 401, { error: '곡을 받으려면 로그인이 필요합니다' })
   const r = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range ?? '') // 영상 미리듣기는 구간 요청으로 온다
   let a = 0, b = st.size - 1
   if (r && (r[1] || r[2])) { if (r[1]) { a = +r[1]; if (r[2]) b = Math.min(+r[2], b) } else a = Math.max(st.size - +r[2], 0) }
   if (r?.[1] && !r[2]) b = Math.min(b, a + CHUNK - 1) // 끝을 안 정한 요청(bytes=N-)에 통째로 보내지 않는다: 터널 대역폭을 영상 한 개가 독차지하지 않게 (브라우저가 이어서 또 요청한다)
   if (a > b) { res.writeHead(416, { ...CORS, 'Content-Range': `bytes */${st.size}` }); res.end(); return }
   const part = a > 0 || b < st.size - 1
-  res.writeHead(part ? 206 : 200, { ...CORS, 'Content-Type': TYPES[file.split('.').pop().toLowerCase()] ?? 'application/octet-stream', 'Accept-Ranges': 'bytes', 'Content-Length': b - a + 1, ...(part && { 'Content-Range': `bytes ${a}-${b}/${st.size}` }) })
+  res.writeHead(part ? 206 : 200, { ...CORS, 'Content-Type': TYPES[file.split('.').pop().toLowerCase()] ?? 'application/octet-stream', 'Accept-Ranges': 'bytes', ...(media && { 'Cache-Control': 'private, no-store' }), 'Content-Length': b - a + 1, ...(part && { 'Content-Range': `bytes ${a}-${b}/${st.size}` }) })
   if (req.method === 'HEAD') res.end(); else fs.createReadStream(p, { start: a, end: b }).on('error', () => res.destroy()).pipe(res)
 }
 
 // 계정: 비밀번호는 솔트를 쳐서 scrypt로만 저장한다 (원문은 저장도 로그도 안 한다). 로그인하면 임의 토큰(32바이트)을 주고, 서버에는 토큰의 sha256만 남긴다.
 // 비밀번호가 오가므로 터널(HTTPS)로만 공개한다는 전제다. 무차별 대입은 아이디+IP·IP별 실패 횟수로 막는다.
-// shortcut: 비밀번호 변경·탈퇴·이메일 복구는 없다 (잊으면 users.json에서 그 계정을 지워야 한다), 필요해지면 /auth/password 를 추가한다
+// shortcut: 탈퇴·이메일 복구는 없다 (비밀번호를 잊으면 users.json에서 그 계정을 지워야 한다)
 const DATA = process.env.STELLA_DATA ? path.resolve(process.env.STELLA_DATA) : fileURLToPath(new URL('.', import.meta.url)) // 계정·랭킹 파일 폴더 (시험 서버는 STELLA_DATA로 따로 쓴다: 진짜 계정 파일을 건드리지 않게)
 const USERS = path.join(DATA, 'users.json'), TOKEN_TTL = 90 * 864e5, MAX_TOKENS = 5, MAX_USERS = 5000
 const users = Object.assign(Object.create(null), (() => { try { return JSON.parse(fs.readFileSync(USERS, 'utf8')) } catch { return {} } })()) // 아이디 -> {id, nick, salt, hash, tokens: [{h, at}], at}. 프로토타입 없는 객체: 아이디 "__proto__"가 통과하므로
 const tokenIdx = new Map() // 토큰 해시 -> 아이디
 const reindex = () => { tokenIdx.clear(); for (const u of Object.values(users)) for (const t of u.tokens) tokenIdx.set(t.h, u.id) }
 reindex()
-const saveUsers = () => { fs.writeFileSync(USERS + '.tmp', JSON.stringify(users)); fs.renameSync(USERS + '.tmp', USERS) } // 임시 파일을 거쳐서: 쓰다 끊겨도 기존 파일은 안 깨진다
+const saveUsers = () => { // 임시 파일을 거쳐서: 쓰다 끊겨도 기존 파일은 안 깨진다. 덮기 전의 파일은 .bak 으로 한 벌 남긴다
+  fs.writeFileSync(USERS + '.tmp', JSON.stringify(users))
+  try { fs.copyFileSync(USERS, USERS + '.bak') } catch { /* 처음엔 없다 */ }
+  fs.renameSync(USERS + '.tmp', USERS)
+}
 const sha = s => crypto.createHash('sha256').update(s).digest('hex')
 const kdf = (pw, salt) => new Promise((ok, no) => crypto.scrypt(pw.normalize('NFKC'), salt, 64, { N: 16384, r: 8, p: 1 }, (e, k) => (e ? no(e) : ok(k))))
 const DUMMY = crypto.randomBytes(16) // 없는 아이디도 똑같이 해시를 계산해서 응답 시간으로 아이디 유무를 알 수 없게
@@ -89,131 +95,165 @@ const userByToken = tok => {
   if (Date.now() - t.at > TOKEN_TTL) { u.tokens = u.tokens.filter(x => x !== t); reindex(); saveUsers(); return null }
   return u
 }
+const readBuf = (req, max) => new Promise(ok => { const a = []; let n = 0; req.on('data', c => { n += c.length; if (n > max) ok(null); else a.push(c) }); req.on('end', () => ok(Buffer.concat(a))); req.on('error', () => ok(null)) })
 const readBody = (req, max) => new Promise(ok => { let b = ''; req.on('data', c => { b += c; if (b.length > max) { req.destroy(); ok(null) } }); req.on('end', () => ok(b)); req.on('error', () => ok(null)) })
 // 닉네임: 글자나 숫자가 하나는 있어야 한다 ("--" 같은 이름 방지)
 const NICK = /^(?=.*[\p{L}\p{N}])[\p{L}\p{N}_ -]{2,12}$/u, RESERVED = /^(player|admin|guest|stella|운영자|관리자)$/
+const json = (res, code, body) => { res.writeHead(code, { ...CORS, 'Cache-Control': 'no-store', 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(body)) }
+// 가입·닉네임 변경이 같이 쓰는 닉네임 검사 (self: 변경하는 계정, 자기 자신과의 겹침은 제외). 막히면 응답을 보내고 true
+const nickRejected = (res, nick, self = '') => {
+  const bad = !NICK.test(nick) || RESERVED.test(nickKey(nick)) ? [400, '닉네임은 한글·영문·숫자 2~12자입니다'] : Object.values(users).some(u => u.id !== self && nickKey(u.nick) === nickKey(nick)) ? [409, '이미 있는 닉네임입니다'] : undefined
+  if (bad) json(res, bad[0], { error: bad[1] })
+  return !!bad
+}
+// 로그인·비밀번호 변경이 같이 쓰는 실패 횟수 제한: 아이디+IP 8번, IP 30번 (15분)
+const FAIL_WIN = 15 * 60 * 1000
+const lockedOut = (id, ip) => spent(`fail|${id}|${ip}`, 8, FAIL_WIN) || spent('failip|' + ip, 30, FAIL_WIN)
+const noteFail = (id, ip) => { bump(`fail|${id}|${ip}`, FAIL_WIN); bump('failip|' + ip, FAIL_WIN) }
+const AVATARS = path.join(DATA, 'avatars'), AVATAR_MAX = 64 * 1024
+const BAD_FORM = { error: '형식이 올바르지 않습니다' }
 async function authApi(req, res, route) {
-  const json = (code, body) => { res.writeHead(code, { ...CORS, 'Cache-Control': 'no-store', 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(body)) }
-  if (route === 'me') { const u = userOf(req); return u ? json(200, { id: u.id, nick: u.nick }) : json(401, { error: '로그인이 필요합니다' }) }
-  if (req.method !== 'POST') return json(405, { error: 'POST만 됩니다' })
+  if (route === 'me') { const u = userOf(req); return u ? json(res, 200, { id: u.id, nick: u.nick }) : json(res, 401, { error: '로그인이 필요합니다' }) }
+  if (req.method !== 'POST') return json(res, 405, { error: 'POST만 됩니다' })
   if (route === 'logout') {
     const tok = bearer(req), u = userOf(req)
     if (u && tok) { u.tokens = u.tokens.filter(t => t.h !== sha(tok)); reindex(); saveUsers() }
-    return json(200, {})
+    return json(res, 200, {})
   }
-  let m; try { m = JSON.parse(await readBody(req, 1024)) } catch { return json(400, { error: '형식이 올바르지 않습니다' }) }
-  if (!m || typeof m !== 'object') return json(400, { error: '형식이 올바르지 않습니다' })
+  let m; try { m = JSON.parse(await readBody(req, 1024)) } catch { return json(res, 400, BAD_FORM) }
+  if (!m || typeof m !== 'object') return json(res, 400, BAD_FORM)
   const ip = ipOf(req), id = String(m.id ?? '').trim().toLowerCase(), pw = String(m.pw ?? '')
   if (route === 'register') {
     const nick = String(m.nick ?? '').trim(), WIN = 36e5
-    if (spent('reg|' + ip, 5, WIN)) return json(429, { error: '가입 시도가 너무 많습니다. 나중에 다시 해 주세요' })
-    if (!/^[a-z0-9_]{4,16}$/.test(id)) return json(400, { error: '아이디는 영문 소문자·숫자·_ 4~16자입니다' })
-    if (pw.length < 8 || pw.length > 64) return json(400, { error: '비밀번호는 8~64자입니다' })
-    if (pw.toLowerCase() === id) return json(400, { error: '아이디와 같은 비밀번호는 쓸 수 없습니다' })
-    if (!NICK.test(nick) || RESERVED.test(nickKey(nick))) return json(400, { error: '닉네임은 한글·영문·숫자 2~12자입니다' })
-    const taken = () => (users[id] ? '이미 있는 아이디입니다' : Object.values(users).some(u => nickKey(u.nick) === nickKey(nick)) ? '이미 있는 닉네임입니다' : '')
-    if (taken()) return json(409, { error: taken() })
-    if (Object.keys(users).length >= MAX_USERS) return json(503, { error: '지금은 가입할 수 없습니다' })
+    if (spent('reg|' + ip, 5, WIN)) return json(res, 429, { error: '가입 시도가 너무 많습니다. 나중에 다시 해 주세요' })
+    if (!/^[a-z0-9_]{4,16}$/.test(id)) return json(res, 400, { error: '아이디는 영문 소문자·숫자·_ 4~16자입니다' })
+    if (pw.length < 8 || pw.length > 64) return json(res, 400, { error: '비밀번호는 8~64자입니다' })
+    if (pw.toLowerCase() === id) return json(res, 400, { error: '아이디와 같은 비밀번호는 쓸 수 없습니다' })
+    if (users[id]) return json(res, 409, { error: '이미 있는 아이디입니다' })
+    if (nickRejected(res, nick)) return
+    if (Object.keys(users).length >= MAX_USERS) return json(res, 503, { error: '지금은 가입할 수 없습니다' })
     bump('reg|' + ip, WIN)
     const salt = crypto.randomBytes(16), hash = (await kdf(pw, salt)).toString('hex')
-    if (taken()) return json(409, { error: taken() }) // 해시를 계산하는 동안 같은 이름이 가입했을 수 있다
+    if (users[id]) return json(res, 409, { error: '이미 있는 아이디입니다' }) // 해시를 계산하는 동안 같은 이름이 가입했을 수 있다
+    if (nickRejected(res, nick)) return
     const u = users[id] = { id, nick, salt: salt.toString('hex'), hash, tokens: [], at: Date.now() }
-    log('가입', id); return json(200, { token: issue(u), id, nick })
+    log('가입', id); return json(res, 200, { token: issue(u), id, nick })
   }
   // 로그인
-  const WIN = 15 * 60 * 1000, kf = `fail|${id}|${ip}`, ki = 'failip|' + ip
-  if (spent(kf, 8, WIN) || spent(ki, 30, WIN)) return json(429, { error: '실패가 너무 많습니다. 잠시 후 다시 해 주세요' })
+  if (lockedOut(id, ip)) return json(res, 429, { error: '실패가 너무 많습니다. 잠시 후 다시 해 주세요' })
   const u = users[id], h = await kdf(pw.slice(0, 64), u ? Buffer.from(u.salt, 'hex') : DUMMY)
-  if (!u || pw.length > 64 || !crypto.timingSafeEqual(h, Buffer.from(u.hash, 'hex'))) { bump(kf, WIN); bump(ki, WIN); return json(401, { error: '아이디 또는 비밀번호가 틀렸습니다' }) }
-  buckets.delete(kf)
-  return json(200, { token: issue(u), id: u.id, nick: u.nick })
+  if (!u || pw.length > 64 || !crypto.timingSafeEqual(h, Buffer.from(u.hash, 'hex'))) { noteFail(id, ip); return json(res, 401, { error: '아이디 또는 비밀번호가 틀렸습니다' }) }
+  buckets.delete(`fail|${id}|${ip}`)
+  return json(res, 200, { token: issue(u), id: u.id, nick: u.nick })
 }
 
 // 온라인 랭킹: 곡·키 수·난이도마다 계정 하나당 최고 점수만 남기고 상위 50명을 ranks.json에 저장한다. 올리려면 로그인해야 하고, 이름은 계정의 닉네임으로 남는다
 // 닉네임은 계정 안에서 겹치지 않으므로 남의 이름으로 올릴 수 없다.
-// shortcut: 점수는 클라이언트가 보낸 값을 그대로 믿는다 (친구끼리 쓰는 규모), 부정 방지가 필요해지면 서버가 판정 기록을 검증하도록 바꾼다
-const RANKS = path.join(DATA, 'ranks.json'), TOP = 50
+// 점수 올리기는 "곡을 시작했다"는 기록(/play/start)이 있어야 하고, 시작한 뒤 곡 길이의 80%가 지나야 받는다 (경험치도 이 한 번만). 점수 값 자체는 클라이언트를 믿는다.
+// shortcut: 시작 기록은 가짜 점수를 "느리게" 할 뿐 막지는 못한다 (곡 길이만큼 기다린 뒤 만점을 올리는 건 가능), 필요해지면 판정 기록(리플레이)을 서버가 검증하게 바꾼다
+const RANKS = path.join(DATA, 'ranks.json'), TOP = 50, MIN_PLAY = 0.8
 let ranks = {}
 try { ranks = JSON.parse(fs.readFileSync(RANKS, 'utf8')) } catch { /* 처음엔 없다 */ }
 let saveTimer
 const saveRanks = () => { clearTimeout(saveTimer); saveTimer = setTimeout(() => fs.writeFile(RANKS, JSON.stringify(ranks), e => e && log('랭킹 저장 실패', e.message)), 2000) }
-const hits = new Map() // IP -> [분 시작, 횟수]: 점수 올리기는 분당 30번까지
-const tooMany = ip => { const now = Date.now(), h = hits.get(ip); if (!h || now - h[0] > 60000) { hits.set(ip, [now, 1]); return false } return ++h[1] > 30 }
 const BADGES = ['ALL PERFECT', 'FULL COMBO']
+const BOARD = /^([\w-]{1,64})\/([46]k-(?:easy|normal|hard|stella))$/
+// 채보의 마지막 노트 시각(초) = 곡을 끝까지 치는 데 걸리는 최소 시간. 채보가 없으면 undefined
+const chartLen = (dir, key) => { try { return JSON.parse(fs.readFileSync(path.join(SONGS, dir, key + '.json'), 'utf8')).notes.at(-1)?.time ?? 0 } catch { return undefined } }
+const plays = new Map() // 계정 id -> {board, at}: 지금 치고 있는 곡 (한 번 쓰면 지운다)
 function rankApi(req, res, dir, key) {
-  const json = (code, body) => { res.writeHead(code, { ...CORS, 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(body)) }
-  if (!fs.existsSync(path.join(SONGS, dir, key + '.json'))) { json(404, { error: '없는 곡' }); return }
+  if (chartLen(dir, key) === undefined) return json(res, 404, { error: '없는 곡' })
   const id = dir + '/' + key, list = (ranks[id] ??= []), top = () => list.slice(0, 10).map(({ uid, ...r }) => ({ ...r, lv: levelOf(users[uid]?.exp ?? 0).level })) // 계정 id는 내보내지 않고 레벨을 붙인다
-  if (req.method === 'GET') { json(200, top()); return }
+  if (req.method === 'GET') return json(res, 200, top())
   const user = userOf(req)
-  if (!user) { json(401, { error: '로그인이 필요합니다' }); return }
-  if (tooMany(ipOf(req))) { json(429, { error: '잠시 후 다시' }); return }
-  let body = ''
-  req.on('data', c => { body += c; if (body.length > 512) req.destroy() })
-  req.on('end', () => {
-    let m; try { m = JSON.parse(body) } catch { json(400, { error: '형식' }); return }
-    const nick = user.nick, score = m.score, acc = m.acc, mc = m.mc
-    if (!Number.isInteger(score) || score < 0 || score > 1_000_000 || !(acc >= 0 && acc <= 100) || !Number.isInteger(mc) || mc < 0 || mc > 99999) { json(400, { error: '값' }); return }
-    const rec = { uid: user.id, nick, score, acc: +acc.toFixed(2), mc, badge: BADGES.includes(m.badge) ? m.badge : '', at: Date.now() }, cur = list.find(r => r.uid === user.id)
+  if (!user) return json(res, 401, { error: '로그인이 필요합니다' })
+  if (spent('rank|' + ipOf(req), 30, 60000)) return json(res, 429, { error: '잠시 후 다시' })
+  bump('rank|' + ipOf(req), 60000)
+  readBody(req, 512).then(body => {
+    let m; try { m = JSON.parse(body) } catch { return json(res, 400, { error: '형식' }) }
+    const score = m.score, acc = m.acc, mc = m.mc
+    if (!Number.isInteger(score) || score < 0 || score > 1_000_000 || !(acc >= 0 && acc <= 100) || !Number.isInteger(mc) || mc < 0 || mc > 99999) return json(res, 400, { error: '값' })
+    const p = plays.get(user.id)
+    if (p?.board !== id || Date.now() - p.at < chartLen(dir, key) * 1000 * MIN_PLAY) return json(res, 409, { error: '곡을 시작한 기록이 없거나 너무 빨리 끝났습니다' })
+    plays.delete(user.id)
+    const rec = { uid: user.id, nick: user.nick, score, acc: +acc.toFixed(2), mc, badge: BADGES.includes(m.badge) ? m.badge : '', at: Date.now() }, cur = list.find(r => r.uid === user.id)
     if (!cur) list.push(rec); else if (score > cur.score) Object.assign(cur, rec)
     list.sort((a, b) => b.score - a.score || a.at - b.at); list.length = Math.min(list.length, TOP)
-    if (!user.lastPlay || Date.now() - user.lastPlay > 20000) { applyPlay(user, id, score, rec.badge); user.lastPlay = Date.now() } // 경험치·기록: 20초 안에 또 오는 건 세지 않는다 (곡 하나가 그보다 길다)
-    saveRanks(); saveUsersSoon(); json(200, top())
+    applyPlay(user, id, score, rec.badge)
+    saveRanks(); saveUsersSoon(); json(res, 200, top())
   })
 }
 
 // 프로필(레벨·티어·DJ CLASS·꾸미기)과 래더 결과 API. 모두 로그인(Bearer 토큰)이 필요하다
 const ladder = createLadder({
+  len: (dir, diff) => chartLen(dir, '4k-' + diff) ?? 0,
   pool: () => JSON.parse(songIndex()).filter(s => s.meta.charts?.includes('4k-hard.json') && s.meta.title).map(s => ({ dir: s.dir, diff: 'hard', title: s.meta.title, artist: s.meta.artist ?? '' })),
   save: () => saveUsersSoon(), log
 })
 setInterval(() => ladder.tick(), 2000).unref()
 async function playerApi(req, res, url) {
-  const json = (code, body) => { res.writeHead(code, { ...CORS, 'Cache-Control': 'no-store', 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(body)) }
   const user = userOf(req)
-  if (!user) return json(401, { error: '로그인이 필요합니다' })
-  if (url === '/profile/me' && req.method === 'GET') return json(200, profileView(user))
-  if (url === '/ladder/result' && req.method === 'GET') return json(200, ladder.result(user, new URL(req.url, 'http://x').searchParams.get('mid')))
-  if (req.method !== 'POST') return json(405, { error: 'POST만 됩니다' })
-  let m; try { m = JSON.parse(await readBody(req, 512)) } catch { return json(400, { error: '형식이 올바르지 않습니다' }) }
-  if (!m || typeof m !== 'object') return json(400, { error: '형식이 올바르지 않습니다' })
+  if (!user) return json(res, 401, { error: '로그인이 필요합니다' })
+  if (url === '/profile/me' && req.method === 'GET') return json(res, 200, profileView(user))
+  if (url === '/ladder/result' && req.method === 'GET') return json(res, 200, ladder.result(user, new URL(req.url, 'http://x').searchParams.get('mid')))
+  if (url === '/profile/avatar') { // 프로필 이미지: 앱이 160x160 JPEG로 줄여서 올린다. JPEG 머리·꼬리만 확인하고 그대로 저장 (그림으로만 쓰고 image/jpeg로만 내보낸다)
+    const file = () => path.join(AVATARS, user.pid + '.jpg')
+    if (req.method === 'DELETE') { if (user.avatarAt) { fs.rmSync(file(), { force: true }); user.avatarAt = 0; saveUsers() } return json(res, 200, profileView(user)) }
+    if (req.method !== 'POST') return json(res, 405, { error: 'POST만 됩니다' })
+    if (spent('avatar|' + user.id, 10, 36e5)) return json(res, 429, { error: '이미지는 한 시간에 10번까지 바꿀 수 있습니다' })
+    bump('avatar|' + user.id, 36e5)
+    const b = await readBuf(req, AVATAR_MAX)
+    if (!b) res.once('finish', () => req.destroy()) // 너무 큰 몸통은 응답을 보낸 뒤 연결을 끊는다 (먼저 끊으면 앱이 이유를 못 받는다)
+    if (!b || b.length < 200 || b[0] !== 0xff || b[1] !== 0xd8 || b[2] !== 0xff || b.at(-2) !== 0xff || b.at(-1) !== 0xd9) return json(res, 400, { error: '올릴 수 없는 이미지입니다 (64KB 이하 JPEG)' })
+    user.pid ??= crypto.randomBytes(8).toString('hex')
+    fs.mkdirSync(AVATARS, { recursive: true }); fs.writeFileSync(file() + '.tmp', b); fs.renameSync(file() + '.tmp', file())
+    user.avatarAt = Date.now(); saveUsers()
+    return json(res, 200, profileView(user))
+  }
+  if (req.method !== 'POST') return json(res, 405, { error: 'POST만 됩니다' })
+  let m; try { m = JSON.parse(await readBody(req, 512)) } catch { return json(res, 400, { error: '형식이 올바르지 않습니다' }) }
+  if (!m || typeof m !== 'object') return json(res, 400, { error: '형식이 올바르지 않습니다' })
+  if (url === '/play/start') { // 곡을 시작했다고 알린다: 점수·경험치는 이 기록이 있어야 받는다
+    const b = BOARD.exec(String(m?.board ?? ''))
+    if (!b || chartLen(b[1], b[2]) === undefined) return json(res, 400, { error: '없는 곡' })
+    plays.set(user.id, { board: m.board, at: Date.now() }); return json(res, 200, {})
+  }
   if (url === '/profile/equip') { // 해금한 플레이트·칭호만 낄 수 있다
-    for (const [kind, key] of [['plate', 'plate'], ['title', 'title']]) if (m[key] !== undefined) { if (typeof m[key] !== 'string' || !canEquip(user, kind, m[key])) return json(400, { error: '아직 쓸 수 없는 항목입니다' }); user[key] = m[key] }
-    saveUsersSoon(); return json(200, profileView(user))
+    for (const [kind, key] of [['plate', 'plate'], ['title', 'title']]) if (m[key] !== undefined) { if (typeof m[key] !== 'string' || !canEquip(user, kind, m[key])) return json(res, 400, { error: '아직 쓸 수 없는 항목입니다' }); user[key] = m[key] }
+    saveUsersSoon(); return json(res, 200, profileView(user))
   }
   if (url === '/profile/nick') { // 닉네임 변경: 가입 때와 같은 규칙, 하루에 한 번만. 랭킹에 남은 이름도 같이 바뀐다
     const nick = String(m.nick ?? '').trim()
-    if (!NICK.test(nick) || RESERVED.test(nickKey(nick))) return json(400, { error: '닉네임은 한글·영문·숫자 2~12자입니다' })
-    if (nick === user.nick) return json(400, { error: '지금 쓰는 닉네임과 같습니다' })
-    if (Object.values(users).some(x => x.id !== user.id && nickKey(x.nick) === nickKey(nick))) return json(409, { error: '이미 있는 닉네임입니다' })
+    if (nick === user.nick) return json(res, 400, { error: '지금 쓰는 닉네임과 같습니다' })
+    if (nickRejected(res, nick, user.id)) return
     const wait = (user.nickAt ?? 0) + 864e5 - Date.now()
-    if (wait > 0) return json(429, { error: `닉네임은 하루에 한 번만 바꿀 수 있습니다 (${Math.ceil(wait / 36e5)}시간 뒤)` })
+    if (wait > 0) return json(res, 429, { error: `닉네임은 하루에 한 번만 바꿀 수 있습니다 (${Math.ceil(wait / 36e5)}시간 뒤)` })
     user.nick = nick; user.nickAt = Date.now()
     for (const list of Object.values(ranks)) for (const r of list) if (r.uid === user.id) r.nick = nick
     saveRanks(); saveUsersSoon(); log('닉네임 변경', user.id)
-    return json(200, profileView(user))
+    return json(res, 200, profileView(user))
   }
   if (url === '/profile/password') { // 비밀번호 변경: 현재 비밀번호를 확인하고(틀리면 로그인 실패와 같은 횟수 제한), 지금 기기 말고는 모두 로그아웃시킨다. 403: 401은 앱이 "로그아웃됨"으로 읽는다
-    const ip = ipOf(req), kf = `fail|${user.id}|${ip}`, ki = 'failip|' + ip, WIN = 15 * 60 * 1000, old = String(m.old ?? ''), pw = String(m.pw ?? '')
-    if (spent(kf, 8, WIN) || spent(ki, 30, WIN)) return json(429, { error: '실패가 너무 많습니다. 잠시 후 다시 해 주세요' })
+    const ip = ipOf(req), old = String(m.old ?? ''), pw = String(m.pw ?? '')
+    if (lockedOut(user.id, ip)) return json(res, 429, { error: '실패가 너무 많습니다. 잠시 후 다시 해 주세요' })
     const same = old.length <= 64 && crypto.timingSafeEqual(await kdf(old, Buffer.from(user.salt, 'hex')), Buffer.from(user.hash, 'hex'))
-    if (!same) { bump(kf, WIN); bump(ki, WIN); return json(403, { error: '현재 비밀번호가 틀렸습니다' }) }
-    if (pw.length < 8 || pw.length > 64) return json(400, { error: '새 비밀번호는 8~64자입니다' })
-    if (pw.toLowerCase() === user.id) return json(400, { error: '아이디와 같은 비밀번호는 쓸 수 없습니다' })
-    if (pw === old) return json(400, { error: '지금 비밀번호와 같습니다' })
+    if (!same) { noteFail(user.id, ip); return json(res, 403, { error: '현재 비밀번호가 틀렸습니다' }) }
+    if (pw.length < 8 || pw.length > 64) return json(res, 400, { error: '새 비밀번호는 8~64자입니다' })
+    if (pw.toLowerCase() === user.id) return json(res, 400, { error: '아이디와 같은 비밀번호는 쓸 수 없습니다' })
+    if (pw === old) return json(res, 400, { error: '지금 비밀번호와 같습니다' })
     const salt = crypto.randomBytes(16), hash = (await kdf(pw, salt)).toString('hex'), cur = sha(bearer(req))
     user.salt = salt.toString('hex'); user.hash = hash
     user.tokens = user.tokens.filter(t => t.h === cur); reindex(); saveUsers(); log('비밀번호 변경', user.id)
-    return json(200, {})
+    return json(res, 200, {})
   }
-  if (url === '/ladder/report') return json(ladder.report(user, m.mid, { score: m.score, failed: m.failed }) ? 200 : 400, {})
-  json(404, { error: '없는 주소' })
+  if (url === '/ladder/report') return json(res, ladder.report(user, m.mid, { score: m.score, failed: m.failed }) ? 200 : 400, {})
+  json(res, 404, { error: '없는 주소' })
 }
 
 const server = http.createServer((req, res) => {
-  const url = req.url?.split('?')[0] ?? '', song = /^\/songs\/([\w-]{1,64})\/([\w.-]{1,80})$/.exec(url), rank = /^\/rank\/([\w-]{1,64})\/([46]k-(?:easy|normal|hard|stella))$/.exec(url)
-  if (req.method === 'OPTIONS') { res.writeHead(204, { ...CORS, 'Access-Control-Allow-Methods': 'GET, POST', 'Access-Control-Allow-Headers': 'Content-Type, Authorization' }); res.end(); return }
-  if (/^\/(profile\/(me|equip|nick|password)|ladder\/(result|report))$/.test(url)) { playerApi(req, res, url).catch(e => { log('API 오류', e.message); if (!res.headersSent) res.writeHead(500, CORS); res.end() }); return }
+  const url = req.url?.split('?')[0] ?? '', song = /^\/songs\/([\w-]{1,64})\/([\w.-]{1,80})$/.exec(url), avatar = /^\/avatar\/([0-9a-f]{16})\.jpg$/.exec(url), rank = /^\/rank\/([\w-]{1,64})\/([46]k-(?:easy|normal|hard|stella))$/.exec(url)
+  if (req.method === 'OPTIONS') { res.writeHead(204, { ...CORS, 'Access-Control-Allow-Methods': 'GET, POST, DELETE', 'Access-Control-Allow-Headers': 'Content-Type, Authorization' }); res.end(); return }
+  if (/^\/(profile\/(me|equip|nick|password)|ladder\/(result|report)|play\/start)$|^\/profile\/avatar$/.test(url)) { playerApi(req, res, url).catch(e => { log('API 오류', e.message); if (!res.headersSent) res.writeHead(500, CORS); res.end() }); return }
   const auth = /^\/auth\/(register|login|logout|me)$/.exec(url)
   if (auth) { authApi(req, res, auth[1]).catch(e => { log('인증 오류', e.message); if (!res.headersSent) res.writeHead(500, CORS); res.end() }); return }
   if (rank && (req.method === 'GET' || req.method === 'POST')) { rankApi(req, res, rank[1], rank[2]); return }
@@ -221,7 +261,9 @@ const server = http.createServer((req, res) => {
   if (url === '/songs/index.json') {
     try { res.writeHead(200, { ...CORS, 'Content-Type': 'application/json; charset=utf-8' }); res.end(songIndex()) } catch (e) { log('목록 오류', e.message); res.destroy() }
   } else if (song) sendSong(req, res, song[1], song[2])
-  else { res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' }); res.end(`STELLA relay OK (${rooms.size} rooms)\n`) } // 터널·브라우저로 살아 있는지 보는 용도
+  else if (avatar) { // 프로필 이미지는 공개 (주소의 ?v=가 바뀌면 새 파일)
+    fs.readFile(path.join(AVATARS, avatar[1] + '.jpg'), (e, b) => { if (e) { res.writeHead(404, CORS); res.end() } else { res.writeHead(200, { ...CORS, 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=31536000, immutable', 'Content-Length': b.length }); res.end(b) } })
+  } else { res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' }); res.end(`STELLA relay OK (${rooms.size} rooms)\n`) } // 터널·브라우저로 살아 있는지 보는 용도
 })
 const wss = new WebSocketServer({ server, maxPayload: 1 << 20 }) // 채보(수십 KB)가 한 메시지로 오가므로 1MB까지
 
