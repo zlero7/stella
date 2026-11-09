@@ -18,7 +18,7 @@ fs.writeFileSync(path.join(songs, '4k-hard.json'), JSON.stringify({ notes: [{ ti
 let proc, base
 before(async () => {
   const port = await new Promise(ok => { const s = net.createServer().listen(0, () => { const p = s.address().port; s.close(() => ok(p)) }) })
-  proc = spawn(process.execPath, [path.join(import.meta.dirname, 'relay.mjs')], { env: { ...process.env, PORT: String(port), STELLA_DATA: data, STELLA_SONGS: path.join(tmp, 'songs') }, stdio: 'ignore' })
+  proc = spawn(process.execPath, [path.join(import.meta.dirname, 'relay.mjs')], { env: { ...process.env, PORT: String(port), STELLA_DATA: data, STELLA_SONGS: path.join(tmp, 'songs'), STELLA_DL_MAX: '350', STELLA_BACKUP_MS: '300' }, stdio: 'ignore' })
   base = `http://127.0.0.1:${port}`
   for (let i = 0; i < 50; i++) { try { await fetch(base); return } catch { await new Promise(r => setTimeout(r, 100)) } }
   throw new Error('서버가 안 뜸')
@@ -71,11 +71,15 @@ test('비밀번호 변경: 현재 비밀번호 확인, 다른 기기 로그아�
   assert.equal((await call('/auth/login', { id: 'bobby', pw: 'brand-new-pw1' })).status, 200)
 })
 
-test('곡 파일: 음원·영상은 로그인(헤더 또는 ?t=)이 있어야, 표지는 공개', async () => {
+test('곡 파일: 음원·영상은 로그인(헤더 또는 10분짜리 ?t= 미디어 토큰)이 있어야, 표지는 공개', async () => {
   assert.equal((await fetch(`${base}/songs/a-b/audio.mp4`)).status, 401)
   assert.equal((await fetch(`${base}/songs/a-b/cover.png`)).status, 200)
-  assert.equal((await fetch(`${base}/songs/a-b/audio.mp4?t=${tokA}`)).status, 200)
-  assert.equal((await fetch(`${base}/songs/a-b/audio.mp4?t=${'x'.repeat(43)}`)).status, 401)
+  assert.equal((await fetch(`${base}/songs/a-b/audio.mp4?t=${tokA}`)).status, 401) // 진짜 로그인 토큰은 주소로 받지 않는다
+  assert.equal((await call('/auth/media')).status, 405) // GET은 안 된다
+  assert.equal((await call('/auth/media', {})).status, 401) // 로그인 필요
+  const mt = (await call('/auth/media', {}, tokA)).body.token; assert.match(mt, /^[\w-]{32}$/)
+  assert.equal((await fetch(`${base}/songs/a-b/audio.mp4?t=${mt}`)).status, 200)
+  assert.equal((await fetch(`${base}/songs/a-b/audio.mp4?t=${'x'.repeat(32)}`)).status, 401)
   assert.equal((await fetch(`${base}/songs/a-b/audio.mp4`, { headers: { Authorization: `Bearer ${tokA}` } })).status, 200)
   assert.equal((await fetch(`${base}/songs/index.json`)).status, 200)
 })
@@ -112,4 +116,35 @@ test('프로필 이미지: JPEG만, 올리면 공개 주소로 보이고 지우�
   const del = await fetch(`${base}/profile/avatar`, { method: 'DELETE', headers: { Authorization: `Bearer ${tokA}` } })
   assert.equal((await del.json()).avatar, '')
   assert.equal((await fetch(`${base}/avatar/${key.split('.')[0]}.jpg`)).status, 404)
+})
+
+test('랭킹 본문이 null이거나 너무 커도 서버는 살아 있다 (예전엔 서버가 죽었다)', async () => {
+  const post = body => fetch(`${base}/rank/a-b/4k-hard`, { method: 'POST', headers: { Authorization: `Bearer ${tokA}` }, body }).then(r => r.status).catch(() => 0)
+  assert.equal(await post('null'), 400)
+  assert.equal(await post('7'), 400)
+  await post('x'.repeat(2000)) // 너무 크면 연결이 끊겨도 된다
+  assert.equal((await fetch(`${base}/version`)).status, 200) // 아직 살아 있다
+})
+
+test('하루 받기 한도: 계정마다, 넘으면 429', async () => {
+  const c = (await call('/auth/register', { id: 'carol', pw: PW, nick: 'Carol' })).body.token
+  const get = () => fetch(`${base}/songs/a-b/audio.mp4`, { headers: { Authorization: `Bearer ${c}` } }).then(async r => { await r.arrayBuffer(); return r.status })
+  const got = []; for (let i = 0; i < 5; i++) got.push(await get())
+  assert.deepEqual(got, [200, 200, 200, 200, 429]) // 한도 350바이트, 한 번에 100바이트
+  assert.equal((await fetch(`${base}/songs/a-b/audio.mp4`, { headers: { Authorization: `Bearer ${tokA}` } })).status, 200) // 다른 계정은 영향 없다
+})
+
+test('버전 안내와 곡 지문(v): 앱이 새 버전·바뀐 곡을 알아챈다', async () => {
+  const v = await (await fetch(`${base}/version`)).json()
+  assert.equal(v.latest, JSON.parse(fs.readFileSync(path.join(import.meta.dirname, '..', 'package.json'), 'utf8')).version)
+  const idx = await (await fetch(`${base}/songs/index.json`)).json()
+  assert.match(idx[0].v, /^[0-9a-f]{10}$/)
+  assert.ok(idx[0].files.every(f => f.name && f.size >= 0 && f.mt === undefined)) // 앱에는 이름·크기만 준다
+})
+
+test('백업: 계정·랭킹이 날짜 폴더에 복사된다', async () => {
+  await sleep(700)
+  const day = fs.readdirSync(path.join(data, 'backups'))
+  assert.equal(day.length, 1)
+  assert.ok(fs.existsSync(path.join(data, 'backups', day[0], 'users.json')))
 })

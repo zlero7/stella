@@ -21,3 +21,7 @@ server/users.json.tmp
 server/users.json.bak
 server/users.backup*
 server/avatars/
+server/backups/
+design-canvas/
+reports/
+research_notes/

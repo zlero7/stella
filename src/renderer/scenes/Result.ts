@@ -4,7 +4,7 @@ import { JUDGES, ScoreKeeper } from '../game/ScoreKeeper'
 import { diffName } from '../data/Songs'
 import { account, saveSettings, settings } from '../data/Storage'
 import { setBest } from '../data/Storage'
-import { fetchRank, submitRank, type RankRow } from '../data/Rank'
+import { fetchRank, submitRank, rankMsg, type RankRow } from '../data/Rank'
 import { prof, refreshProfile } from '../data/Profile'
 import { FONT, CYAN, ICE, AMBER, artOf, card, chip, drawBg, drawCover, fit, glow, meter, pill, starPath } from '../render/theme'
 
@@ -126,6 +126,7 @@ export const Result = (sm: SceneManager): Scene => {
       g.fillText(applied !== undefined ? `판정 오프셋을 ${applied > 0 ? '+' : ''}${applied}ms로 맞췄습니다` : rec ? `판정 오프셋 ${-rec > 0 ? '+' : ''}${-rec} 더 조정하면 맞습니다` : '판정 오프셋은 그대로 좋습니다', 880, 482)
       }
 
+      if (rankMsg && !loading && !d.failed) { g.font = `700 14px ${FONT}`; g.fillStyle = AMBER; g.textAlign = 'left'; g.fillText(rankMsg, 60, 700) } // 점수를 서버에 못 올렸을 때 이유
       // 아래: 키 안내 (알약 모양 키캡)
       const keys: [string, string][] = [['Enter', '재도전'], ['Esc', '곡 선택'], ['O', '보정'], ['Tab', showBoard ? '타이밍' : '순위']]
       let kx = 880

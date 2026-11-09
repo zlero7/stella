@@ -14,11 +14,20 @@ export const chartFile = (diff: string, keys = settings.keyMode) => `${keys}k-${
 // song 프로토콜(Rust가 처리): <video>가 곡 폴더의 영상을 직접 스트리밍한다. Windows에서는 http://song.localhost 모양이다
 const SONG_BASE = typeof navigator !== 'undefined' && navigator.userAgent.includes('Windows') ? 'http://song.localhost/' : 'song://localhost/'
 // 아직 받지 않은 곡(remoteDirs)은 서버에서 바로 읽는다: 목록의 로고·미리듣기용
-// 서버의 음원·영상은 로그인한 계정만 받을 수 있다. <video>는 헤더를 못 붙이므로 주소에 토큰을 붙인다 (표지·채보는 공개)
+// 서버의 음원·영상은 로그인한 계정만 받을 수 있다. <video>는 헤더를 못 붙이므로 주소에 10분짜리 미디어 토큰을 붙인다 (로그인 토큰 자체는 주소에 남기지 않는다). 표지·채보는 공개
 const MEDIA = /.(mp4|mp3|wav|ogg|flac|m4a|aac)$/i
+let mediaToken = ''
+export async function refreshMedia() {
+  if (!account.token) { mediaToken = ''; return }
+  try {
+    const r = await fetch(`${serverUrl()}/auth/media`, { method: 'POST', headers: { Authorization: `Bearer ${account.token}` }, signal: AbortSignal.timeout(6000) })
+    mediaToken = r.ok ? ((await r.json()) as { token: string }).token : ''
+  } catch { /* 서버에 못 닿으면 다음 주기에 다시 */ }
+}
+setInterval(() => void refreshMedia(), 4 * 60 * 1000) // 토큰은 10분 뒤 만료된다
 export const songUrl = (dir: string, file: string) => {
   const remote = remoteDirs.has(dir)
-  return `${remote ? `${serverUrl()}/songs/` : SONG_BASE}${encodeURIComponent(dir)}/${encodeURIComponent(file)}${remote && account.token && MEDIA.test(file) ? `?t=${account.token}` : ''}`
+  return `${remote ? `${serverUrl()}/songs/` : SONG_BASE}${encodeURIComponent(dir)}/${encodeURIComponent(file)}${remote && mediaToken && MEDIA.test(file) ? `?t=${mediaToken}` : ''}`
 }
 
 // 미리듣기 시작 지점: meta에 없으면 곡의 30% 지점(보통 앞의 인트로를 지난 부분)
@@ -26,13 +35,18 @@ export const previewStartOf = (start: number | undefined, duration: number) => M
 export const diffName = (d: string) => d.toUpperCase()
 
 // ---- 서버 곡 목록: 곡은 서버 목록(/songs/index.json)에 있는 것만 보인다. 이 PC에 없는 곡은 고를 때 받아 온다 ----
-interface Entry { dir: string; meta: Song['meta']; files: { name: string; size: number }[] }
+interface Entry { dir: string; meta: Song['meta']; v?: string; files: { name: string; size: number }[] }
+// 받아 둔 곡의 서버 지문(v): 서버의 v가 바뀌면(채보를 고치는 등) 그 곡을 다시 받는다. 기록이 없는 예전 곡은 지금 서버 것으로 보고 시작한다
+const VER_KEY = 'stella.songVer'
+const readVers = (): Record<string, string> => { try { return JSON.parse(localStorage.getItem(VER_KEY) ?? '{}') } catch { return {} } }
+const writeVers = (v: Record<string, string>) => { try { localStorage.setItem(VER_KEY, JSON.stringify(v)) } catch { /* 저장 못 해도 이번 실행은 계속 */ } }
 let entries: Entry[] = []
 const remoteDirs = new Set<string>()
 const CACHE_KEY = 'stella.songIndex' // 서버에 못 닿을 때 마지막으로 받은 목록
 export const serverUrl = () => { const r = settings.relay?.trim(); return relayUrl(!r || r === '-' ? DEFAULT_RELAY : r).replace(/^ws/, 'http') }
 
 export async function loadSongs(): Promise<Song[]> {
+  await refreshMedia()
   try {
     const r = await fetch(`${serverUrl()}/songs/index.json`, { signal: AbortSignal.timeout(8000) })
     if (!r.ok) throw new Error(String(r.status))
@@ -44,12 +58,19 @@ export async function loadSongs(): Promise<Song[]> {
   }
   const have = new Map(((await window.api?.scanSongs()) ?? []).map(s => [s.dir, s]))
   remoteDirs.clear()
-  return entries.map(e => {
+  const vers = readVers()
+  let changed = false
+  const list = entries.map(e => {
     const local = have.get(e.dir)
-    if (local) return local
-    remoteDirs.add(e.dir)
+    if (local && e.v) {
+      if (!vers[e.dir]) { vers[e.dir] = e.v; changed = true }
+      if (vers[e.dir] === e.v) return local
+    } else if (local) return local
+    remoteDirs.add(e.dir) // 이 PC에 없거나, 서버에서 바뀐 곡
     return { dir: e.dir, meta: e.meta, remote: true }
   })
+  if (changed) writeVers(vers)
+  return list
 }
 
 // 서버에서 곡 파일을 받아 곡 폴더에 둔다 (이미 있으면 바로 끝). progress는 0~1
@@ -72,7 +93,7 @@ async function download(s: Song, progress: (p: number) => void, signal?: AbortSi
   signal?.addEventListener('abort', () => stop.abort())
   const get = async (f: { name: string }) => {
     const r = await fetch(`${serverUrl()}/songs/${encodeURIComponent(s.dir)}/${encodeURIComponent(f.name)}`, { signal: stop.signal, headers: account.token ? { Authorization: `Bearer ${account.token}` } : {} })
-    if (r.status === 401) throw new Error('곡을 받으려면 로그인이 필요합니다')
+    if (r.status === 401 || r.status === 429) throw new Error(((await r.json().catch(() => ({}))) as { error?: string }).error ?? '곡을 받을 수 없습니다')
     if (!r.ok || !r.body) throw new Error(`${f.name}: ${r.status}`)
     const chunks: Uint8Array[] = [], rd = r.body.getReader()
     for (let c = await rd.read(); !c.done; c = await rd.read()) { chunks.push(c.value); done += c.value.length; progress(Math.min(done / total, 1)) }
@@ -87,4 +108,5 @@ async function download(s: Song, progress: (p: number) => void, signal?: AbortSi
     if (meta) await get(meta)
   } catch (err) { stop.abort(); throw err }
   remoteDirs.delete(s.dir)
+  if (e.v) writeVers({ ...readVers(), [s.dir]: e.v })
 }

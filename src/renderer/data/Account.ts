@@ -1,5 +1,5 @@
 import { account, saveAccount, saveSettings, settings } from './Storage'
-import { serverUrl } from './Songs'
+import { refreshMedia, serverUrl } from './Songs'
 
 // 계정 (서버의 /auth). 비밀번호는 서버로 보낼 때만 쓰고 저장하지 않는다
 export const ID_RE = /^[a-z0-9_]{4,16}$/, NICK_RE = /^(?=.*[\p{L}\p{N}])[\p{L}\p{N}_ -]{2,12}$/u
@@ -29,7 +29,7 @@ export async function api<T>(path: string, body?: object | Blob, method?: string
 const keep = (j: { token?: string; id: string; nick: string }) => {
   if (j.token) account.token = j.token
   account.id = j.id; account.nick = settings.nick = j.nick
-  saveAccount(); saveSettings()
+  saveAccount(); saveSettings(); void refreshMedia() // 곡 주소용 미디어 토큰
 }
 
 export const forget = () => { account.token = account.id = account.nick = ''; saveAccount() } // 로컬 정보만 지운다 (토큰이 서버에서 만료됐을 때도 쓴다)

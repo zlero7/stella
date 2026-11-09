@@ -1,6 +1,7 @@
 import type { Scene, SceneManager } from '../core/SceneManager'
 import { account, settings } from '../data/Storage'
 import { prof, refreshProfile } from '../data/Profile'
+import { APP_VERSION, updateInfo } from '../data/Update'
 import { profileCard } from '../render/profileCard'
 import { FONT, AMBER, accentFill, drawBg, slant, glow, hit, press, starPath, ease } from '../render/theme'
 
@@ -73,6 +74,8 @@ export const Title = (sm: SceneManager): Scene => {
       g.font = `15px ${FONT}`; g.fillStyle = '#eaf6ff'
       g.fillText(`${settings.keyMode}K  ·  세로 리듬 게임`, cx, by + 62)
 
+      const up = updateInfo.value // 새 버전이 있으면 아래에 안내 (앱에는 자동 업데이트가 없다)
+      if (up) { g.textAlign = 'center'; g.font = `700 15px ${FONT}`; g.fillStyle = AMBER; g.fillText(`새 버전 v${up.latest}이 나왔습니다 — ${up.url.replace('https://', '')} 에서 받아 설치하세요 (현재 v${APP_VERSION})`, 640, 690); g.textAlign = 'left' }
       // 시작 화면: 깜빡이는 PRESS ANY KEY
       if (m < 1) {
         g.globalAlpha = 1 - m

@@ -13,6 +13,7 @@ import { Lobby } from './scenes/Lobby'
 import { VsResult } from './scenes/VsResult'
 import { Account } from './scenes/Account'
 import { verify } from './data/Account'
+import { checkUpdate } from './data/Update'
 import { prof, refreshProfile } from './data/Profile'
 import { Ladder } from './scenes/Ladder'
 import { Collection } from './scenes/Collection'
@@ -38,6 +39,7 @@ sm.add('account', Account(sm))
 sm.add('ladder', Ladder(sm))
 sm.add('collection', Collection(sm))
 initVersus(sm)
+void checkUpdate()
 void verify().then(refreshProfile) // 저장된 로그인이 아직 유효한지 (서버에 못 닿으면 그대로 둔다), 그다음 내 프로필
 sm.go('title')
 if (import.meta.env.DEV) Object.assign(window, { __sm: sm, __prof: prof }) // 개발 중 화면을 바로 열어 보는 용도 (프로필도 손으로 채워 본다)
@@ -76,13 +78,15 @@ cv.addEventListener('mouseleave', () => { pointerLeave(); mouse.x = mouse.y = -9
 addEventListener('mousemove', e => { [mouse.x, mouse.y] = pos(e) })
 // 화면 크기에 맞춰 캔버스의 실제 해상도를 정한다(1280폭 이상, 화면 픽셀 그대로): 그림을 늘려 붙이면 비스듬한 선이 계단처럼 보이고 글자가 뭉개진다. 그림은 계속 1280x720 좌표로 그린다
 // 4K 화면에서 느려지면(프레임 시간 평균이 22ms 넘게 한동안 계속) 해상도 상한을 3840 → 2560 → 1920으로 한 단계씩 낮춘다
-let cap = 3840, frameMs = 16.7, lastT = 0, slow = 0
+// 낮춘 지 1분이 지나면 한 단계만 다시 올려 본다 (잠깐 느렸던 것일 수 있다). 또 느려지면 다시 낮추고, 그 뒤로는 올리지 않는다
+let cap = 3840, frameMs = 16.7, lastT = 0, slow = 0, loweredAt = 0, retried = false
 function fitCanvas() {
   const w = Math.min(cap, Math.max(1280, Math.round(cv.clientWidth * devicePixelRatio)))
   if (cv.width !== w) { cv.width = w; cv.height = Math.round(w * 9 / 16) }
   g.setTransform(w / 1280, 0, 0, w / 1280, 0, 0)
   g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high' // 기본값(low)은 큰 커버·배경을 줄여 그릴 때 가장자리가 계단져 보인다. 캔버스 크기를 바꾸면 초기화되므로 매 프레임 지정
   const now = performance.now(), dt = now - lastT; lastT = now
-  if (dt < 100) { frameMs += (dt - frameMs) * 0.05; slow = frameMs > 22 ? slow + 1 : 0; if (slow > 120 && cap > 1920) { cap = cap > 2560 ? 2560 : 1920; slow = 0; frameMs = 16.7 } } // 창이 가려졌다 돌아온 큰 dt는 느린 탓이 아니므로 제외
+  if (dt < 100) { frameMs += (dt - frameMs) * 0.05; slow = frameMs > 22 ? slow + 1 : 0; if (slow > 120 && cap > 1920) { cap = cap > 2560 ? 2560 : 1920; slow = 0; frameMs = 16.7; loweredAt = now } }
+  if (cap < 3840 && !retried && loweredAt && now - loweredAt > 60000) { cap = cap < 2560 ? 2560 : 3840; retried = true; frameMs = 16.7; slow = 0 } // 창이 가려졌다 돌아온 큰 dt는 느린 탓이 아니므로 제외
 }
 startLoop(dt => sm.update(dt), () => { fitCanvas(); clearHits(); sm.render(g); drawPointer(g, !!hitAt(mouse.x, mouse.y)) })

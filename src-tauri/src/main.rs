@@ -114,7 +114,9 @@ struct StateStore { path: PathBuf, map: Mutex<BTreeMap<String, String>> }
 fn state_save(store: tauri::State<StateStore>, key: String, value: String) {
     let mut m = store.map.lock().unwrap();
     m.insert(key, value);
-    let _ = fs::write(&store.path, serde_json::to_vec(&*m).unwrap_or_default()); // 저장 못 해도 이번 실행은 계속
+    // 임시 파일에 쓴 뒤 이름을 바꾼다: 쓰다 끊겨도 기존 state.json(로그인·기록·설정)은 안 깨진다. 저장 못 해도 이번 실행은 계속
+    let tmp = store.path.with_extension("json.tmp");
+    let _ = fs::write(&tmp, serde_json::to_vec(&*m).unwrap_or_default()).and_then(|_| fs::rename(&tmp, &store.path));
 }
 
 // 대결: 한 번에 한 명과 TCP로 연결해 JSON 한 줄씩 주고받는다. 렌더러는 'net' 이벤트로 열림·메시지·끊김을 받는다
@@ -130,10 +132,13 @@ fn net_run(app: tauri::AppHandle, id: u64, stream: TcpStream) {
     let Ok(w) = stream.try_clone() else { net_event(&app, "close", None); return };
     *app.state::<Net>().writer.lock().unwrap() = Some(w);
     net_event(&app, "open", None);
-    for line in BufReader::new(stream).lines() {
-        let Ok(line) = line else { break };
+    let mut rd = BufReader::new(stream);
+    loop {
+        // 한 줄은 1MB까지: 상대가 줄바꿈 없이 계속 보내 메모리를 채우지 못하게 (채보도 수십 KB)
+        let mut line = String::new();
+        if !matches!((&mut rd).take(1 << 20).read_line(&mut line), Ok(n) if n > 0) || !line.ends_with('\n') { break; }
         if app.state::<Net>().gen.load(Ordering::SeqCst) != id { return; }
-        net_event(&app, "msg", Some(line));
+        net_event(&app, "msg", Some(line.trim_end_matches(['\r', '\n']).to_string()));
     }
     if app.state::<Net>().gen.load(Ordering::SeqCst) == id { net_event(&app, "close", None); }
 }
