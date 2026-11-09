@@ -277,7 +277,7 @@ export const SongSelect = (sm: SceneManager): Scene => {
       // 아래 안내
       g.fillStyle = 'rgba(6,18,56,.55)'; g.fillRect(0, 676, 1280, 44); g.fillStyle = 'rgba(255,255,255,.25)'; g.fillRect(0, 676, 1280, 1)
       {
-        const hints: [string, string][] = [['↑↓', '곡'], ['←→', '난이도'], ['Tab', '가수'], ['F2', '검색'], ['F4', '정렬'], ['F3', '4/6키'], ['F5', '연습'], ['Enter', '시작'], ['F1', '설정'], ['Esc', '뒤로']]
+        const hints: [string, string][] = [['↑↓', '곡'], ['←→', '난이도'], ['Tab', '가수'], ['F2', '검색'], ['F4', '정렬'], ['1 2', '속도'], ['F3', '4/6키'], ['F5', '연습'], ['Enter', '시작'], ['F1', '설정'], ['Esc', '뒤로']]
         let hx = 440
         for (const [k, label] of hints) hx = chip(g, hx, 692, k, label, '#fff', k === '↑↓' || k === '←→' ? null : undefined)
       }
@@ -325,6 +325,7 @@ export const SongSelect = (sm: SceneManager): Scene => {
       }
       else if (e.key === 'F3') { settings.keyMode = settings.keyMode === 6 ? 4 : 6; saveSettings(); di = Math.min(di, diffs().length - 1); schedulePreview() } // 4키 ↔ 6키
       else if (e.key === 'F5' && !vsMode) { prac = (prac + 1) % PRACTICE.length; note = prac ? `연습: 곡의 ${PRACTICE[prac] * 100}%부터 (기록 안 됨)` : '연습 끔'; noteAt = performance.now() + 1500 }
+      else if (e.key === '1' || e.key === '2') { settings.scroll = Math.min(Math.max(Math.round((settings.scroll + (e.key === '2' ? 0.5 : -0.5)) * 10) / 10, 1), 20); saveSettings(); note = `스크롤 속도 ${settings.scroll.toFixed(1)}`; noteAt = performance.now() + 1500 } // 1 느리게 · 2 빠르게
       else if (e.key === 'F1') leave('settings', { back: 'select', backData: vsMode ? { mode: 'versus' } : undefined })
       else if (e.key === 'Escape') leave(vsMode ? 'vs' : 'title')
       else if (/^[a-z0-9]$/i.test(e.key) && !e.ctrlKey && !e.altKey && !e.metaKey && songs.length > 1) { // 글자·숫자 키: 그 글자로 시작하는 다음 곡으로 건너뛴다
