@@ -66,10 +66,20 @@ function speaker(g: CanvasRenderingContext2D, cx: number, cy: number, r: number,
   g.fillStyle = k0.mid; g.beginPath(); g.arc(cx, cy, r * 0.14, 0, 7); g.fill()
 }
 
+// 기둥 아래쪽에 붙는 바깥쪽 날개: 위로 뾰족하게 올라가고 끝에 포인트 색 줄이 간다. d = -1 왼쪽, 1 오른쪽
+function wing(g: CanvasRenderingContext2D, rx: number, d: number, jy: number, k0: GearSkin) {
+  const x0 = rx + (d < 0 ? 0 : 26), tip = 250, bot = jy + 26
+  g.beginPath(); g.moveTo(x0, tip); g.quadraticCurveTo(x0 + d * 62, tip + 120, x0 + d * 30, bot); g.lineTo(x0, bot); g.closePath()
+  const f = g.createLinearGradient(0, tip, 0, bot); f.addColorStop(0, k0.light); f.addColorStop(0.55, k0.mid); f.addColorStop(1, k0.dark)
+  g.fillStyle = f; g.fill(); g.strokeStyle = k0.accent; g.lineWidth = 2; g.stroke()
+  g.beginPath(); g.moveTo(x0, tip + 30); g.quadraticCurveTo(x0 + d * 38, tip + 130, x0 + d * 18, bot - 4); g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 1.5; g.stroke()
+}
+
 // 필드 판과 양옆 기둥·램프 (노트 아래에 깔린다)
 export function drawGearBack(g: CanvasRenderingContext2D, x: number, fw: number, jy: number, pa: number, lit: Lit, k0: GearSkin) {
   g.fillStyle = `rgba(${k0.field},${pa})`; g.fillRect(x - 4, 0, fw + 8, 720)
   rail(g, x - 30, jy, k0); rail(g, x + fw + 4, jy, k0)
+  wing(g, x - 30, -1, jy, k0); wing(g, x + fw + 4, 1, jy, k0)
   lamps(g, x - 66, lit, k0); lamps(g, x + fw + 66, lit, k0)
 }
 

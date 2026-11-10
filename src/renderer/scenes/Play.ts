@@ -276,8 +276,8 @@ export const Play = (sm: SceneManager): Scene => {
       g.fillStyle = 'rgba(255,255,255,.07)'
       for (let l = 1; l < LANES; l++) g.fillRect(FIELD_X + l * LANE_W, 0, 1, 720)
       down.forEach(l => { g.fillStyle = laneGlow![isBlue(l) ? 'o' : 'i']; g.fillRect(FIELD_X + l * LANE_W, JUDGE_Y - 300, LANE_W, 300) })
-      g.fillStyle = 'rgba(190,235,255,.4)'; g.fillRect(FIELD_X - 4, JUDGE_Y - 9, fw + 8, 18) // 판정선 번짐
-      g.fillStyle = '#fff'; g.fillRect(FIELD_X - 4, JUDGE_Y - 2, fw + 8, 4)
+      g.globalAlpha = 0.35; g.fillStyle = gs.accent; g.fillRect(FIELD_X - 4, JUDGE_Y - 9, fw + 8, 18); g.globalAlpha = 1 // 판정선 번짐: 스킨 포인트 색
+      g.fillStyle = lighten(gs.accent, 0.55); g.fillRect(FIELD_X - 4, JUDGE_Y - 2, fw + 8, 4)
       const curPos = posOf(t)
       for (let i = head; i < ns.length; i++) {
         const n = ns[i]
@@ -342,16 +342,17 @@ export const Play = (sm: SceneManager): Scene => {
         const ap = sk.counts.slice(1).every(c => c === 0), fc = sk.counts[MISS] === 0
         const pop = 1 + 0.18 * Math.max(0, 1 - (performance.now() - flash.at) / 120) // 칠 때마다 살짝 커졌다 돌아온다
         g.save(); g.translate(CX, 250); g.scale(pop, pop)
-        g.font = `900 72px ${FONT}`; g.lineJoin = 'round'; g.lineWidth = 9; g.strokeStyle = 'rgba(6,20,70,.9)'; g.strokeText(String(sk.combo), 0, 0)
+        g.globalAlpha = 0.55; g.font = `900 104px ${FONT}`; g.lineJoin = 'round'; g.lineWidth = 8; g.strokeStyle = 'rgba(6,10,24,.85)'; g.strokeText(String(sk.combo), 0, 0) // 큰 반투명 콤보 숫자 (노트가 비쳐 보인다)
         const cg = g.createLinearGradient(0, -56, 0, 6); if (ap) { cg.addColorStop(0, '#fff6c2'); cg.addColorStop(1, '#ffb52e') } else if (fc) { cg.addColorStop(0, '#e6fbff'); cg.addColorStop(1, '#5fd0ff') } else { cg.addColorStop(0, '#ffffff'); cg.addColorStop(1, '#bcd6ff') }
-        g.fillStyle = cg; g.fillText(String(sk.combo), 0, 0); g.restore()
+        g.fillStyle = cg; g.fillText(String(sk.combo), 0, 0); g.globalAlpha = 1; g.restore()
         g.font = `900 17px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.95)'; g.fillText(ap ? 'ALL PERFECT' : fc ? 'FULL COMBO' : 'COMBO', CX, 278)
       }
       const age = performance.now() - flash.at
       if (age < 500) {
         g.globalAlpha = 1 - age / 500
         g.font = `900 36px ${FONT}`; g.lineJoin = 'round'; g.lineWidth = 7; g.strokeStyle = 'rgba(6,20,70,.85)'; g.strokeText(JUDGES[flash.j].name, CX, 430)
-        g.fillStyle = JUDGE_COLORS[flash.j]; g.fillText(JUDGES[flash.j].name, CX, 430)
+        if (flash.j === 0) { const gg = g.createLinearGradient(0, 400, 0, 436); gg.addColorStop(0, '#fff6c2'); gg.addColorStop(0.55, '#ffd04a'); gg.addColorStop(1, '#d98a00'); g.fillStyle = gg } else g.fillStyle = JUDGE_COLORS[flash.j] // PERFECT는 금색
+        g.fillText(JUDGES[flash.j].name, CX, 430)
         if (settings.fastSlow && flash.j !== MISS && flash.j !== 0) {
           g.font = `700 18px ${FONT}`; g.fillStyle = flash.dt > 0 ? CYAN : AMBER
           g.fillText(flash.dt > 0 ? 'FAST' : 'SLOW', CX, 458)
