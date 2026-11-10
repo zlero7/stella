@@ -89,3 +89,12 @@ test('콤보가 높을수록 같은 판정도 점수가 크다 (끊긴 판이 �
   assert.ok(a.score < 1_000_000 && a.score > b.score)
   assert.equal(new ScoreKeeper(0).score, 0)
 })
+
+test('판정 수가 5%씩 쌓일 때마다 점수를 기록하고, ±25ms 이내 입력은 MAX로 센다', () => {
+  const s = new ScoreKeeper(40)
+  for (let i = 0; i < 40; i++) { s.press(i % 2 ? 0.01 : 0.04); s.add(0) }
+  assert.equal(s.pace.length, 20)
+  assert.equal(s.pace[19], s.score)
+  assert.ok(s.pace.every((v, i) => i === 0 || v >= s.pace[i - 1]))
+  assert.equal(s.maxCount, 20)
+})

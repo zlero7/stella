@@ -54,6 +54,7 @@ export const Result = (sm: SceneManager): Scene => {
         if (f > 0) { g.fillStyle = COLORS[i]; g.globalAlpha = 0.34; g.beginPath(); g.roundRect(60, y, Math.max(340 * f, 20), 36, 10); g.fill(); g.globalAlpha = 1 }
         g.fillStyle = COLORS[i]; g.beginPath(); g.roundRect(70, y + 10, 4, 16, 2); g.fill()
         g.font = `800 16px ${FONT}`; g.fillText(j.name, 88, y + 24)
+        if (i === 0 && sk.maxCount) { const nw = g.measureText(j.name).width; g.font = `800 13px ${FONT}`; g.fillStyle = '#ffd04a'; g.fillText(`MAX ${sk.maxCount}`, 88 + nw + 10, y + 24) } // PERFECT 중 ±25ms 이내
         g.font = `800 22px ${FONT}`; g.fillStyle = '#fff'; g.textAlign = 'right'; g.fillText(String(sk.counts[i]), 388, y + 26); g.textAlign = 'left'
       })
       g.fillStyle = 'rgba(255,255,255,.2)'; g.fillRect(60, 460, 340, 1)

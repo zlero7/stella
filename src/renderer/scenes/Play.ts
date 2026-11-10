@@ -1,11 +1,11 @@
 import type { Scene, SceneManager } from '../core/SceneManager'
 import type { Chart, Note, Song } from '../../shared/types'
 import { AudioClock } from '../core/AudioClock'
-import { HIT_WIN, JUDGES, MISS, ScoreKeeper, judgeOf, pickTarget } from '../game/ScoreKeeper'
+import { HIT_WIN, JUDGES, MAX_WIN, MISS, ScoreKeeper, judgeOf, pickTarget } from '../game/ScoreKeeper'
 import { buildChart } from '../game/AutoChart'
 import { cleanChart, posAt, speedTable } from '../game/chartCheck'
 import { chartFile, diffName } from '../data/Songs'
-import { keyLabel, saveSettings, settings } from '../data/Storage'
+import { getBest, keyLabel, saveSettings, settings, type Best } from '../data/Storage'
 import { sfx } from '../core/Sfx'
 import { send, vs, waitFor } from '../core/Versus'
 import { startPlay } from '../data/Rank'
@@ -22,7 +22,9 @@ const fieldX = (align: number) => [70, (1280 - LANES * LANE_W) / 2, 1280 - LANES
 let FIELD_X = 70, CX = FIELD_X + LANES * LANE_W / 2
 const activeKeys = () => (LANES === 6 ? settings.keys6 : settings.keys)
 const JUDGE_COLORS = ['#7fe3ff', '#7dff9a', '#ffe27a', '#ffb066', '#ff8a8a', '#ff4d6d']
-const PAUSE_ITEMS = ['계속', '다시 시작', '설정', '나가기']
+const PAUSE_ITEMS = ['계속', '10초 전으로', '다시 시작', '설정', '나가기']
+const BEAMS = [0, 150, 300, 450] // 키빔 길이(px): 설정의 끔·짧게·보통·길게
+const beamLen = () => BEAMS[settings.beam] ?? 300
 const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 const isBlue =(lane: number) => lane === 0 || lane === LANES - 1
 
@@ -55,6 +57,7 @@ const demoNotes = (): Note[] =>
 export const Play = (sm: SceneManager): Scene => {
   const clock = new AudioClock()
   let data: PlayData, song: Song, ns: N[] = [], endTime = 1, dur = 1, sk = new ScoreKeeper(0)
+  let fullNotes: Note[] = [], audioBuf: AudioBuffer | undefined, bestRec: Best | undefined // 리와인드용 전체 노트 · 음원 / 최고 기록(점수 차이 표시)
   let practice = false, ready = false, finished = false, paused = false, pSel = 0, token = 0
   // 체력이 다하면 DIE_S초 동안 노트 속도와 소리가 점점 느려지다가 결과 화면으로 넘어간다. dying = 시작한 시각(ms), dyT0 = 그때의 곡 시각
   const DIE_S = 1.6
@@ -126,6 +129,16 @@ export const Play = (sm: SceneManager): Scene => {
     n.state = 'done'
   }
 
+  // 리와인드: 10초 전부터 다시 친다. 점수·콤보·체력은 그 지점에서 새로 시작하고, 이 판은 연습으로 취급해 기록·순위·경험치에 반영하지 않는다 (대결 중에는 없다)
+  function rewind() {
+    const t0 = Math.max(0, clock.songTime - 10), rest = fullNotes.filter(n => n.time >= t0 + 0.5)
+    if (!rest.length || data.vs) return
+    ns = rest.map(n => ({ ...n, state: 'wait' as const })).sort((a, b) => a.time - b.time); head = 0
+    sk = new ScoreKeeper(ns.reduce((s, n) => s + (n.duration ? 2 : 1), 0)); practice = true; bestRec = undefined
+    fx.length = 0; down.clear(); dispHp = 100; flash.at = -1e9; dying = 0
+    if (audioBuf) clock.play(audioBuf, 2, t0); else clock.start(2, t0); paused = false; resumeAt = 0
+  }
+
   // 창을 바꾸면(Alt+Tab 등) 곡이 계속 흐르지 않고 일시정지한다. 대결은 멈출 수 없으므로 제외
   addEventListener('blur', () => { if (ready && !paused && !finished && !dying && !resumeAt && !data.vs) { paused = true; pSel = 0; down.clear(); clock.pause() } })
 
@@ -152,6 +165,7 @@ export const Play = (sm: SceneManager): Scene => {
       if (v) { v.muted = true; v.src = URL.createObjectURL(new Blob([raw], { type: 'video/mp4' })); if (my === token) video = v; else URL.revokeObjectURL(v.src) }
       buf = await clock.decode(raw)
     } catch { /* 음원 없음 */ }
+    audioBuf = buf
     let chart: Chart | undefined
     if (data.vs && vs.role === 'guest') { // 손님: 방장이 보내는 채보로 친다 (두 사람이 똑같은 채보여야 공정하다)
       await waitFor(() => vs.chart, 15000)
@@ -167,7 +181,9 @@ export const Play = (sm: SceneManager): Scene => {
     const from = data.from ?? (data.fromPct ? Math.floor((buf?.duration ?? 0) * data.fromPct) : undefined) // 연습: 곡의 몇 %부터
     practice = from !== undefined
     spd = speedTable(chart?.speeds)
-    const notes = cleanChart(chart?.notes ?? demoNotes(), LANES).notes.filter(n => from === undefined || n.time >= from + 0.5).map(n => settings.mirror ? { ...n, lane: LANES - 1 - n.lane } : n) // 미러: 좌우 반전
+    fullNotes = cleanChart(chart?.notes ?? demoNotes(), LANES).notes.map(n => settings.mirror ? { ...n, lane: LANES - 1 - n.lane } : n) // 미러: 좌우 반전
+    const notes = fullNotes.filter(n => from === undefined || n.time >= from + 0.5)
+    bestRec = !data.vs && from === undefined ? getBest(song.dir, data.diff) : undefined // 점수 차이는 내 최고 기록과 비교
     ns = notes.map(n => ({ ...n, state: 'wait' as const })).sort((a, b) => a.time - b.time)
     head = 0
     sk = new ScoreKeeper(ns.reduce((s, n) => s + (n.duration ? 2 : 1), 0))
@@ -253,7 +269,7 @@ export const Play = (sm: SceneManager): Scene => {
       // 레인: 위는 투명하게 밝아지고 아래로 짙어지는 유리 띠 + 시안→보라 경계선. 그라데이션은 처음에 한 번만 만든다
       const fw = LANES * LANE_W
       if (!laneGlow) {
-        laneGlow = { o: g.createLinearGradient(0, JUDGE_Y - 300, 0, JUDGE_Y), i: g.createLinearGradient(0, JUDGE_Y - 300, 0, JUDGE_Y) }
+        laneGlow = { o: g.createLinearGradient(0, JUDGE_Y - beamLen(), 0, JUDGE_Y), i: g.createLinearGradient(0, JUDGE_Y - beamLen(), 0, JUDGE_Y) }
         laneGlow.o.addColorStop(0, `rgba(${rgbOf(noteColor())},0)`); laneGlow.o.addColorStop(1, `rgba(${rgbOf(noteColor())},.55)`)
         laneGlow.i.addColorStop(0, 'rgba(255,255,255,0)'); laneGlow.i.addColorStop(1, 'rgba(255,255,255,.4)')
         fieldGr = g.createLinearGradient(0, 0, 0, 720); const pa = settings.panelA / 100; fieldGr.addColorStop(0, `rgba(10,32,90,${pa * 0.8})`); fieldGr.addColorStop(0.7, `rgba(8,28,80,${pa})`); fieldGr.addColorStop(1, `rgba(8,24,70,${Math.min(pa + 0.08, 1)})`)
@@ -269,7 +285,7 @@ export const Play = (sm: SceneManager): Scene => {
       g.restore()
       g.fillStyle = 'rgba(255,255,255,.07)'
       for (let l = 1; l < LANES; l++) g.fillRect(FIELD_X + l * LANE_W, 0, 1, 720)
-      down.forEach(l => { g.fillStyle = laneGlow![isBlue(l) ? 'o' : 'i']; g.fillRect(FIELD_X + l * LANE_W, JUDGE_Y - 300, LANE_W, 300) })
+      if (beamLen()) down.forEach(l => { g.fillStyle = laneGlow![isBlue(l) ? 'o' : 'i']; g.fillRect(FIELD_X + l * LANE_W, JUDGE_Y - beamLen(), LANE_W, beamLen()) })
       g.globalAlpha = 0.35; g.fillStyle = gs.accent; g.fillRect(FIELD_X - 4, JUDGE_Y - 9, fw + 8, 18); g.globalAlpha = 1 // 판정선 번짐: 스킨 포인트 색
       g.fillStyle = lighten(gs.accent, 0.55); g.fillRect(FIELD_X - 4, JUDGE_Y - 2, fw + 8, 4)
       const curPos = posOf(t)
@@ -322,6 +338,14 @@ export const Play = (sm: SceneManager): Scene => {
       meter(g, qx + 20, qy + 96, qi, sk.accuracy / 100) // 정확도 막대
       g.font = `600 13px ${FONT}`; g.fillStyle = ICE; g.fillText('ACCURACY', qx + 20, qy + 120)
       g.textAlign = 'right'; g.fillText(sk.counts.some(n => n) ? `${sk.accuracy.toFixed(2)}%` : '--.--%', qx + 20 + qi, qy + 120)
+      if (bestRec) { // 내 최고 기록과의 점수 차이: 같은 진행도(판정 수 기준)에서 최고 기록을 쳤을 때의 점수와 비교
+        const judged = sk.counts.reduce((a, b) => a + b, 0), pc = bestRec.pace
+        g.font = `700 14px ${FONT}`; g.textAlign = 'left'; g.fillStyle = ICE; g.fillText(`BEST ${bestRec.score.toLocaleString()}`, qx + 20, qy + 152)
+        if (pc?.length && sk.total > 0 && judged > 0) {
+          const q = (judged / sk.total) * 20, i = Math.min(Math.floor(q), 19), lo = i ? pc[i - 1] ?? 0 : 0, hi = pc[i] ?? pc[pc.length - 1] ?? lo, d = sk.score - Math.round(lo + (hi - lo) * (q - i))
+          g.textAlign = 'right'; g.fillStyle = d >= 0 ? AMBER : '#ff8a9a'; g.fillText(`${d >= 0 ? '+' : '-'}${Math.abs(d).toLocaleString()}`, qx + 20 + qi, qy + 152); g.textAlign = 'left'
+        }
+      }
       if (data.vs) { // 상대 카드: 점수·점수 차이·체력
         const ry = qy + 144, p = vs.peer, diff = sk.score - p.s
         card(g, qx, ry, 300, 112, `RIVAL  ·  ${vs.peerNick || 'PLAYER'}`)
@@ -345,9 +369,10 @@ export const Play = (sm: SceneManager): Scene => {
       const age = performance.now() - flash.at
       if (age < 500) {
         g.globalAlpha = 1 - age / 500
-        g.font = `900 36px ${FONT}`; g.lineJoin = 'round'; g.lineWidth = 7; g.strokeStyle = 'rgba(6,20,70,.85)'; g.strokeText(JUDGES[flash.j].name, CX, 430)
+        const jn = flash.j === 0 && Math.abs(flash.dt) <= MAX_WIN ? 'MAX' : JUDGES[flash.j].name // PERFECT 중 ±25ms 이내는 MAX
+        g.font = `900 36px ${FONT}`; g.lineJoin = 'round'; g.lineWidth = 7; g.strokeStyle = 'rgba(6,20,70,.85)'; g.strokeText(jn, CX, 430)
         if (flash.j === 0) { const gg = g.createLinearGradient(0, 400, 0, 436); gg.addColorStop(0, '#fff6c2'); gg.addColorStop(0.55, '#ffd04a'); gg.addColorStop(1, '#d98a00'); g.fillStyle = gg } else g.fillStyle = JUDGE_COLORS[flash.j] // PERFECT는 금색
-        g.fillText(JUDGES[flash.j].name, CX, 430)
+        g.fillText(jn, CX, 430)
         if (settings.fastSlow && flash.j !== MISS && flash.j !== 0) {
           g.font = `700 18px ${FONT}`; g.fillStyle = flash.dt > 0 ? CYAN : AMBER
           g.fillText(flash.dt > 0 ? 'FAST' : 'SLOW', CX, 458)
@@ -395,7 +420,7 @@ export const Play = (sm: SceneManager): Scene => {
         g.fillStyle = accentFill(g, 0, 1280); g.fillRect(0, 196, 1280, 2); g.fillRect(0, 534, 1280, 2)
         g.font = `800 18px ${FONT}`; g.fillStyle = AMBER; g.fillText('P A U S E', 440, 240)
         PAUSE_ITEMS.forEach((p, i) => {
-          const y = 258 + i * 62, on = i === pSel
+          const y = 250 + i * 56, on = i === pSel
           hit(440, y, 400, 52, () => { pSel = i; pressKey('Enter') }, () => { pSel = i }) // 올리면 고르고, 누르면 실행
           menuRow(g, 440, y, 400, 52, ease('pause' + i, on))
           g.font = `800 22px ${FONT}`; g.fillStyle = '#fff'; g.fillText(p, 480, y + 34)
@@ -409,8 +434,9 @@ export const Play = (sm: SceneManager): Scene => {
         else if (e.key === 'ArrowUp') pSel = (pSel + PAUSE_ITEMS.length - 1) % PAUSE_ITEMS.length
         else if (e.key === 'Escape' || (e.key === 'Enter' && pSel === 0)) { paused = false; resumeAt = performance.now() + 3000 } // 곡은 멈춘 채 3초 센 뒤 재개
         else if (e.key === 'Enter') {
-          if (pSel === 1) { clock.resume(); sm.go('play', data) }
-          else if (pSel === 2) sm.go('settings', { back: 'play', backData: { ...data, resume: true } }) // 곡은 멈춘 채로 설정을 연다
+          if (pSel === 1) rewind()
+          else if (pSel === 2) { clock.resume(); sm.go('play', data) }
+          else if (pSel === 3) sm.go('settings', { back: 'play', backData: { ...data, resume: true } }) // 곡은 멈춘 채로 설정을 연다
           else quit()
         }
         return

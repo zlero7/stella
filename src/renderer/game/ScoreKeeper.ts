@@ -9,6 +9,7 @@ export const JUDGES = [
   { name: 'MISS', win: Infinity, weight: 0, hp: -5 }
 ] as const
 export const MISS = JUDGES.length - 1
+export const MAX_WIN = 0.025 // PERFECT 안에서도 이 안쪽(±25ms)이면 MAX (표시와 집계만, 점수는 같다)
 export const HIT_WIN = JUDGES[MISS - 1].win // 이보다 늦으면 놓친 것, 이보다 이르면 입력 무시
 
 // dt = 노트 시각 - 입력 시각 (초). 양수면 빠르게 누른 것(Fast)
@@ -44,6 +45,8 @@ export class ScoreKeeper {
   private lossSum = 0
   readonly total: number // 전체 판정 수 (롱노트는 시작·끝 각각)
   private num = 0 // 콤보 배율을 곱한 판정 점수의 합
+  private n = 0 // 지금까지 판정한 수
+  readonly pace: number[] = [] // 판정 수가 전체의 5%씩 쌓일 때마다의 점수 (최고 기록과 실시간으로 비교하려고 기록에 같이 남긴다)
   private den = 0 // 전부 PERFECT일 때의 합 (이게 100만점)
 
   constructor(total: number) { this.total = total; for (let c = 1; c <= total; c++) this.den += comboMult(c) }
@@ -61,6 +64,8 @@ export class ScoreKeeper {
     if (j === MISS) this.combo = 0
     else this.maxCombo = Math.max(this.maxCombo, ++this.combo)
     this.num += JUDGES[j].weight * comboMult(this.combo)
+    this.n++
+    while (this.total > 0 && this.pace.length < 20 && this.n * 20 >= this.total * (this.pace.length + 1)) this.pace.push(this.score)
   }
   get failed() { return this.hp <= 0 }
 
@@ -75,6 +80,7 @@ export class ScoreKeeper {
     for (const dt of this.errs) h[Math.min(Math.max(Math.floor((-1000 * dt + rangeMs) / binMs), 0), n - 1)]++
     return h
   }
+  get maxCount() { return this.errs.filter(dt => Math.abs(dt) <= MAX_WIN).length }
   get avgMs() { return this.errN ? Math.round((1000 * this.errSum) / this.errN) : 0 }
 
   get score() { return this.den ? Math.round(1_000_000 * this.num / this.den) : 0 }

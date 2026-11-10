@@ -5,7 +5,7 @@ import { profileCard } from '../render/profileCard'
 import { FONT, CYAN, AMBER, NOTE_COLORS, accentFill, artOf, drawBg, drawCover, ease, fit, glow, hit, marquee, overRect, pill, press, starPath, chip } from '../render/theme'
 import { chartFile, diffName, diffsOf, ensureSong, loadSongs, songUrl } from '../data/Songs'
 import { needsRegen } from '../game/AutoChart'
-import { getRecords, saveSettings, settings } from '../data/Storage'
+import { getRecords, isFav, saveSettings, settings, toggleFav } from '../data/Storage'
 import { pickSong } from '../core/Versus'
 import { rankOf } from '../game/ScoreKeeper'
 import { preview, stopPreview, tickPreview } from '../core/Preview'
@@ -29,6 +29,7 @@ export const SongSelect = (sm: SceneManager): Scene => {
   let query = '', searching = false, sortMode = 0 // 검색어(제목·가수 포함) · F2로 입력 중인지 · F4 정렬: 0 서버 순서, 1 제목, 2 가수
   let inp: HTMLInputElement | undefined // 한글(IME)도 받으려고 화면 밖 입력칸을 쓴다. 캔버스에는 검색창만 그린다
   const SORTS = ['기본 순서', '제목순', '가수순']
+  const FILTERS = ['전체 곡', '즐겨찾기만', '안 쳐 본 곡만']; let fmode = 0 // F6 즐겨찾기 넣고 빼기 · F7 목록 거르기
   const PRACTICE = [0, 0.25, 0.5, 0.75]; let prac = 0 // F5: 연습 시작 위치 (곡의 0·25·50·75%). 0이 아니면 점수·EXP는 기록되지 않는다
   const pending = new Set<string>() // 워커가 만드는 중인 곡+난이도+키 수
   const pk = (dir: string, d: string, keys = settings.keyMode) => `${keys}|${dir}|${d}`
@@ -82,7 +83,7 @@ export const SongSelect = (sm: SceneManager): Scene => {
   // 분류에 맞는 곡만 추리고, 보던 곡이 남아 있으면 그대로 두고 아니면 맨 위로
   const applyCat = (focus = songs[idx]?.dir) => {
     const q = query.trim().toLowerCase()
-    songs = cat === 'ALL' && !q ? all : all.filter(s => (cat === 'ALL' || singers(s).includes(cat)) && (!q || [s.meta.title, s.meta.artist, ...singers(s)].join(' ').toLowerCase().includes(q)))
+    songs = cat === 'ALL' && !q && !fmode ? all : all.filter(s => (cat === 'ALL' || singers(s).includes(cat)) && (fmode === 0 || (fmode === 1 ? isFav(s.dir) : !bestOf(s))) && (!q || [s.meta.title, s.meta.artist, ...singers(s)].join(' ').toLowerCase().includes(q)))
     if (sortMode) songs = [...songs].sort((a, b) => (sortMode === 2 ? a.meta.artist.localeCompare(b.meta.artist, 'ko') : 0) || a.meta.title.localeCompare(b.meta.title, 'ko'))
     idx = Math.max(songs.findIndex(s => s.dir === focus), 0)
     target = pos = idx; di = 0
@@ -254,6 +255,7 @@ export const SongSelect = (sm: SceneManager): Scene => {
         } else { g.fillStyle = 'rgba(8,24,70,.74)'; g.beginPath(); g.roundRect(x, y, w, h, 14); g.fill(); g.strokeStyle = 'rgba(255,255,255,.22)'; g.lineWidth = 1; g.stroke() }
         const rec = bestOf(s), th = h - 12, tx = x + 12, thumb = artOf(s)?.img // 왼쪽 썸네일
         if (thumb) { g.save(); g.beginPath(); g.roundRect(tx, y + 6, th, th, 8); g.clip(); drawCover(g, thumb, thumb.width, thumb.height, tx, y + 6, th, th); g.restore(); g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 1.5; g.beginPath(); g.roundRect(tx, y + 6, th, th, 8); g.stroke() }
+        if (isFav(s.dir)) { g.font = `900 18px ${FONT}`; g.lineJoin = 'round'; g.lineWidth = 4; g.strokeStyle = 'rgba(6,20,70,.9)'; g.strokeText('★', tx + 3, y + 25); g.fillStyle = AMBER; g.fillText('★', tx + 3, y + 25) } // 즐겨찾기 별
         const lx0 = tx + th + 16, tw = (rec ? w - 250 : w - 80) - (lx0 - x - 28)
         g.font = `800 ${sel ? 22 : 19}px ${FONT}`; g.fillStyle = '#fff'
         if (sel) marquee(g, s.meta.title, lx0, y + 28, tw, 22, selSince); else g.fillText(fit(g, s.meta.title, tw), lx0, y + 21) // 고른 곡만 긴 이름이 흐른다
@@ -277,8 +279,8 @@ export const SongSelect = (sm: SceneManager): Scene => {
       // 아래 안내
       g.fillStyle = 'rgba(6,18,56,.55)'; g.fillRect(0, 676, 1280, 44); g.fillStyle = 'rgba(255,255,255,.25)'; g.fillRect(0, 676, 1280, 1)
       {
-        const hints: [string, string][] = [['↑↓', '곡'], ['←→', '난이도'], ['Tab', '가수'], ['F2', '검색'], ['F4', '정렬'], ['1 2', '속도'], ['F3', '4/6키'], ['F5', '연습'], ['Enter', '시작'], ['F1', '설정'], ['Esc', '뒤로']]
-        let hx = 440
+        const hints: [string, string][] = [['↑↓', '곡'], ['←→', '난이도'], ['Tab', '가수'], ['F2', '검색'], ['F4', '정렬'], ['1 2', '속도'], ['F3', '4/6키'], ['F5', '연습'], ['F6', '즐겨찾기'], ['F7', '필터'], ['Enter', '시작'], ['F1', '설정'], ['Esc', '뒤로']]
+        let hx = 24
         for (const [k, label] of hints) hx = chip(g, hx, 692, k, label, '#fff', k === '↑↓' || k === '←→' ? null : undefined)
       }
       g.font = `700 13px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.75)'; g.textAlign = 'right' // 곡 번호는 아래 오른쪽 구석 (위쪽 띠 오른쪽은 프로필 카드 자리)
@@ -324,6 +326,8 @@ export const SongSelect = (sm: SceneManager): Scene => {
         })
       }
       else if (e.key === 'F3') { settings.keyMode = settings.keyMode === 6 ? 4 : 6; saveSettings(); di = Math.min(di, diffs().length - 1); schedulePreview() } // 4키 ↔ 6키
+      else if (e.key === 'F6' && songs[idx]) { note = toggleFav(songs[idx].dir) ? '즐겨찾기에 넣었습니다 ★' : '즐겨찾기에서 뺐습니다'; noteAt = performance.now() + 1500; if (fmode === 1) applyCat() }
+      else if (e.key === 'F7') { fmode = (fmode + 1) % FILTERS.length; applyCat(); note = `보기: ${FILTERS[fmode]} (${songs.length}곡)`; noteAt = performance.now() + 1800 }
       else if (e.key === 'F5' && !vsMode) { prac = (prac + 1) % PRACTICE.length; note = prac ? `연습: 곡의 ${PRACTICE[prac] * 100}%부터 (기록 안 됨)` : '연습 끔'; noteAt = performance.now() + 1500 }
       else if (e.key === '1' || e.key === '2') { settings.scroll = Math.min(Math.max(Math.round((settings.scroll + (e.key === '2' ? 0.5 : -0.5)) * 10) / 10, 1), 20); saveSettings(); note = `스크롤 속도 ${settings.scroll.toFixed(1)}`; noteAt = performance.now() + 1500 } // 1 느리게 · 2 빠르게
       else if (e.key === 'F1') leave('settings', { back: 'select', backData: vsMode ? { mode: 'versus' } : undefined })
