@@ -9,7 +9,7 @@ import { keyLabel, saveSettings, settings } from '../data/Storage'
 import { sfx } from '../core/Sfx'
 import { send, vs, waitFor } from '../core/Versus'
 import { startPlay } from '../data/Rank'
-import { skinOf, skinSprite } from '../game/noteSkins'
+import { skinSprite } from '../game/noteSkins'
 import { prof } from '../data/Profile'
 import { drawConsoleBack, drawConsoleFront, drawGearBack, gearOf } from '../render/gear'
 import { FX_OF, drawHit } from '../render/hitfx'
@@ -34,8 +34,8 @@ export interface PlayData { song: Song; diff: string; from?: number; fromPct?: n
 // 노트 그림은 한 번만 만들어 두고 drawImage로 찍는다: 노트마다 shadowBlur/그라데이션을 새로 만드는 비용이 없다
 // 바깥 두 레인은 시안, 안쪽 두 레인은 흰색 (디맥 4K의 색 구분)
 const noteColor = () => (NOTE_COLORS[settings.noteColor] ?? NOTE_COLORS[0])[1]
-// 노트 그림은 스킨이 만든다 (game/noteSkins.ts). 고른 스킨이 아직 안 풀렸으면 기본 스킨
-const noteSprite = (outer: boolean, scale: number) => skinSprite(skinOf(settings.noteSkin, prof.v), outer, noteColor(), scale)
+// 노트 모양은 노트 스킨(기어 스킨)이 정한다 (game/noteSkins.ts). 안 풀린 스킨을 골랐으면 스틸
+const noteSprite = (outer: boolean, scale: number) => skinSprite(gearOf(settings.gearSkin, prof.v).id, outer, noteColor(), scale)
 let laneGlow: Record<'o' | 'i', CanvasGradient> | undefined, fieldGr: CanvasGradient | undefined, edgeGr: CanvasGradient | undefined
 
 // 배경을 은은하게 흐리게: 원본 해상도 그대로 그리면서 블러 필터를 약하게 건다 (줄였다 늘리면 네모 도트가 보인다). 가장자리가 투명해지지 않게 3% 크게 그린다
@@ -283,7 +283,7 @@ export const Play = (sm: SceneManager): Scene => {
         const sc = LANE_W / 80, x = FIELD_X + n.lane * LANE_W + 4 * sc
         const len = n.duration ? (posOf(n.time + n.duration) - (holding ? curPos : posOf(n.time))) * speed : 0
         if (y - len > 740) continue
-        if (len > 0) { g.fillStyle = isBlue(n.lane) ? `rgba(${rgbOf(noteColor())},.55)` : 'rgba(255,255,255,.4)'; g.fillRect(x + 14 * sc, y - len, LANE_W - 36 * sc, len) }
+        if (len > 0) { g.fillStyle = isBlue(n.lane) ? `rgba(${rgbOf(gs.id === 'steel' ? noteColor() : gs.accent)},.55)` : 'rgba(255,255,255,.4)'; g.fillRect(x + 14 * sc, y - len, LANE_W - 36 * sc, len) }
         g.drawImage(noteSprite(isBlue(n.lane), g.getTransform().a * Math.max(sc, 1)), x - 10 * sc, y - 22, 92 * sc, 44)
       }
       drawConsoleBack(g, FIELD_X, fw, JUDGE_Y, diffCol, !!settings.char, gs)

@@ -2,7 +2,7 @@ import type { Scene, SceneManager } from '../core/SceneManager'
 import { FONT, CYAN, ICE, NAVY, NOTE_COLORS, accentFill, card, chevron, chip, drawBg, fit, glow, header, hit, icon, optRow, pill, press, segBar, slant, ease, overRect } from '../render/theme'
 import { settings, saveSettings, keyLabel } from '../data/Storage'
 import { prof } from '../data/Profile'
-import { NOTE_SKINS, skinOf, skinSprite } from '../game/noteSkins'
+import { skinSprite } from '../game/noteSkins'
 import { GEAR_SKINS, gearOf } from '../render/gear'
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi)
@@ -24,7 +24,6 @@ const CATS: { name: string; items: Item[] }[] = [
     { label: '이펙트', value: () => FX[settings.fx] ?? FX[2], change: d => { settings.fx = clamp(settings.fx + d, 0, 2) } },
     { label: '캐릭터 그림', value: () => (settings.char ? '켜짐' : '꺼짐'), change: () => { settings.char = settings.char ? 0 : 1 } },
     { label: '노트 스킨', value: () => { const s = GEAR_SKINS[settings.gearSkin] ?? GEAR_SKINS[0]; return gearOf(settings.gearSkin, prof.v) === s ? s.name : `${s.name} · 잠김 (${s.need})` }, change: d => { settings.gearSkin = (settings.gearSkin + d + GEAR_SKINS.length) % GEAR_SKINS.length } },
-    { label: '노트 모양', value: () => { const s = NOTE_SKINS[settings.noteSkin] ?? NOTE_SKINS[0]; return skinOf(settings.noteSkin, prof.v) === s ? s.name : `${s.name} · 잠김 (${s.need})` }, change: d => { settings.noteSkin = (settings.noteSkin + d + NOTE_SKINS.length) % NOTE_SKINS.length } },
     { label: '노트 색상', value: () => NOTE_COLORS[settings.noteColor]?.[0] ?? NOTE_COLORS[0][0], change: d => { settings.noteColor = (settings.noteColor + d + NOTE_COLORS.length) % NOTE_COLORS.length } }
   ] },
   { name: 'GAME', items: [
@@ -66,8 +65,7 @@ const DESC: Record<string, string> = {
   '레인 불투명도': '노트 레인 패널의 불투명도입니다. 높을수록 배경이 덜 비칩니다.',
   '이펙트': '판정 이펙트의 세기입니다. 끔 / 약 / 보통 중에서 고릅니다.',
   '캐릭터 그림': '플레이 화면 아래 콘솔 양옆에 치비 캐릭터를 보일지 정합니다. 필드를 가운데에 둘 때 둘 다 보입니다.',
-  '노트 스킨': '플레이 화면 전체의 꾸밈입니다: 기어 틀과 날개·램프·아래 콘솔·판정선 색. (디맥의 노트 스킨) 잠긴 스킨은 미리 볼 수 있지만 조건을 채우기 전에는 스틸로 나옵니다. 조건은 내 프로필 기록(레벨·플레이 수·풀 콤보·올 퍼펙트·대결 승수)으로 정해집니다.',
-  '노트 모양': '노트 한 개의 모양입니다. 잠긴 스킨은 미리 볼 수 있지만 조건을 채우기 전에는 플레이에서 기본 스킨으로 나옵니다. 조건은 내 프로필 기록(레벨·플레이 수·풀 콤보·올 퍼펙트·대결 승수)으로 정해집니다.',
+  '노트 스킨': '플레이 화면 전체의 꾸밈입니다: 기어 틀·기둥 무늬·필드 무늬·날개·램프·아래 콘솔, 노트 모양, 타격 이펙트까지 스킨마다 다릅니다. (디맥의 노트 스킨) 잠긴 스킨은 미리 볼 수 있지만 조건을 채우기 전에는 스틸로 나옵니다. 조건은 내 프로필 기록(레벨·플레이 수·풀 콤보·올 퍼펙트·대결 승수)으로 정해집니다.',
   '노트 색상': '바깥 레인 노트의 색을 스텔라이브 멤버의 대표 색 중에서 고릅니다.',
   '볼륨': '곡 소리 크기입니다. 값이 작을수록 급격히 작아지니 귀가 아프면 낮추세요.'
 }
@@ -97,7 +95,7 @@ function drawPreview(g: CanvasRenderingContext2D) {
     const dt = (((k * 0.28 - phase) % PV.loop) + PV.loop) % PV.loop, ny = judgeY - dt * speed
     if (ny < y - 12 || ny > judgeY + 2) return
     const outer = lane === 0 || lane === L - 1, nx = fieldX + lane * laneW + 3
-    const kk = L === 6 ? 0.8 : 1; g.drawImage(skinSprite(NOTE_SKINS[settings.noteSkin] ?? NOTE_SKINS[0], outer, col, 1), fieldX + lane * laneW + (4 - 10 * kk) * s, ny - 22 * s, 92 * kk * s, 44 * s) // 고른 스킨(잠겨 있어도 미리 본다)
+    const kk = L === 6 ? 0.8 : 1; g.drawImage(skinSprite((GEAR_SKINS[settings.gearSkin] ?? GEAR_SKINS[0]).id, outer, col, 1), fieldX + lane * laneW + (4 - 10 * kk) * s, ny - 22 * s, 92 * kk * s, 44 * s) // 고른 스킨(잠겨 있어도 미리 본다)
   })
   g.fillStyle = '#fff'; g.fillRect(fieldX - 4, judgeY - 1.5, L * laneW + 8, 3)
   g.restore()

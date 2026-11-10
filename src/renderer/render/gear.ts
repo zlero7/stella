@@ -1,6 +1,7 @@
 // 디맥 리스펙트 V 스타일 기어: 어두운 강철 틀·옆 램프·아래 콘솔(건반·점수 LCD·칩)·양옆 치비 캐릭터. 플레이 화면에서만 쓴다
 import { FONT, glow, lighten, starPath } from './theme'
 import type { Profile } from '../data/Profile'
+import { skinSprite } from '../game/noteSkins'
 
 const img = (src: string) => { const i = new Image(); i.src = src; return i }
 // 스킨마다 치비 한 쌍: assets/chibi/<스킨 id>-l.png, -r.png (없으면 steel의 것). 그림을 더하려면 tools/split-chibi.ps1
@@ -10,7 +11,7 @@ const pairs: Record<string, [HTMLImageElement, HTMLImageElement]> = {}
 const pairOf = (id: string): [HTMLImageElement, HTMLImageElement] => pairs[id] ??= (urlOf(id, 'l') && urlOf(id, 'r') ? [img(urlOf(id, 'l')), img(urlOf(id, 'r'))] : pairOf('steel'))
 const ready = (i: HTMLImageElement) => i.complete && i.naturalWidth > 0
 
-// 기어 스킨: 같은 기어를 색과 재질만 바꿔 열두 가지로 그린다. dark·mid·light는 틀의 어두운 쪽·중간·밝은 쪽, accent는 맞출 때 켜지는 램프, warn은 놓칠 때 켜지는 램프
+// 노트 스킨(= 기어 스킨): 열두 가지. 색뿐 아니라 기둥 무늬·필드 무늬·날개 모양·콘솔 모서리·노트 모양·타격 이펙트가 스킨마다 다르다. dark·mid·light는 틀의 어두운 쪽·중간·밝은 쪽, accent는 맞출 때 켜지는 램프, warn은 놓칠 때 켜지는 램프
 export interface GearSkin { id: string; name: string; need: string; ok: (p: Profile) => boolean; dark: string; mid: string; light: string; accent: string; warn: string; lcd: string; field: string; chips: [string, string, string] }
 const sk = (id: string, name: string, need: string, ok: GearSkin['ok'], dark: string, mid: string, light: string, accent: string, warn: string, lcd: string, field: string, chips: GearSkin['chips']): GearSkin => ({ id, name, need, ok, dark, mid, light, accent, warn, lcd, field, chips })
 export const GEAR_SKINS: GearSkin[] = [
@@ -29,19 +30,79 @@ export const GEAR_SKINS: GearSkin[] = [
 ]
 // 지금 쓸 기어: 고른 번호가 아직 안 풀렸으면 스틸 (프로필이 없으면 스틸만 쓴다)
 export const gearOf = (i: number, p: Profile | undefined) => { const g = GEAR_SKINS[i] ?? GEAR_SKINS[0]; return p && g.ok(p) || g === GEAR_SKINS[0] ? g : GEAR_SKINS[0] }
+// 스킨마다 다른 생김새: 기둥 무늬(rail)·필드 바탕 무늬(field)·날개 모양(wing)·콘솔 윗모서리를 깎는 정도(cut)
+type RailStyle = 'steel' | 'neon' | 'rope' | 'vine' | 'thorn' | 'wave' | 'circuit' | 'ice' | 'stripe' | 'flat' | 'pixel' | 'soft'
+type FieldStyle = 'none' | 'grid' | 'lattice' | 'petals' | 'leaves' | 'slashes' | 'waves' | 'hex' | 'snow' | 'rays' | 'pixels'
+interface GearStyle { rail: RailStyle; field: FieldStyle; wing: 'swept' | 'angular' | 'round' | 'none'; cut: number }
+const STYLE_OF: Record<string, GearStyle> = {
+  steel: { rail: 'steel', field: 'none', wing: 'swept', cut: 24 }, neon: { rail: 'neon', field: 'grid', wing: 'angular', cut: 24 },
+  gold: { rail: 'rope', field: 'lattice', wing: 'round', cut: 24 }, sakura: { rail: 'soft', field: 'petals', wing: 'round', cut: 10 },
+  forest: { rail: 'vine', field: 'leaves', wing: 'swept', cut: 24 }, crimson: { rail: 'thorn', field: 'slashes', wing: 'angular', cut: 44 },
+  ocean: { rail: 'wave', field: 'waves', wing: 'round', cut: 24 }, violet: { rail: 'circuit', field: 'hex', wing: 'angular', cut: 30 },
+  ice: { rail: 'ice', field: 'snow', wing: 'angular', cut: 44 }, sunset: { rail: 'stripe', field: 'rays', wing: 'swept', cut: 24 },
+  mono: { rail: 'flat', field: 'none', wing: 'none', cut: 24 }, arcade: { rail: 'pixel', field: 'pixels', wing: 'none', cut: 24 }
+}
+const styleOf = (id: string) => STYLE_OF[id] ?? STYLE_OF.steel
+const rnd = (i: number) => ((i * 7919 + 13) % 97) / 97 // 고정 난수 (무늬 위치가 깜빡이지 않게)
 // 두 색을 섞는다 (t=0이면 a, 1이면 b)
 const mix = (a: string, b: string, t: number) => '#' + [1, 3, 5].map(i => Math.round(parseInt(a.slice(i, i + 2), 16) * (1 - t) + parseInt(b.slice(i, i + 2), 16) * t).toString(16).padStart(2, '0')).join('')
 export interface Lit { hit: number; miss: number; combo: number } // hit·miss: 0~1 (방금 쳤을 때 1에서 줄어든다) · combo: 켜질 원판 수 0~3
 
 // 기어 한 칸 바깥 틀: 세로 강철 기둥 (가운데 홈에 체력 게이지가 들어간다)
-function rail(g: CanvasRenderingContext2D, rx: number, jy: number, k0: GearSkin) {
+function rail(g: CanvasRenderingContext2D, rx: number, d: number, jy: number, k0: GearSkin) {
   const k = g.createLinearGradient(rx, 0, rx + 26, 0)
   k.addColorStop(0, k0.dark); k.addColorStop(0.3, k0.mid); k.addColorStop(0.65, mix(k0.mid, k0.dark, 0.55)); k.addColorStop(1, mix(k0.dark, '#000000', 0.3))
   g.fillStyle = k; g.fillRect(rx, 0, 26, 720)
   g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(rx + 1, 0, 1, 720); g.fillStyle = k0.light; g.globalAlpha = 0.35; g.fillRect(rx + 24, 0, 1, 720); g.globalAlpha = 1
   g.fillStyle = mix(k0.dark, '#000000', 0.6); g.fillRect(rx + 8, 90, 10, jy - 90) // 체력 홈
-  g.fillStyle = mix(k0.dark, '#000000', 0.5)
-  for (let y = 40; y < 720; y += 64) { g.beginPath(); g.arc(rx + 13, y, 2.6, 0, 7); g.fill() } // 리벳
+  railDecor(g, rx, d, k0, styleOf(k0.id).rail)
+}
+
+// 기둥 무늬: 스킨마다 다르다 (강철 리벳·네온 선·밧줄·덩굴·가시·물결·회로·얼음결·줄무늬·픽셀·점)
+function railDecor(g: CanvasRenderingContext2D, rx: number, d: number, k0: GearSkin, style: RailStyle) {
+  const cx = rx + 13, acc = k0.accent, edge = d < 0 ? rx : rx + 26
+  g.save(); g.beginPath(); g.rect(rx, 0, 26, 720); g.clip(); g.lineCap = 'round'
+  if (style === 'steel') { g.fillStyle = mix(k0.dark, '#000000', 0.5); for (let y = 40; y < 720; y += 64) { g.beginPath(); g.arc(cx, y, 2.6, 0, 7); g.fill() } }
+  else if (style === 'neon') {
+    g.strokeStyle = acc; g.shadowColor = acc; g.shadowBlur = 8; g.lineWidth = 2; g.beginPath(); g.moveTo(cx, 0); g.lineTo(cx, 720); g.stroke(); g.shadowBlur = 0; g.lineWidth = 1.5
+    g.beginPath(); for (let y = 24; y < 720; y += 48) { g.moveTo(rx + 3, y); g.lineTo(rx + 9, y); g.moveTo(rx + 17, y); g.lineTo(rx + 23, y) } g.stroke()
+  } else if (style === 'rope') { g.strokeStyle = acc; g.globalAlpha = 0.55; g.lineWidth = 3; g.beginPath(); for (let y = -10; y < 720; y += 14) { g.moveTo(rx, y + 10); g.lineTo(rx + 26, y) } g.stroke() }
+  else if (style === 'vine') {
+    g.strokeStyle = acc; g.globalAlpha = 0.8; g.lineWidth = 2.5; g.beginPath(); for (let y = 0; y <= 720; y += 6) { const px = cx + Math.sin(y / 14) * 6; y ? g.lineTo(px, y) : g.moveTo(px, y) } g.stroke(); g.globalAlpha = 1
+    g.fillStyle = acc; for (let y = 50; y < 720; y += 84) { g.beginPath(); g.ellipse(cx + d * 6, y, 7, 3.2, d * 0.7, 0, 7); g.fill() }
+  } else if (style === 'thorn') { g.fillStyle = k0.light; for (let y = 6; y < 720; y += 22) { g.beginPath(); g.moveTo(edge, y); g.lineTo(edge - d * 9, y + 8); g.lineTo(edge, y + 16); g.fill() } }
+  else if (style === 'wave') { g.strokeStyle = acc; g.globalAlpha = 0.7; g.lineWidth = 2; for (let y = 4; y < 720; y += 18) { g.beginPath(); g.arc(cx, y, 7, 0, Math.PI); g.stroke() } }
+  else if (style === 'circuit') {
+    g.strokeStyle = acc; g.globalAlpha = 0.65; g.lineWidth = 1.6; g.beginPath()
+    for (let y = 0; y < 720; y += 96) { g.moveTo(rx + 5, y); g.lineTo(rx + 5, y + 28); g.lineTo(rx + 13, y + 36); g.lineTo(rx + 13, y + 60); g.lineTo(rx + 21, y + 68); g.lineTo(rx + 21, y + 96) } g.stroke()
+    g.fillStyle = acc; for (let y = 0; y < 720; y += 96) for (const [px, py] of [[5, 28], [13, 60], [21, 96]]) { g.beginPath(); g.arc(rx + px, y + py, 2.4, 0, 7); g.fill() }
+  } else if (style === 'ice') {
+    g.fillStyle = k0.light; g.globalAlpha = 0.5; g.beginPath(); g.moveTo(edge, 0); for (let y = 0, i = 0; y < 740; y += 20, i++) g.lineTo(edge - d * (i % 2 ? 3 : 11), y); g.lineTo(edge, 720); g.fill(); g.globalAlpha = 1
+    g.fillStyle = '#ffffff'; for (let y = 30; y < 720; y += 90) { g.globalAlpha = 0.6; g.beginPath(); g.arc(cx, y, 1.6, 0, 7); g.fill() }
+  } else if (style === 'stripe') { g.fillStyle = acc; g.globalAlpha = 0.35; for (let y = 0; y < 720; y += 24) g.fillRect(rx, y, 26, 10) }
+  else if (style === 'flat') { g.fillStyle = k0.light; g.globalAlpha = 0.25; g.fillRect(cx - 1, 0, 2, 720) }
+  else if (style === 'pixel') { g.fillStyle = acc; g.globalAlpha = 0.5; for (let y = 0; y < 720; y += 18) { g.fillRect(rx + 4, y, 6, 6); g.fillRect(rx + 16, y + 9, 6, 6) } }
+  else { g.fillStyle = k0.light; g.globalAlpha = 0.7; for (let y = 20; y < 720; y += 40) { g.beginPath(); g.arc(cx, y, 3, 0, 7); g.fill() } g.globalAlpha = 0.3; g.strokeStyle = k0.light; g.lineWidth = 1.5; g.beginPath(); g.moveTo(cx, 0); g.lineTo(cx, 720); g.stroke() }
+  g.restore()
+}
+
+// 필드 바탕 무늬: 레인 뒤에 아주 옅게 깔린다. 일부는 천천히 움직인다
+function fieldDecor(g: CanvasRenderingContext2D, x: number, fw: number, jy: number, k0: GearSkin, style: FieldStyle) {
+  if (style === 'none') return
+  const now = performance.now(), w = fw + 8, acc = k0.accent
+  g.save(); g.beginPath(); g.rect(x - 4, 0, w, jy); g.clip(); g.lineWidth = 1
+  if (style === 'grid') { g.strokeStyle = acc; g.globalAlpha = 0.09; g.beginPath(); for (let px = x - 4; px < x + w; px += 40) { g.moveTo(px, 0); g.lineTo(px, jy) } for (let py = (now / 40) % 40; py < jy; py += 40) { g.moveTo(x - 4, py); g.lineTo(x + w, py) } g.stroke() }
+  else if (style === 'lattice') { g.strokeStyle = k0.light; g.globalAlpha = 0.08; g.beginPath(); for (let o = -jy; o < w; o += 40) { g.moveTo(x - 4 + o, 0); g.lineTo(x - 4 + o + jy, jy); g.moveTo(x - 4 + o + jy, 0); g.lineTo(x - 4 + o, jy) } g.stroke() }
+  else if (style === 'petals' || style === 'leaves') {
+    g.fillStyle = acc; g.globalAlpha = 0.16
+    for (let i = 0; i < 16; i++) { const px = x - 4 + rnd(i) * w + Math.sin(now / 900 + i) * 8, py = (rnd(i + 20) * jy + now / (24 + 20 * rnd(i + 3))) % jy; g.save(); g.translate(px, py); g.rotate(now / 1200 + i); g.beginPath(); if (style === 'petals') g.ellipse(0, 0, 6, 3.2, 0, 0, 7); else { g.moveTo(-7, 0); g.quadraticCurveTo(0, -5, 7, 0); g.quadraticCurveTo(0, 5, -7, 0) } g.fill(); g.restore() }
+  } else if (style === 'slashes') { g.strokeStyle = acc; g.globalAlpha = 0.07; g.lineWidth = 8; g.beginPath(); for (let i = 0; i < 6; i++) { const px = x - 4 + rnd(i) * w; g.moveTo(px, 0); g.lineTo(px - 70, jy) } g.stroke() }
+  else if (style === 'waves') { g.strokeStyle = acc; g.globalAlpha = 0.1; g.lineWidth = 1.5; for (let py = (now / 60) % 46; py < jy; py += 46) { g.beginPath(); for (let px = 0; px <= w; px += 8) g.lineTo(x - 4 + px, py + Math.sin(px / 18 + now / 600) * 5); g.stroke() } }
+  else if (style === 'hex') { g.strokeStyle = acc; g.globalAlpha = 0.09; g.beginPath(); for (let r = 0, py = 0; py < jy + 30; py += 26, r++) for (let px = x - 4 + (r % 2) * 22; px < x + w + 30; px += 44) { for (let k = 0; k < 6; k++) { const a = (k / 6) * Math.PI * 2 + Math.PI / 6, qx = px + Math.cos(a) * 14, qy = py + Math.sin(a) * 14; k ? g.lineTo(qx, qy) : g.moveTo(qx, qy) } g.closePath() } g.stroke() }
+  else if (style === 'snow') { g.fillStyle = '#ffffff'; g.globalAlpha = 0.28; for (let i = 0; i < 24; i++) { const px = x - 4 + ((rnd(i) * w + Math.sin(now / 1000 + i) * 6 + w) % w), py = (rnd(i + 30) * jy + now / (30 + 30 * rnd(i + 1))) % jy; g.beginPath(); g.arc(px, py, 1 + 1.6 * rnd(i + 5), 0, 7); g.fill() } }
+  else if (style === 'rays') { g.fillStyle = acc; g.globalAlpha = 0.06; const cx = x + fw / 2; for (let k = 0; k < 9; k++) { const a = -Math.PI + (k / 8) * Math.PI; g.beginPath(); g.moveTo(cx, jy); g.lineTo(cx + Math.cos(a - 0.06) * 520, jy + Math.sin(a - 0.06) * 520); g.lineTo(cx + Math.cos(a + 0.06) * 520, jy + Math.sin(a + 0.06) * 520); g.fill() } }
+  else if (style === 'pixels') { g.strokeStyle = acc; g.globalAlpha = 0.07; g.beginPath(); for (let px = x - 4; px < x + w; px += 16) { g.moveTo(px, 0); g.lineTo(px, jy) } for (let py = 0; py < jy; py += 16) { g.moveTo(x - 4, py); g.lineTo(x + w, py) } g.stroke(); g.fillStyle = acc; g.globalAlpha = 0.07; g.fillRect(x - 4, (now / 12) % jy, w, 3) }
+  g.restore()
 }
 
 // 기둥 바깥 램프: 맞히면 시안 별이 빛나고, 놓치면 빨간 X가 켜지고, 콤보가 쌓이면 원판이 하나씩 켜진다
@@ -49,7 +110,10 @@ function lamps(g: CanvasRenderingContext2D, cx: number, lit: Lit, k0: GearSkin) 
   if (cx - 30 < 2 || cx + 30 > 1278) return // 화면 밖이면 그리지 않는다 (필드를 한쪽으로 붙였을 때)
   const plate = mix(k0.dark, '#000000', 0.15), line = mix(k0.mid, k0.dark, 0.35)
   g.fillStyle = plate; g.beginPath(); g.roundRect(cx - 27, 14, 54, 54, 8); g.fill(); g.strokeStyle = line; g.lineWidth = 2; g.stroke()
-  g.globalAlpha = 0.55 + 0.45 * lit.hit; glow(g, k0.accent, 16, () => { starPath(g, cx, 41, 19); g.fillStyle = lighten(k0.accent, 0.35); g.fill() }); g.globalAlpha = 1
+  g.globalAlpha = 0.55 + 0.45 * lit.hit
+  if (k0.id === 'steel') glow(g, k0.accent, 16, () => { starPath(g, cx, 41, 19); g.fillStyle = lighten(k0.accent, 0.35); g.fill() })
+  else g.drawImage(skinSprite(k0.id, true, k0.accent, 1), cx - 24, 41 - 11.5, 48, 23) // 램프 그림은 그 스킨의 노트 모양
+  g.globalAlpha = 1
   g.fillStyle = plate; g.beginPath(); g.roundRect(cx - 20, 78, 40, 40, 7); g.fill(); g.strokeStyle = line; g.stroke()
   g.strokeStyle = k0.warn; g.globalAlpha = 0.3 + 0.7 * lit.miss; g.lineWidth = 5; g.lineCap = 'round'
   g.beginPath(); g.moveTo(cx - 9, 89); g.lineTo(cx + 9, 107); g.moveTo(cx + 9, 89); g.lineTo(cx - 9, 107); g.stroke(); g.lineCap = 'butt'; g.globalAlpha = 1
@@ -70,8 +134,12 @@ function speaker(g: CanvasRenderingContext2D, cx: number, cy: number, r: number,
 
 // 기둥 아래쪽에 붙는 바깥쪽 날개: 위로 뾰족하게 올라가고 끝에 포인트 색 줄이 간다. d = -1 왼쪽, 1 오른쪽
 function wing(g: CanvasRenderingContext2D, rx: number, d: number, jy: number, k0: GearSkin) {
+  const wi = styleOf(k0.id).wing
+  if (wi === 'none') return
   const x0 = rx + (d < 0 ? 0 : 26), tip = 250, bot = jy + 26
-  g.beginPath(); g.moveTo(x0, tip); g.quadraticCurveTo(x0 + d * 62, tip + 120, x0 + d * 30, bot); g.lineTo(x0, bot); g.closePath()
+  g.beginPath(); g.moveTo(x0, tip)
+  if (wi === 'angular') { g.lineTo(x0 + d * 46, tip + 70); g.lineTo(x0 + d * 30, bot) } else g.quadraticCurveTo(x0 + d * (wi === 'round' ? 96 : 62), tip + (wi === 'round' ? 70 : 120), x0 + d * 30, bot)
+  g.lineTo(x0, bot); g.closePath()
   const f = g.createLinearGradient(0, tip, 0, bot); f.addColorStop(0, k0.light); f.addColorStop(0.55, k0.mid); f.addColorStop(1, k0.dark)
   g.fillStyle = f; g.fill(); g.strokeStyle = k0.accent; g.lineWidth = 2; g.stroke()
   g.beginPath(); g.moveTo(x0, tip + 30); g.quadraticCurveTo(x0 + d * 38, tip + 130, x0 + d * 18, bot - 4); g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 1.5; g.stroke()
@@ -80,7 +148,8 @@ function wing(g: CanvasRenderingContext2D, rx: number, d: number, jy: number, k0
 // 필드 판과 양옆 기둥·램프 (노트 아래에 깔린다)
 export function drawGearBack(g: CanvasRenderingContext2D, x: number, fw: number, jy: number, pa: number, lit: Lit, k0: GearSkin) {
   g.fillStyle = `rgba(${k0.field},${pa})`; g.fillRect(x - 4, 0, fw + 8, 720)
-  rail(g, x - 30, jy, k0); rail(g, x + fw + 4, jy, k0)
+  fieldDecor(g, x, fw, jy, k0, styleOf(k0.id).field)
+  rail(g, x - 30, -1, jy, k0); rail(g, x + fw + 4, 1, jy, k0)
   wing(g, x - 30, -1, jy, k0); wing(g, x + fw + 4, 1, jy, k0)
   lamps(g, x - 66, lit, k0); lamps(g, x + fw + 66, lit, k0)
 }
@@ -88,7 +157,8 @@ export function drawGearBack(g: CanvasRenderingContext2D, x: number, fw: number,
 // 판정선 아래 콘솔의 몸통·스피커·선반·치비 캐릭터 (노트와 이펙트 위, 건반 아래)
 export function drawConsoleBack(g: CanvasRenderingContext2D, x: number, fw: number, jy: number, diffCol: string, chibi: boolean, k0: GearSkin) {
   const top = jy + 22
-  g.beginPath(); g.moveTo(x - 40, top); g.lineTo(x + fw + 40, top); g.lineTo(x + fw + 64, top + 38); g.lineTo(x + fw + 64, 720); g.lineTo(x - 64, 720); g.lineTo(x - 64, top + 38); g.closePath()
+  const ins = styleOf(k0.id).cut, drop = Math.round(ins * 1.6) // 윗모서리를 깎는 정도는 스킨마다 다르다
+  g.beginPath(); g.moveTo(x - 64 + ins, top); g.lineTo(x + fw + 64 - ins, top); g.lineTo(x + fw + 64, top + drop); g.lineTo(x + fw + 64, 720); g.lineTo(x - 64, 720); g.lineTo(x - 64, top + drop); g.closePath()
   const bg = g.createLinearGradient(0, top, 0, 720); bg.addColorStop(0, mix(k0.mid, k0.dark, 0.35)); bg.addColorStop(0.4, mix(k0.dark, k0.mid, 0.2)); bg.addColorStop(1, mix(k0.dark, '#000000', 0.4))
   g.fillStyle = bg; g.fill(); g.strokeStyle = mix(k0.mid, k0.light, 0.4); g.lineWidth = 1.5; g.stroke()
   speaker(g, x - 34, jy + 126, 21, k0); speaker(g, x + fw + 34, jy + 126, 21, k0)
