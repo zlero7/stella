@@ -1,4 +1,5 @@
 import { gainOf } from '../data/Storage'
+import { frameT } from './GameLoop'
 
 // 모든 시간의 기준: AudioContext.currentTime (기획서 '싱크의 핵심 원칙')
 export class AudioClock {
@@ -41,20 +42,28 @@ export class AudioClock {
   resume() { void this.ctx.resume() }
 
   // currentTime은 소리가 출력 장치에 나가기 전 시각이라, 실제로 들리는 시각은 출력 지연만큼 늦다
-  // currentTime과 outputLatency는 몇 ms씩 계단/출렁임이 있어서 그대로 그리면 빠른 스크롤에서 노트가 겹쳐 두 개로 보인다.
-  // 그래서 프레임 사이는 performance.now로 매끄럽게 흘리고, 실제 시계와의 차이만 서서히(0.15초 시정수) 맞춘다. 0.05초 넘게 벌어지면(재개·탐색) 바로 맞춘다
+  // currentTime과 outputLatency는 몇 ms씩 계단/출렁임이 있어서 그대로 그리면 빠른 스크롤에서 노트가 겹쳐 두 개로 보이거나 계단져 움직인다.
+  // 그래서 곡 시각을 "sm 시각에 smAt(performance.now 기준)" 한 점과 1초에 1초씩 흐르는 직선으로 두고, 실제 시계와의 차이만 서서히(0.15초 시정수) 맞춘다. 0.05초 넘게 벌어지면(재개·탐색) 바로 맞춘다
+  // 화면에 그릴 때는 이 직선을 프레임 시작 시각(frameT)에서 읽는다: 렌더 직전에 performance.now를 읽으면 그 사이 작업 시간(수 ms)만큼 노트가 흔들리는데, 속도 11 이상(초당 1000px 안팎)에서는 그게 몇 px 계단으로 보인다
   private sm = 0
   private smAt = 0
   private get rawTime() { return this.ctx.currentTime - (this.ctx.outputLatency || this.ctx.baseLatency || 0) - this.startedAt - this.offset }
-  get songTime() {
+  private sync() {
     const raw = this.rawTime, now = performance.now()
     if (this.ctx.state !== 'running') { this.smAt = 0; return raw }
     const dt = (now - this.smAt) / 1000, pred = this.sm + dt
     this.sm = !this.smAt || Math.abs(raw - pred) > 0.05 ? raw : pred + (raw - pred) * Math.min(1, dt / 0.15)
     this.smAt = now
-    return this.sm
+    return undefined
+  }
+  get songTime() {
+    const raw = this.sync()
+    return raw ?? this.sm + (frameT - this.smAt) / 1000
   }
 
   // keydown의 event.timeStamp(performance.now 기준)를 곡 시각으로 변환 (프레임 사이 입력도 정확하게)
-  timeAt(perfMs: number) { return this.songTime - (performance.now() - perfMs) / 1000 }
+  timeAt(perfMs: number) {
+    const raw = this.sync()
+    return raw ?? this.sm + (perfMs - this.smAt) / 1000
+  }
 }
