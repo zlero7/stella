@@ -9,12 +9,12 @@ import { keyLabel, saveSettings, settings } from '../data/Storage'
 import { sfx } from '../core/Sfx'
 import { send, vs, waitFor } from '../core/Versus'
 import { startPlay } from '../data/Rank'
-import char1 from '../assets/char1.jpg'
+import { drawConsoleBack, drawConsoleFront, drawGearBack } from '../render/gear'
 import { drawLoading } from '../render/loading'
 import { FONT, CYAN, AMBER, accentFill, ICE, NOTE_COLORS, artOf, drawBg, fit, fitFont, lighten, menuRow, rgbOf, slant, glow, card, meter, starPath, hit, press as pressKey, ease } from '../render/theme'
 
 let LANES = 4, LANE_W = 80 // 4키는 레인 80px, 6키는 64px (enter에서 설정의 키 모드로 정한다)
-const JUDGE_Y = 590, BASE_PX = 100 // 스크롤 속도 1.0 = 100px/s
+const JUDGE_Y = 520, BASE_PX = JUDGE_Y / 5.9 // 판정선은 화면의 72% 높이 (아래는 콘솔). 노트가 보이는 시간은 590px·100px/s 때와 같게 맞춘다
 const fieldX = (align: number) => [70, (1280 - LANES * LANE_W) / 2, 1280 - LANES * LANE_W - 70][align] ?? 70 // 설정의 화면 위치: 왼쪽/가운데/오른쪽
 let FIELD_X = 70, CX = FIELD_X + LANES * LANE_W / 2
 const activeKeys = () => (LANES === 6 ? settings.keys6 : settings.keys)
@@ -47,19 +47,6 @@ function noteSprite(outer: boolean, scale: number) {
     x.strokeStyle = outer ? '#ffffff' : 'rgba(80,140,230,.95)'; x.lineWidth = 1.5; x.strokeRect(11.5, 15.5, 69, 13)
   }
   return c
-}
-const charImg = new Image(); charImg.src = char1
-// 디맥처럼 기어 옆에 캐릭터 그림 카드: 필드 반대쪽 빈 곳 아래에 기울어진 틀로 오려 붙인다 (그림은 720x960, 3:4)
-function drawChar(g: CanvasRenderingContext2D) {
-  if (!settings.char || !charImg.complete || !charImg.naturalWidth) return
-  const fw = LANES * LANE_W, w = 300, h = 400, x = settings.align === 2 ? FIELD_X - 40 - w : FIELD_X + fw + 40, y = 292
-  g.save()
-  slant(g, x, y, w, h, 28); g.clip()
-  g.drawImage(charImg, x, y, w, h)
-  const sh = g.createLinearGradient(0, y + h - 90, 0, y + h); sh.addColorStop(0, 'rgba(6,20,60,0)'); sh.addColorStop(1, 'rgba(6,20,60,.55)'); g.fillStyle = sh; g.fillRect(x, y + h - 90, w, 90)
-  g.restore()
-  slant(g, x, y, w, h, 28); g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = 2; g.stroke()
-  slant(g, x - 6, y - 6, w + 12, h + 12, 28); g.strokeStyle = 'rgba(122,216,255,.45)'; g.lineWidth = 1.5; g.stroke()
 }
 let laneGlow: Record<'o' | 'i', CanvasGradient> | undefined, fieldGr: CanvasGradient | undefined, edgeGr: CanvasGradient | undefined
 
@@ -292,10 +279,9 @@ export const Play = (sm: SceneManager): Scene => {
         edgeGr = g.createLinearGradient(0, 0, 0, 720); edgeGr.addColorStop(0, 'rgba(255,255,255,.1)'); edgeGr.addColorStop(0.7, 'rgba(255,255,255,.85)'); edgeGr.addColorStop(1, 'rgba(170,220,255,.95)')
        
       }
-      g.fillStyle = fieldGr!; g.fillRect(FIELD_X - 4, 0, fw + 8, 720)
-      g.fillStyle = 'rgba(6,20,60,.96)'; g.fillRect(FIELD_X - 16, 0, 12, 720); g.fillRect(FIELD_X + fw + 4, 0, 12, 720) // 기어 옆 틀: 체력 게이지가 들어간다
-      g.fillStyle = edgeGr!; g.fillRect(FIELD_X - 4, 0, 2, 720); g.fillRect(FIELD_X + fw + 2, 0, 2, 720)
-      g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(FIELD_X - 16, 0, 1, 720); g.fillRect(FIELD_X + fw + 15, 0, 1, 720)
+      const diffCol = ({ easy: '#2ecc71', normal: '#f1c40f', hard: '#e74c3c', stella: '#a855f7' } as Record<string, string>)[data.diff] ?? CYAN
+      const age0 = performance.now() - flash.at, lit = { hit: flash.j !== MISS && flash.j <= 2 ? Math.max(0, 1 - age0 / 220) : 0, miss: flash.j === MISS ? Math.max(0, 1 - age0 / 300) : 0, combo: sk.combo >= 200 ? 3 : sk.combo >= 100 ? 2 : sk.combo >= 30 ? 1 : 0 } // 램프를 켜는 값
+      drawGearBack(g, FIELD_X, fw, JUDGE_Y, settings.panelA / 100, lit)
       g.save(); g.font = `900 30px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.06)'; g.textAlign = 'center'
       for (const [sx, dir] of [[FIELD_X + 20, -1], [FIELD_X + fw - 20, 1]] as const) { g.save(); g.translate(sx, 340); g.rotate(dir * Math.PI / 2); g.fillText('C O M B O   X ' + sk.mult.toFixed(2), 0, 10); g.restore() }
       g.restore()
@@ -318,40 +304,33 @@ export const Play = (sm: SceneManager): Scene => {
         if (len > 0) { g.fillStyle = isBlue(n.lane) ? `rgba(${rgbOf(noteColor())},.55)` : 'rgba(255,255,255,.4)'; g.fillRect(x + 14 * sc, y - len, LANE_W - 36 * sc, len) }
         g.drawImage(noteSprite(isBlue(n.lane), g.getTransform().a * Math.max(sc, 1)), x - 10 * sc, y - 22, 92 * sc, 44)
       }
-      drawChar(g)
+      drawConsoleBack(g, FIELD_X, fw, JUDGE_Y, diffCol, !!settings.char)
       drawFx(g, t)
       activeKeys().slice(0, LANES).forEach((k, i) => {
-        const on = down.has(i), blue = isBlue(i), x = FIELD_X + i * LANE_W + 4, w = LANE_W - 8, y = JUDGE_Y + 20 + (on ? 3 : 0), h = 72 - (on ? 3 : 0) // 디맥 키처럼 반듯한 네모 건반: 누르면 가라앉으며 빛난다
-        const top = blue ? (on ? lighten(noteColor(), 0.55) : lighten(noteColor(), 0.05)) : (on ? '#ffffff' : '#dfe9f5'), bot = blue ? (on ? lighten(noteColor(), 0.2) : '#123c93') : (on ? '#cfe3ff' : '#8fa7c6')
+        const on = down.has(i), blue = isBlue(i), x = FIELD_X + i * LANE_W + 4, w = LANE_W - 8, y = JUDGE_Y + 32 + (on ? 2 : 0), h = 60 - (on ? 2 : 0) // 디맥 키처럼 반듯한 네모 건반: 누르면 가라앉으며 빛난다
+        const top = on ? (blue ? lighten(noteColor(), 0.5) : '#ffffff') : '#4a5262', bot = on ? (blue ? lighten(noteColor(), 0.15) : '#cfe3ff') : '#1b1f27' // 어두운 금속 건반: 누르면 켜진다
         const kg = g.createLinearGradient(0, y, 0, y + h); kg.addColorStop(0, top); kg.addColorStop(1, bot)
         if (on) glow(g, blue ? noteColor() : '#ffffff', 22, () => { g.beginPath(); g.roundRect(x, y, w, h, 6); g.fillStyle = kg; g.fill() })
         else { g.beginPath(); g.roundRect(x, y, w, h, 6); g.fillStyle = kg; g.fill() }
         g.fillStyle = 'rgba(255,255,255,.55)'; g.fillRect(x + 4, y + 2, w - 8, 3) // 윗면 하이라이트
         g.fillStyle = 'rgba(6,20,60,.35)'; g.fillRect(x + 2, y + h - 6, w - 4, 4) // 아랫면 그림자
         g.beginPath(); g.roundRect(x, y, w, h, 6); g.strokeStyle = on ? '#fff' : 'rgba(255,255,255,.65)'; g.lineWidth = 1.5; g.stroke()
-        g.font = `900 ${keyLabel(k).length > 2 ? 15 : 26}px ${FONT}`; g.fillStyle = blue && !on ? '#fff' : '#0b2a6b'; g.textAlign = 'center'
+        g.font = `900 ${keyLabel(k).length > 2 ? 15 : 26}px ${FONT}`; g.fillStyle = on ? '#0b2a6b' : blue ? lighten(noteColor(), 0.3) : '#e7edf7'; g.textAlign = 'center'
         g.fillText(keyLabel(k), x + w / 2, y + h / 2 + (keyLabel(k).length > 2 ? 5 : 9))
       })
-      // 기어 아래 띠 (디맥의 기어 아래쪽처럼): 난이도 이름 + 스크롤 속도 칸. 판정선 위에는 지금까지의 정확도
-      { const by = JUDGE_Y + 100, col = ({ easy: '#2ecc71', normal: '#f1c40f', hard: '#e74c3c', stella: '#a855f7' } as Record<string, string>)[data.diff] ?? CYAN
-        g.fillStyle = 'rgba(6,20,60,.92)'; g.fillRect(FIELD_X - 4, by, fw + 8, 26); g.fillStyle = col; g.fillRect(FIELD_X - 4, by, fw + 8, 2)
-        g.font = `900 14px ${FONT}`; g.fillStyle = col; g.textAlign = 'left'; g.fillText(diffName(data.diff), FIELD_X + 6, by + 19)
-        g.textAlign = 'right'; g.font = `700 11px ${FONT}`; g.fillStyle = ICE; g.fillText('SPEED', FIELD_X + fw - 44, by + 18)
-        g.font = `900 16px ${FONT}`; g.fillStyle = '#fff'; g.fillText(settings.scroll.toFixed(1), FIELD_X + fw - 4, by + 19)
-        g.textAlign = 'center'; g.font = `900 22px ${FONT}`; g.fillStyle = sk.accuracy >= 100 ? '#ffe27a' : 'rgba(255,255,255,.85)'
-        if (sk.counts.some(n => n)) g.fillText(`${sk.accuracy >= 100 ? 'MAX ' : ''}${sk.accuracy.toFixed(sk.accuracy >= 100 ? 0 : 1)}%`, FIELD_X + fw / 2, JUDGE_Y - 36); g.textAlign = 'left' }
+      drawConsoleFront(g, FIELD_X, fw, JUDGE_Y, { score: sk.score, scroll: settings.scroll, mult: sk.mult, hp: sk.hp, hpLow: sk.hp <= 25 })
+      g.textAlign = 'center'; g.font = `900 22px ${FONT}`; g.fillStyle = sk.accuracy >= 100 ? '#ffe27a' : 'rgba(255,255,255,.85)' // 판정선 위: 지금까지의 정확도
+      if (sk.counts.some(n => n)) g.fillText(`${sk.accuracy >= 100 ? 'MAX ' : ''}${sk.accuracy.toFixed(sk.accuracy >= 100 ? 0 : 1)}%`, FIELD_X + fw / 2, JUDGE_Y - 36); g.textAlign = 'left'
       // 체력 게이지: 기어 양옆 틀 안의 세로 막대 두 줄. 가득 → 하늘색, 절반 아래 → 금색, 25% 아래 → 깜빡이는 빨강
       dispHp += (sk.hp - dispHp) * 0.2
       const hy = 90, hh = JUDGE_Y - hy, fillH = (hh * dispHp) / 100
       g.fillStyle = dispHp > 50 ? CYAN : dispHp > 25 ? AMBER : (Math.floor(performance.now() / 160) % 2 ? '#ff5a6e' : '#ff9aa6')
-      for (const gx of [FIELD_X - 14, FIELD_X + fw + 6]) {
+      for (const gx of [FIELD_X - 21, FIELD_X + fw + 13]) {
         g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(gx, hy, 8, hh)
         g.fillStyle = dispHp > 50 ? CYAN : dispHp > 25 ? AMBER : (Math.floor(performance.now() / 160) % 2 ? '#ff5a6e' : '#ff9aa6')
         g.fillRect(gx, hy + hh - fillH, 8, fillH)
         g.fillStyle = 'rgba(6,20,60,.9)'; for (const q of [0.25, 0.5, 0.75]) g.fillRect(gx, hy + hh * q, 8, 1.5) // 눈금
       }
-      g.font = `800 13px ${FONT}`; g.fillStyle = dispHp > 25 ? '#fff' : '#ff8a9a'; g.textAlign = 'center' // 체력 숫자는 기어 아래 띠 가운데에 (좌우 틀 밖으로 잘리지 않게)
-      g.fillText(`HP ${Math.round(sk.hp)}%`, FIELD_X + fw / 2, JUDGE_Y + 119); g.textAlign = 'left'
       g.fillStyle = AMBER; g.fillRect(0, 0, 1280 * Math.min(Math.max(t / endTime, 0), 1), 5)
       // 점수 카드: 곡 정보 카드와 같은 모양. 필드가 오른쪽이면 왼쪽 끝으로 옮긴다
       const qx = settings.align !== 2 ? 1280 - 24 - 300 : 24, qy = 24, qi = 260
@@ -383,17 +362,17 @@ export const Play = (sm: SceneManager): Scene => {
       const age = performance.now() - flash.at
       if (age < 500) {
         g.globalAlpha = 1 - age / 500
-        g.font = `900 36px ${FONT}`; g.lineJoin = 'round'; g.lineWidth = 7; g.strokeStyle = 'rgba(6,20,70,.85)'; g.strokeText(JUDGES[flash.j].name, CX, 470)
-        g.fillStyle = JUDGE_COLORS[flash.j]; g.fillText(JUDGES[flash.j].name, CX, 470)
+        g.font = `900 36px ${FONT}`; g.lineJoin = 'round'; g.lineWidth = 7; g.strokeStyle = 'rgba(6,20,70,.85)'; g.strokeText(JUDGES[flash.j].name, CX, 430)
+        g.fillStyle = JUDGE_COLORS[flash.j]; g.fillText(JUDGES[flash.j].name, CX, 430)
         if (settings.fastSlow && flash.j !== MISS && flash.j !== 0) {
           g.font = `700 18px ${FONT}`; g.fillStyle = flash.dt > 0 ? CYAN : AMBER
-          g.fillText(flash.dt > 0 ? 'FAST' : 'SLOW', CX, 498)
+          g.fillText(flash.dt > 0 ? 'FAST' : 'SLOW', CX, 458)
         }
         g.globalAlpha = 1
       }
       g.textAlign = 'left'
       // 곡 정보 카드: 필드와 안 겹치는 빈 쪽에 둔다 (가운데=왼쪽 끝, 왼쪽 필드=필드 오른쪽, 오른쪽 필드=점수 카드 옆)
-      const px = [FIELD_X + fw + 40, 24, 380][settings.align] ?? 24, pw = 400, py = 24, iw = pw - 40
+      const px = [FIELD_X + fw + 40, 24, 380][settings.align] ?? 24, pw = settings.align === 1 ? 340 : 400, py = 24, iw = pw - 40
       card(g, px, py, pw, 132, `${data.vs ? 'VERSUS' : 'NOW PLAYING'}  ·  ${LANES}K ${diffName(data.diff)}`)
       const line = `${song.meta.title} - ${song.meta.artist}`
       g.font = `800 19px ${FONT}`; g.fillStyle = '#fff'
