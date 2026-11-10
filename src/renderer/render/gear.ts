@@ -8,8 +8,9 @@ const img = (src: string) => { const i = new Image(); i.src = src; return i }
 // 스킨마다 치비 한 쌍: assets/chibi/<스킨 id>-l.png, -r.png (없으면 steel의 것). 그림을 더하려면 tools/split-chibi.ps1
 const arts = import.meta.glob('../assets/chibi/*.png', { eager: true, query: '?url', import: 'default' }) as Record<string, string>
 const urlOf = (id: string, side: 'l' | 'r') => arts[`../assets/chibi/${id}-${side}.png`]
-const pairs: Record<string, [HTMLImageElement, HTMLImageElement]> = {}
-const pairOf = (id: string): [HTMLImageElement, HTMLImageElement] => pairs[id] ??= (urlOf(id, 'l') && urlOf(id, 'r') ? [img(urlOf(id, 'l')), img(urlOf(id, 'r'))] : pairOf('steel'))
+const pairs: Record<string, [HTMLImageElement | undefined, HTMLImageElement | undefined]> = {}
+// 한쪽만 있는 스킨은 있는 쪽만 그린다. 둘 다 없으면 steel의 한 쌍
+const pairOf = (id: string): [HTMLImageElement | undefined, HTMLImageElement | undefined] => pairs[id] ??= (urlOf(id, 'l') || urlOf(id, 'r') ? [urlOf(id, 'l') ? img(urlOf(id, 'l')) : undefined, urlOf(id, 'r') ? img(urlOf(id, 'r')) : undefined] : pairOf('steel'))
 const ready = (i: HTMLImageElement) => i.complete && i.naturalWidth > 0
 
 // 노트 스킨(= 기어 스킨): 열두 가지. 색뿐 아니라 기둥 무늬·필드 무늬·날개 모양·콘솔 모서리·노트 모양·타격 이펙트가 스킨마다 다르다. dark·mid·light는 틀의 어두운 쪽·중간·밝은 쪽, accent는 맞출 때 켜지는 램프, warn은 놓칠 때 켜지는 램프
@@ -177,8 +178,8 @@ export function drawConsoleBack(g: CanvasRenderingContext2D, x: number, fw: numb
 // 콘솔 양끝에 걸쳐 선 캐릭터 (edge: 콘솔 끝이 필드에서 떨어진 거리. 화면 밖으로 나가면 그리지 않는다)
 export function chibis(g: CanvasRenderingContext2D, x: number, fw: number, k0: GearSkin, edge = 64) {
   const ch = 176, [CL, CR] = pairOf(k0.id)
-  if (ready(CL)) { const w = ch * CL.naturalWidth / CL.naturalHeight, lx = x - edge + 26 - w; if (lx >= -8) g.drawImage(CL, lx, 720 - ch, w, ch) }
-  if (ready(CR)) { const w = ch * CR.naturalWidth / CR.naturalHeight, rx = x + fw + edge - 26; if (rx + w <= 1288) g.drawImage(CR, rx, 720 - ch, w, ch) }
+  if (CL && ready(CL)) { const w = ch * CL.naturalWidth / CL.naturalHeight, lx = x - edge + 26 - w; if (lx >= -8) g.drawImage(CL, lx, 720 - ch, w, ch) }
+  if (CR && ready(CR)) { const w = ch * CR.naturalWidth / CR.naturalHeight, rx = x + fw + edge - 26; if (rx + w <= 1288) g.drawImage(CR, rx, 720 - ch, w, ch) }
 }
 
 let dots: CanvasPattern | undefined
