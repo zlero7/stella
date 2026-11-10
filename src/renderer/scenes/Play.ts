@@ -11,7 +11,7 @@ import { send, vs, waitFor } from '../core/Versus'
 import { startPlay } from '../data/Rank'
 import { skinOf, skinSprite } from '../game/noteSkins'
 import { prof } from '../data/Profile'
-import { drawConsoleBack, drawConsoleFront, drawGearBack } from '../render/gear'
+import { drawConsoleBack, drawConsoleFront, drawGearBack, gearOf } from '../render/gear'
 import { drawLoading } from '../render/loading'
 import { FONT, CYAN, AMBER, accentFill, ICE, NOTE_COLORS, artOf, drawBg, fit, fitFont, lighten, menuRow, rgbOf, slant, glow, card, meter, starPath, hit, press as pressKey, ease } from '../render/theme'
 
@@ -268,7 +268,8 @@ export const Play = (sm: SceneManager): Scene => {
       }
       const diffCol = ({ easy: '#2ecc71', normal: '#f1c40f', hard: '#e74c3c', stella: '#a855f7' } as Record<string, string>)[data.diff] ?? CYAN
       const age0 = performance.now() - flash.at, lit = { hit: flash.j !== MISS && flash.j <= 2 ? Math.max(0, 1 - age0 / 220) : 0, miss: flash.j === MISS ? Math.max(0, 1 - age0 / 300) : 0, combo: sk.combo >= 200 ? 3 : sk.combo >= 100 ? 2 : sk.combo >= 30 ? 1 : 0 } // 램프를 켜는 값
-      drawGearBack(g, FIELD_X, fw, JUDGE_Y, settings.panelA / 100, lit)
+      const gs = gearOf(settings.gearSkin, prof.v)
+      drawGearBack(g, FIELD_X, fw, JUDGE_Y, settings.panelA / 100, lit, gs)
       g.save(); g.font = `900 30px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.06)'; g.textAlign = 'center'
       for (const [sx, dir] of [[FIELD_X + 20, -1], [FIELD_X + fw - 20, 1]] as const) { g.save(); g.translate(sx, 340); g.rotate(dir * Math.PI / 2); g.fillText('C O M B O   X ' + sk.mult.toFixed(2), 0, 10); g.restore() }
       g.restore()
@@ -291,7 +292,7 @@ export const Play = (sm: SceneManager): Scene => {
         if (len > 0) { g.fillStyle = isBlue(n.lane) ? `rgba(${rgbOf(noteColor())},.55)` : 'rgba(255,255,255,.4)'; g.fillRect(x + 14 * sc, y - len, LANE_W - 36 * sc, len) }
         g.drawImage(noteSprite(isBlue(n.lane), g.getTransform().a * Math.max(sc, 1)), x - 10 * sc, y - 22, 92 * sc, 44)
       }
-      drawConsoleBack(g, FIELD_X, fw, JUDGE_Y, diffCol, !!settings.char)
+      drawConsoleBack(g, FIELD_X, fw, JUDGE_Y, diffCol, !!settings.char, gs)
       drawFx(g, t)
       activeKeys().slice(0, LANES).forEach((k, i) => {
         const on = down.has(i), blue = isBlue(i), x = FIELD_X + i * LANE_W + 4, w = LANE_W - 8, y = JUDGE_Y + 32 + (on ? 2 : 0), h = 60 - (on ? 2 : 0) // 디맥 키처럼 반듯한 네모 건반: 누르면 가라앉으며 빛난다
@@ -305,7 +306,7 @@ export const Play = (sm: SceneManager): Scene => {
         g.font = `900 ${keyLabel(k).length > 2 ? 15 : 26}px ${FONT}`; g.fillStyle = on ? '#0b2a6b' : blue ? lighten(noteColor(), 0.3) : '#e7edf7'; g.textAlign = 'center'
         g.fillText(keyLabel(k), x + w / 2, y + h / 2 + (keyLabel(k).length > 2 ? 5 : 9))
       })
-      drawConsoleFront(g, FIELD_X, fw, JUDGE_Y, { score: sk.score, scroll: settings.scroll, mult: sk.mult, hp: sk.hp, hpLow: sk.hp <= 25 })
+      drawConsoleFront(g, FIELD_X, fw, JUDGE_Y, { score: sk.score, scroll: settings.scroll, mult: sk.mult, hp: sk.hp, hpLow: sk.hp <= 25 }, gs)
       g.textAlign = 'center'; g.font = `900 22px ${FONT}`; g.fillStyle = sk.accuracy >= 100 ? '#ffe27a' : 'rgba(255,255,255,.85)' // 판정선 위: 지금까지의 정확도
       if (sk.counts.some(n => n)) g.fillText(`${sk.accuracy >= 100 ? 'MAX ' : ''}${sk.accuracy.toFixed(sk.accuracy >= 100 ? 0 : 1)}%`, FIELD_X + fw / 2, JUDGE_Y - 36); g.textAlign = 'left'
       // 체력 게이지: 기어 양옆 틀 안의 세로 막대 두 줄. 가득 → 하늘색, 절반 아래 → 금색, 25% 아래 → 깜빡이는 빨강
