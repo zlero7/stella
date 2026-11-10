@@ -9,6 +9,7 @@ import { keyLabel, saveSettings, settings } from '../data/Storage'
 import { sfx } from '../core/Sfx'
 import { send, vs, waitFor } from '../core/Versus'
 import { startPlay } from '../data/Rank'
+import char1 from '../assets/char1.jpg'
 import { drawLoading } from '../render/loading'
 import { FONT, CYAN, AMBER, accentFill, ICE, NOTE_COLORS, artOf, drawBg, fit, fitFont, lighten, menuRow, rgbOf, slant, glow, card, meter, starPath, hit, press as pressKey, ease } from '../render/theme'
 
@@ -46,6 +47,19 @@ function noteSprite(outer: boolean, scale: number) {
     x.strokeStyle = outer ? '#ffffff' : 'rgba(80,140,230,.95)'; x.lineWidth = 1.5; x.strokeRect(11.5, 15.5, 69, 13)
   }
   return c
+}
+const charImg = new Image(); charImg.src = char1
+// 디맥처럼 기어 옆에 캐릭터 그림 카드: 필드 반대쪽 빈 곳 아래에 기울어진 틀로 오려 붙인다 (그림은 720x960, 3:4)
+function drawChar(g: CanvasRenderingContext2D) {
+  if (!settings.char || !charImg.complete || !charImg.naturalWidth) return
+  const fw = LANES * LANE_W, w = 300, h = 400, x = settings.align === 2 ? FIELD_X - 40 - w : FIELD_X + fw + 40, y = 292
+  g.save()
+  slant(g, x, y, w, h, 28); g.clip()
+  g.drawImage(charImg, x, y, w, h)
+  const sh = g.createLinearGradient(0, y + h - 90, 0, y + h); sh.addColorStop(0, 'rgba(6,20,60,0)'); sh.addColorStop(1, 'rgba(6,20,60,.55)'); g.fillStyle = sh; g.fillRect(x, y + h - 90, w, 90)
+  g.restore()
+  slant(g, x, y, w, h, 28); g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = 2; g.stroke()
+  slant(g, x - 6, y - 6, w + 12, h + 12, 28); g.strokeStyle = 'rgba(122,216,255,.45)'; g.lineWidth = 1.5; g.stroke()
 }
 let laneGlow: Record<'o' | 'i', CanvasGradient> | undefined, fieldGr: CanvasGradient | undefined, edgeGr: CanvasGradient | undefined
 
@@ -304,6 +318,7 @@ export const Play = (sm: SceneManager): Scene => {
         if (len > 0) { g.fillStyle = isBlue(n.lane) ? `rgba(${rgbOf(noteColor())},.55)` : 'rgba(255,255,255,.4)'; g.fillRect(x + 14 * sc, y - len, LANE_W - 36 * sc, len) }
         g.drawImage(noteSprite(isBlue(n.lane), g.getTransform().a * Math.max(sc, 1)), x - 10 * sc, y - 22, 92 * sc, 44)
       }
+      drawChar(g)
       drawFx(g, t)
       activeKeys().slice(0, LANES).forEach((k, i) => {
         const on = down.has(i), blue = isBlue(i), x = FIELD_X + i * LANE_W + 4, w = LANE_W - 8, y = JUDGE_Y + 20 + (on ? 3 : 0), h = 72 - (on ? 3 : 0) // 디맥 키처럼 반듯한 네모 건반: 누르면 가라앉으며 빛난다
@@ -344,7 +359,7 @@ export const Play = (sm: SceneManager): Scene => {
       g.font = `800 50px ${FONT}`; g.fillStyle = '#fff'; g.fillText(String(sk.score).padStart(7, '0'), qx + 20, qy + 80)
       meter(g, qx + 20, qy + 96, qi, sk.accuracy / 100) // 정확도 막대
       g.font = `600 13px ${FONT}`; g.fillStyle = ICE; g.fillText('ACCURACY', qx + 20, qy + 120)
-      g.textAlign = 'right'; g.fillText(`${sk.accuracy.toFixed(2)}%`, qx + 20 + qi, qy + 120)
+      g.textAlign = 'right'; g.fillText(sk.counts.some(n => n) ? `${sk.accuracy.toFixed(2)}%` : '--.--%', qx + 20 + qi, qy + 120)
       if (data.vs) { // 상대 카드: 점수·점수 차이·체력
         const ry = qy + 144, p = vs.peer, diff = sk.score - p.s
         card(g, qx, ry, 300, 112, `RIVAL  ·  ${vs.peerNick || 'PLAYER'}`)

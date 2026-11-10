@@ -19,6 +19,7 @@ const CATS: { name: string; items: Item[] }[] = [
     { label: '배경 밝기', value: () => `${settings.bgBright}%`, frac: () => (settings.bgBright - 30) / 70, change: d => { settings.bgBright = clamp(settings.bgBright + d * 10, 30, 100) } },
     { label: '레인 불투명도', value: () => `${settings.panelA}%`, frac: () => (settings.panelA - 50) / 45, change: d => { settings.panelA = clamp(settings.panelA + d * 5, 50, 95) } },
     { label: '이펙트', value: () => FX[settings.fx] ?? FX[2], change: d => { settings.fx = clamp(settings.fx + d, 0, 2) } },
+    { label: '캐릭터 그림', value: () => (settings.char ? '켜짐' : '꺼짐'), change: () => { settings.char = settings.char ? 0 : 1 } },
     { label: '노트 색상', value: () => NOTE_COLORS[settings.noteColor]?.[0] ?? NOTE_COLORS[0][0], change: d => { settings.noteColor = (settings.noteColor + d + NOTE_COLORS.length) % NOTE_COLORS.length } }
   ] },
   { name: 'GAME', items: [
@@ -59,6 +60,7 @@ const DESC: Record<string, string> = {
   '배경 밝기': '플레이 배경의 밝기입니다. 노트가 잘 안 보이면 낮추세요.',
   '레인 불투명도': '노트 레인 패널의 불투명도입니다. 높을수록 배경이 덜 비칩니다.',
   '이펙트': '판정 이펙트의 세기입니다. 끔 / 약 / 보통 중에서 고릅니다.',
+  '캐릭터 그림': '플레이 화면의 노트 필드 옆에 캐릭터 일러스트 카드를 보일지 정합니다.',
   '노트 색상': '바깥 레인 노트의 색을 스텔라이브 멤버의 대표 색 중에서 고릅니다.',
   '볼륨': '곡 소리 크기입니다. 값이 작을수록 급격히 작아지니 귀가 아프면 낮추세요.'
 }
