@@ -1,11 +1,13 @@
 // 디맥 리스펙트 V 스타일 기어: 어두운 강철 틀·옆 램프·아래 콘솔(건반·점수 LCD·칩)·양옆 치비 캐릭터. 플레이 화면에서만 쓴다
 import { FONT, glow, lighten, starPath } from './theme'
 import type { Profile } from '../data/Profile'
-import chibiL from '../assets/chibi-l.png'
-import chibiR from '../assets/chibi-r.png'
 
 const img = (src: string) => { const i = new Image(); i.src = src; return i }
-const CL = img(chibiL), CR = img(chibiR)
+// 스킨마다 치비 한 쌍: assets/chibi/<스킨 id>-l.png, -r.png (없으면 steel의 것). 그림을 더하려면 tools/split-chibi.ps1
+const arts = import.meta.glob('../assets/chibi/*.png', { eager: true, query: '?url', import: 'default' }) as Record<string, string>
+const urlOf = (id: string, side: 'l' | 'r') => arts[`../assets/chibi/${id}-${side}.png`]
+const pairs: Record<string, [HTMLImageElement, HTMLImageElement]> = {}
+const pairOf = (id: string): [HTMLImageElement, HTMLImageElement] => pairs[id] ??= (urlOf(id, 'l') && urlOf(id, 'r') ? [img(urlOf(id, 'l')), img(urlOf(id, 'r'))] : pairOf('steel'))
 const ready = (i: HTMLImageElement) => i.complete && i.naturalWidth > 0
 
 // 기어 스킨: 같은 기어를 색과 재질만 바꿔 열두 가지로 그린다. dark·mid·light는 틀의 어두운 쪽·중간·밝은 쪽, accent는 맞출 때 켜지는 램프, warn은 놓칠 때 켜지는 램프
@@ -97,7 +99,7 @@ export function drawConsoleBack(g: CanvasRenderingContext2D, x: number, fw: numb
   const cx = x + fw / 2
   for (const d of [-1, 1]) for (const o of [10, 24]) { g.beginPath(); g.moveTo(cx + d * o, jy + 9); g.lineTo(cx + d * (o + 8), jy + 9); g.lineTo(cx + d * (o + 3), jy + 20); g.lineTo(cx + d * (o - 5), jy + 20); g.closePath(); g.globalAlpha = 0.9; g.fill(); g.globalAlpha = 1 }
   if (chibi) { // 콘솔 양끝에 걸쳐 선 캐릭터 (화면 밖으로 나가면 그리지 않는다)
-    const ch = 176
+    const ch = 176, [CL, CR] = pairOf(k0.id)
     if (ready(CL)) { const w = ch * CL.naturalWidth / CL.naturalHeight, lx = x - 64 + 26 - w; if (lx >= -8) g.drawImage(CL, lx, 720 - ch, w, ch) }
     if (ready(CR)) { const w = ch * CR.naturalWidth / CR.naturalHeight, rx = x + fw + 64 - 26; if (rx + w <= 1288) g.drawImage(CR, rx, 720 - ch, w, ch) }
   }
