@@ -9,6 +9,8 @@ import { keyLabel, saveSettings, settings } from '../data/Storage'
 import { sfx } from '../core/Sfx'
 import { send, vs, waitFor } from '../core/Versus'
 import { startPlay } from '../data/Rank'
+import { skinOf, skinSprite } from '../game/noteSkins'
+import { prof } from '../data/Profile'
 import { drawConsoleBack, drawConsoleFront, drawGearBack } from '../render/gear'
 import { drawLoading } from '../render/loading'
 import { FONT, CYAN, AMBER, accentFill, ICE, NOTE_COLORS, artOf, drawBg, fit, fitFont, lighten, menuRow, rgbOf, slant, glow, card, meter, starPath, hit, press as pressKey, ease } from '../render/theme'
@@ -30,24 +32,9 @@ export interface PlayData { song: Song; diff: string; from?: number; fromPct?: n
 
 // 노트 그림은 한 번만 만들어 두고 drawImage로 찍는다: 노트마다 shadowBlur/그라데이션을 새로 만드는 비용이 없다
 // 바깥 두 레인은 시안, 안쪽 두 레인은 흰색 (디맥 4K의 색 구분)
-const sprites: Record<string, HTMLCanvasElement> = {}
 const noteColor = () => (NOTE_COLORS[settings.noteColor] ?? NOTE_COLORS[0])[1]
-// 스프라이트는 화면에 찍히는 크기(캔버스 배율 × 레인 배율)로 만든다: 92x44로 만들어 늘려 찍으면 큰 화면에서 가장자리가 계단져 보인다. 배율은 0.25 단위로 맞춰 캐시한다
-function noteSprite(outer: boolean, scale: number) {
-  const col = noteColor(), s = Math.max(1, Math.round(scale * 4) / 4), k = (outer ? col : 'inner') + '@' + s
-  let c = sprites[k]
-  if (!c) {
-    c = sprites[k] = document.createElement('canvas'); c.width = Math.ceil(92 * s); c.height = Math.ceil(44 * s)
-    const x = c.getContext('2d')!; x.scale(c.width / 92, c.height / 44)
-    x.shadowColor = outer ? lighten(col, 0.3) : '#ffffff'; x.shadowBlur = 10
-    const gr = x.createLinearGradient(0, 15, 0, 29) // 얇은 막대(높이 14px): 위가 밝고 아래로 갈수록 색이 진해진다
-    gr.addColorStop(0, outer ? lighten(col, 0.7) : '#ffffff'); gr.addColorStop(1, outer ? col : '#b7d3ff')
-    x.fillStyle = gr; x.fillRect(11, 15, 70, 14)
-    x.shadowBlur = 0; x.fillStyle = 'rgba(255,255,255,.95)'; x.fillRect(11, 15, 70, 2) // 윗변 하이라이트
-    x.strokeStyle = outer ? '#ffffff' : 'rgba(80,140,230,.95)'; x.lineWidth = 1.5; x.strokeRect(11.5, 15.5, 69, 13)
-  }
-  return c
-}
+// 노트 그림은 스킨이 만든다 (game/noteSkins.ts). 고른 스킨이 아직 안 풀렸으면 기본 스킨
+const noteSprite = (outer: boolean, scale: number) => skinSprite(skinOf(settings.noteSkin, prof.v), outer, noteColor(), scale)
 let laneGlow: Record<'o' | 'i', CanvasGradient> | undefined, fieldGr: CanvasGradient | undefined, edgeGr: CanvasGradient | undefined
 
 // 배경을 은은하게 흐리게: 원본 해상도 그대로 그리면서 블러 필터를 약하게 건다 (줄였다 늘리면 네모 도트가 보인다). 가장자리가 투명해지지 않게 3% 크게 그린다
