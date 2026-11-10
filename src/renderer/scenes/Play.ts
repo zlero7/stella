@@ -12,6 +12,7 @@ import { startPlay } from '../data/Rank'
 import { skinOf, skinSprite } from '../game/noteSkins'
 import { prof } from '../data/Profile'
 import { drawConsoleBack, drawConsoleFront, drawGearBack, gearOf } from '../render/gear'
+import { FX_OF, drawHit } from '../render/hitfx'
 import { drawLoading } from '../render/loading'
 import { FONT, CYAN, AMBER, accentFill, ICE, NOTE_COLORS, artOf, drawBg, fit, fitFont, lighten, menuRow, rgbOf, slant, glow, card, meter, starPath, hit, press as pressKey, ease } from '../render/theme'
 
@@ -80,7 +81,7 @@ export const Play = (sm: SceneManager): Scene => {
   function drawFx(g: CanvasRenderingContext2D, t: number) {
     const lv = settings.fx
     if (!lv) return
-    const now = performance.now(), base = noteColor()
+    const now = performance.now(), base = noteColor(), gs = gearOf(settings.gearSkin, prof.v), style = FX_OF[gs.id] ?? 'burst', ar = rgbOf(gs.accent) // 이펙트 모양은 노트 스킨(기어 스킨)마다 다르다
     g.save(); g.globalCompositeOperation = 'lighter'
     for (const e of fx) {
       const k = (now - e.at) / 400
@@ -92,14 +93,7 @@ export const Play = (sm: SceneManager): Scene => {
         lg.addColorStop(0, `rgba(${rgb},${0.38 * big * (1 - k)})`); lg.addColorStop(1, `rgba(${rgb},0)`)
         g.fillStyle = lg; g.fillRect(cx - LANE_W / 2 + 6, JUDGE_Y - bh, LANE_W - 12, bh)
       }
-      g.strokeStyle = `rgba(${rgb},${0.9 * (1 - k)})`; g.lineWidth = 1 + 3 * (1 - k) // 퍼지는 고리
-      g.beginPath(); g.ellipse(cx, JUDGE_Y, (14 + 48 * ease) * big, (6 + 20 * ease) * big, 0, 0, Math.PI * 2); g.stroke()
-      g.fillStyle = `rgba(255,255,255,${1 - k})`; starPath(g, cx, JUDGE_Y, 28 * big * (1 - 0.6 * k)); g.fill() // 별 반짝임
-      g.fillStyle = `rgba(${rgb},${1 - k})` // 위로 퍼지는 불꽃 알갱이
-      for (let i = 0; lv === 2 && i < 8; i++) {
-        const a = -Math.PI + (i / 7) * Math.PI, d = (18 + 72 * ease) * big
-        g.beginPath(); g.arc(cx + Math.cos(a) * d, JUDGE_Y + Math.sin(a) * d * 0.9, 0.6 + 2.6 * (1 - k), 0, Math.PI * 2); g.fill()
-      }
+      drawHit(g, style, cx, JUDGE_Y, k, big, rgb, ar, lv)
     }
     for (let i = head; i < ns.length && ns[i].time <= t; i++) { // 롱노트를 잡고 있는 동안은 판정선에서 계속 빛난다 (head 앞은 끝난 노트, t 뒤는 아직 안 온 노트)
       const n = ns[i]

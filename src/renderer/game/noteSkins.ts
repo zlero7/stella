@@ -5,13 +5,18 @@ import { lighten, starPath } from '../render/theme'
 type Ctx = CanvasRenderingContext2D
 export interface NoteSkin { id: string; name: string; need: string; ok: (p: Profile) => boolean; draw: (x: Ctx, outer: boolean, c: string) => void }
 
-// 노트마다 모양이 완전히 다르다 (기본만 얇은 막대). 세로 중심은 y=22 (판정이 이 높이에 닿는다), 가로는 x 11~81 안
+// 노트마다 모양이 자유롭다 (기본만 얇은 막대). 세로 중심은 y=22 (판정이 이 높이에 닿는다), 가로는 x 11~81 안
 const mix = (a: string, b: string, t: number) => '#' + [1, 3, 5].map(i => Math.round(parseInt(a.slice(i, i + 2), 16) * (1 - t) + parseInt(b.slice(i, i + 2), 16) * t).toString(16).padStart(2, '0')).join('')
-// 색 세트: 바깥 레인은 고른 색, 안쪽 레인은 은백색
-const pal = (o: boolean, c: string) => ({ hi: o ? lighten(c, 0.65) : '#ffffff', mid: o ? c : '#b7cde8', lo: o ? mix(c, '#000000', 0.45) : '#6f86a6', edge: o ? '#ffffff' : '#eef5ff' })
-const poly = (x: Ctx, pts: number[][]) => { x.beginPath(); pts.forEach(([px, py], i) => (i ? x.lineTo(px, py) : x.moveTo(px, py))); x.closePath() }
+// 색 세트: 바깥 레인은 모양 고유의 색, 안쪽 레인은 은백색
+const pal = (o: boolean, nat: string) => ({ col: o ? nat : '#f4f8ff', hi: o ? lighten(nat, 0.6) : '#ffffff', lo: o ? mix(nat, '#000000', 0.4) : '#8aa2c4' })
 const vg = (x: Ctx, y0: number, y1: number, ...s: string[]) => { const g = x.createLinearGradient(0, y0, 0, y1); s.forEach((c, i) => g.addColorStop(i / (s.length - 1), c)); return g }
-const hg = (x: Ctx, ...s: string[]) => { const g = x.createLinearGradient(11, 0, 81, 0); s.forEach((c, i) => g.addColorStop(i / (s.length - 1), c)); return g }
+const outline = (x: Ctx, lo: string, glow: string) => { x.shadowColor = glow; x.shadowBlur = 7; x.strokeStyle = lo; x.lineWidth = 1.6; x.lineJoin = 'round' }
+const blossom = (x: Ctx, cx: number, cy: number, r: number, p: ReturnType<typeof pal>) => {
+  for (let i = 0; i < 5; i++) { const a = (i / 5) * Math.PI * 2 - Math.PI / 2; x.save(); x.translate(cx + Math.cos(a) * r * 0.55, cy + Math.sin(a) * r * 0.55); x.rotate(a); x.beginPath(); x.ellipse(0, 0, r * 0.52, r * 0.4, 0, 0, 7); x.fillStyle = p.col; x.fill(); x.stroke(); x.restore() }
+  x.fillStyle = '#ffd04a'; x.beginPath(); x.arc(cx, cy, r * 0.26, 0, 7); x.fill()
+}
+const heartPath = (x: Ctx, cx: number, cy: number, s: number) => { x.beginPath(); x.moveTo(cx, cy + s); x.bezierCurveTo(cx - s * 1.7, cy - s * 0.1, cx - s * 0.8, cy - s * 1.35, cx, cy - s * 0.45); x.bezierCurveTo(cx + s * 0.8, cy - s * 1.35, cx + s * 1.7, cy - s * 0.1, cx, cy + s) }
+const INVADER = ['..#.....#..', '...#...#...', '..#######..', '.##.###.##.', '###########', '#.#######.#', '#.#.....#.#', '...##.##...']
 
 export const NOTE_SKINS: NoteSkin[] = [
   { id: 'basic', name: '기본', need: '처음부터', ok: () => true, draw(x, o, c) {
@@ -20,77 +25,73 @@ export const NOTE_SKINS: NoteSkin[] = [
     x.shadowBlur = 0; x.fillStyle = 'rgba(255,255,255,.95)'; x.fillRect(11, 15, 70, 2)
     x.strokeStyle = o ? '#ffffff' : 'rgba(80,140,230,.95)'; x.lineWidth = 1.5; x.strokeRect(11.5, 15.5, 69, 13)
   } },
-  { id: 'neon', name: '네온 프레임', need: '플레이 5번', ok: p => p.plays >= 5, draw(x, o, c) {
-    const k = pal(o, c); x.fillStyle = '#0a1022'; x.beginPath(); x.roundRect(11, 9, 70, 26, 9); x.fill()
-    x.shadowColor = k.hi; x.shadowBlur = 10; x.strokeStyle = k.hi; x.lineWidth = 2.5; x.beginPath(); x.roundRect(12, 10, 68, 24, 8); x.stroke()
-    x.fillStyle = k.hi; poly(x, [[46, 15], [53, 22], [46, 29], [39, 22]]); x.fill(); x.shadowBlur = 0
-    x.fillRect(19, 21, 14, 2); x.fillRect(59, 21, 14, 2)
+  { id: 'flower', name: '벚꽃', need: '플레이 5번', ok: p => p.plays >= 5, draw(x, o) {
+    const p = pal(o, '#ff9ec4'); outline(x, p.lo, '#ff9ec4'); blossom(x, 22, 24, 11, p); blossom(x, 70, 21, 10, p); blossom(x, 46, 20, 17, p); x.shadowBlur = 0
   } },
-  { id: 'jelly', name: '젤리', need: '레벨 3', ok: p => p.level >= 3, draw(x, o, c) {
-    const k = pal(o, c); x.shadowColor = k.mid; x.shadowBlur = 8
-    x.fillStyle = vg(x, 9, 35, k.hi, k.mid, k.lo); x.beginPath(); x.roundRect(11, 9, 70, 26, 13); x.fill(); x.shadowBlur = 0
-    x.fillStyle = 'rgba(255,255,255,.75)'; x.beginPath(); x.roundRect(19, 11.5, 54, 7, 3.5); x.fill()
-    x.fillStyle = 'rgba(255,255,255,.35)'; x.beginPath(); x.arc(70, 28, 2.5, 0, 7); x.fill()
+  { id: 'leaf', name: '나뭇잎', need: '레벨 3', ok: p => p.level >= 3, draw(x, o) {
+    const p = pal(o, '#4cc46a'); outline(x, p.lo, '#4cc46a')
+    x.beginPath(); x.moveTo(12, 28); x.bezierCurveTo(22, 4, 58, 3, 80, 17); x.bezierCurveTo(66, 36, 30, 40, 12, 28); x.closePath()
+    x.fillStyle = vg(x, 6, 38, p.hi, p.col); x.fill(); x.stroke(); x.shadowBlur = 0
+    x.strokeStyle = p.lo; x.lineWidth = 1.5; x.beginPath(); x.moveTo(13, 28); x.quadraticCurveTo(46, 18, 76, 18); x.stroke()
+    x.beginPath(); for (const px of [30, 44, 58]) { x.moveTo(px, 21); x.lineTo(px + 5, 12); x.moveTo(px, 22); x.lineTo(px + 4, 31) } x.stroke()
   } },
-  { id: 'crystal', name: '크리스탈', need: '레벨 6', ok: p => p.level >= 6, draw(x, o, c) {
-    const k = pal(o, c), pts = [[11, 22], [27, 9], [65, 9], [81, 22], [65, 35], [27, 35]]
-    x.shadowColor = k.mid; x.shadowBlur = 8; poly(x, pts); x.fillStyle = vg(x, 9, 35, k.hi, k.mid); x.fill(); x.shadowBlur = 0
-    poly(x, [[11, 22], [27, 35], [65, 35], [81, 22], [46, 22]]); x.fillStyle = k.lo; x.globalAlpha = 0.55; x.fill(); x.globalAlpha = 1
-    x.strokeStyle = 'rgba(255,255,255,.7)'; x.lineWidth = 1.2; x.beginPath(); x.moveTo(27, 9); x.lineTo(46, 22); x.lineTo(65, 9); x.moveTo(46, 22); x.lineTo(46, 35); x.stroke()
-    poly(x, pts); x.strokeStyle = k.edge; x.lineWidth = 1.8; x.stroke()
+  { id: 'claw', name: '발톱', need: '풀 콤보 3번', ok: p => p.fcs >= 3, draw(x, o) {
+    const p = pal(o, '#ff3b52'); outline(x, p.lo, '#ff3b52')
+    for (const [dx, dy, s] of [[0, 0, 1], [6, 5, 0.8], [-4, 8, 0.6]] as const) {
+      x.beginPath(); x.moveTo(12 + dx, 30 + dy * 0.2); x.quadraticCurveTo(46 + dx, -8 + dy, 82 + dx * 0.4, 28 + dy * 0.2); x.quadraticCurveTo(46 + dx, 12 + dy, 12 + dx, 30 + dy * 0.2)
+      x.globalAlpha = s; x.fillStyle = vg(x, 4, 32, p.hi, p.col); x.fill(); x.globalAlpha = 1; if (s === 1) x.stroke()
+    }
+    x.shadowBlur = 0
   } },
-  { id: 'stripe', name: '주의 테이프', need: '플레이 30번', ok: p => p.plays >= 30, draw(x, o, c) {
-    const k = pal(o, c), pts = [[20, 10], [81, 10], [72, 34], [11, 34]]
-    x.save(); poly(x, pts); x.clip(); x.fillStyle = k.mid; x.fillRect(0, 0, 92, 44); x.fillStyle = o ? '#10162a' : '#2a3550'
-    for (let px = -10; px < 92; px += 16) poly(x, [[px, 44], [px + 8, 44], [px + 28, 0], [px + 20, 0]]), x.fill()
-    x.restore(); poly(x, pts); x.strokeStyle = k.edge; x.lineWidth = 2; x.stroke()
+  { id: 'bubbles', name: '거품', need: '레벨 6', ok: p => p.level >= 6, draw(x, o) {
+    const p = pal(o, '#4fd0e0'); outline(x, p.lo, '#4fd0e0')
+    for (const [cx, cy, r] of [[22, 25, 9], [44, 18, 13], [63, 27, 10], [75, 15, 6]] as const) {
+      x.beginPath(); x.arc(cx, cy, r, 0, 7); x.fillStyle = vg(x, cy - r, cy + r, p.hi, p.col); x.fill(); x.stroke()
+      x.shadowBlur = 0; x.fillStyle = 'rgba(255,255,255,.85)'; x.beginPath(); x.arc(cx - r * 0.35, cy - r * 0.35, r * 0.26, 0, 7); x.fill(); x.shadowBlur = 7
+    }
+    x.shadowBlur = 0
   } },
-  { id: 'heart', name: '하트', need: '풀 콤보 3번', ok: p => p.fcs >= 3, draw(x, o, c) {
-    x.fillStyle = vg(x, 16, 28, o ? '#ffd0e6' : '#ffffff', o ? '#ff6fa8' : '#f5b8d4'); x.beginPath(); x.roundRect(11, 16, 70, 12, 6); x.fill()
-    x.strokeStyle = '#ffffff'; x.lineWidth = 1.5; x.beginPath(); x.roundRect(11.5, 16.5, 69, 11, 5.5); x.stroke()
-    x.shadowColor = '#ff2f78'; x.shadowBlur = 9; x.fillStyle = '#ff2f78'; x.strokeStyle = '#ffffff'; x.lineWidth = 2.2
-    x.beginPath(); x.moveTo(46, 33); x.bezierCurveTo(30, 24, 36, 8, 46, 15); x.bezierCurveTo(56, 8, 62, 24, 46, 33); x.fill(); x.stroke(); x.shadowBlur = 0; void c
+  { id: 'bolt', name: '번개', need: '플레이 30번', ok: p => p.plays >= 30, draw(x, o) {
+    const p = pal(o, '#ffd43a'); outline(x, p.lo, '#ffd43a')
+    x.beginPath(); x.moveTo(30, 4); x.lineTo(58, 4); x.lineTo(46, 17); x.lineTo(68, 17); x.lineTo(34, 40); x.lineTo(42, 24); x.lineTo(24, 24); x.closePath()
+    x.fillStyle = vg(x, 4, 40, p.hi, p.col); x.fill(); x.stroke(); x.shadowBlur = 0
+    x.strokeStyle = p.col; x.lineWidth = 2; x.beginPath(); x.moveTo(12, 14); x.lineTo(22, 18); x.moveTo(14, 28); x.lineTo(24, 26); x.moveTo(78, 12); x.lineTo(68, 20); x.moveTo(76, 30); x.lineTo(66, 27); x.stroke()
   } },
-  { id: 'star', name: '별똥별', need: '올 퍼펙트 1번', ok: p => p.aps >= 1, draw(x, o, c) {
-    const k = pal(o, c); x.fillStyle = '#16224d'; x.beginPath(); x.roundRect(11, 17, 70, 10, 5); x.fill()
-    x.strokeStyle = k.hi; x.lineWidth = 1.5; x.beginPath(); x.roundRect(11.5, 17.5, 69, 9, 4.5); x.stroke()
-    x.fillStyle = k.hi; x.fillRect(16, 21, 18, 2); x.fillRect(58, 21, 18, 2)
-    x.shadowColor = '#ffb13b'; x.shadowBlur = 10; starPath(x, 46, 22, 19); x.fillStyle = vg(x, 4, 40, '#fff6c2', '#ffd04a', '#e09a1a'); x.fill(); x.shadowBlur = 0
+  { id: 'snow', name: '눈꽃', need: '올 퍼펙트 1번', ok: p => p.aps >= 1, draw(x, o) {
+    const p = pal(o, '#8fd8ff'); x.shadowColor = '#8fd8ff'; x.shadowBlur = 7; x.strokeStyle = o ? p.col : '#cfe6ff'; x.lineWidth = 3; x.lineCap = 'round'
+    x.save(); x.translate(46, 22)
+    for (let i = 0; i < 6; i++) { x.rotate(Math.PI / 3); x.beginPath(); x.moveTo(0, 0); x.lineTo(19, 0); x.moveTo(11, 0); x.lineTo(16, -5); x.moveTo(11, 0); x.lineTo(16, 5); x.stroke() }
+    x.restore(); x.fillStyle = p.hi; for (const px of [20, 72]) { x.beginPath(); x.arc(px, 22, 4, 0, 7); x.fill() } x.beginPath(); x.arc(46, 22, 4.5, 0, 7); x.fill(); x.lineCap = 'butt'; x.shadowBlur = 0
   } },
-  { id: 'emblem', name: '방패', need: '대결 3승', ok: p => p.wins >= 3, draw(x, o, c) {
-    const k = pal(o, c), pts = [[11, 10], [81, 10], [81, 23], [46, 36], [11, 23]]
-    x.shadowColor = k.mid; x.shadowBlur = 7; poly(x, pts); x.fillStyle = vg(x, 10, 36, k.hi, k.mid); x.fill(); x.shadowBlur = 0
-    poly(x, pts); x.strokeStyle = k.edge; x.lineWidth = 2; x.stroke()
-    x.strokeStyle = k.lo; x.lineWidth = 2.6; x.lineJoin = 'miter'
-    for (const px of [30, 46, 62]) { x.beginPath(); x.moveTo(px - 4, 14); x.lineTo(px + 3, 19); x.lineTo(px - 4, 24); x.stroke() }
+  { id: 'sun', name: '태양', need: '대결 3승', ok: p => p.wins >= 3, draw(x, o) {
+    const p = pal(o, '#ffb13b'); x.shadowColor = '#ffb13b'; x.shadowBlur = 9
+    x.fillStyle = p.col; for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2; x.beginPath(); x.moveTo(46 + Math.cos(a - 0.14) * 13, 22 + Math.sin(a - 0.14) * 13); x.lineTo(46 + Math.cos(a) * 20, 22 + Math.sin(a) * 20); x.lineTo(46 + Math.cos(a + 0.14) * 13, 22 + Math.sin(a + 0.14) * 13); x.fill() }
+    x.beginPath(); x.arc(46, 22, 12, 0, 7); x.fillStyle = vg(x, 10, 34, p.hi, p.col); x.fill(); x.strokeStyle = p.lo; x.lineWidth = 1.5; x.stroke(); x.shadowBlur = 0
+    x.fillStyle = p.col; for (const d of [-1, 1]) { x.beginPath(); x.moveTo(46 + d * 26, 22); x.lineTo(46 + d * 36, 18); x.lineTo(46 + d * 36, 26); x.fill(); x.beginPath(); x.moveTo(46 + d * 40, 22); x.lineTo(46 + d * 35, 22 + 0.1); x.stroke() }
   } },
-  { id: 'retro', name: '8비트 블록', need: '레벨 10', ok: p => p.level >= 10, draw(x, o, c) {
-    const k = pal(o, c); x.fillStyle = k.mid; x.fillRect(17, 10, 58, 24); x.fillRect(14, 13, 64, 18); x.fillRect(11, 17, 70, 10)
-    x.fillStyle = k.lo; x.fillRect(17, 30, 58, 4); x.fillRect(14, 28, 64, 3); x.fillRect(11, 24, 70, 3)
-    x.fillStyle = k.hi; x.fillRect(17, 10, 58, 4); x.fillRect(14, 13, 64, 2); x.fillRect(11, 17, 70, 2)
-    x.fillStyle = 'rgba(0,0,0,.45)'; for (let px = 22; px < 70; px += 10) x.fillRect(px, 20, 5, 5)
+  { id: 'invader', name: '인베이더', need: '레벨 10', ok: p => p.level >= 10, draw(x, o) {
+    const p = pal(o, '#7dff7a'); x.shadowColor = '#7dff7a'; x.shadowBlur = 6; x.fillStyle = p.col
+    INVADER.forEach((row, ry) => [...row].forEach((ch, rx) => { if (ch === '#') x.fillRect(24 + rx * 4, 6 + ry * 4, 4, 4) })); x.shadowBlur = 0
+    x.fillStyle = p.lo; x.fillRect(32, 14, 4, 4); x.fillRect(56, 14, 4, 4)
   } },
-  { id: 'holo', name: '홀로그램 다이아', need: '레벨 15', ok: p => p.level >= 15, draw(x) {
-    const pts = [[11, 22], [30, 9], [62, 9], [81, 22], [62, 35], [30, 35]]
-    x.shadowColor = '#c7a6ff'; x.shadowBlur = 10; poly(x, pts); x.fillStyle = hg(x, '#ff7ad9', '#7ad9ff', '#a0ffb0', '#ffe27a', '#ff7ad9'); x.fill(); x.shadowBlur = 0
-    poly(x, [[30, 9], [62, 9], [81, 22], [11, 22]]); x.fillStyle = 'rgba(255,255,255,.35)'; x.fill()
-    poly(x, pts); x.strokeStyle = '#ffffff'; x.lineWidth = 2; x.stroke()
+  { id: 'crown', name: '왕관', need: '레벨 20', ok: p => p.level >= 20, draw(x) {
+    x.shadowColor = '#ffcf4a'; x.shadowBlur = 9
+    x.beginPath(); x.moveTo(14, 36); x.lineTo(11, 12); x.lineTo(30, 24); x.lineTo(46, 6); x.lineTo(62, 24); x.lineTo(81, 12); x.lineTo(78, 36); x.closePath()
+    x.fillStyle = vg(x, 6, 36, '#fff2b0', '#e0a800', '#8a5a00'); x.fill(); x.strokeStyle = '#fff4c8'; x.lineWidth = 1.6; x.lineJoin = 'round'; x.stroke(); x.shadowBlur = 0
+    x.fillStyle = 'rgba(120,70,0,.5)'; x.fillRect(14, 30, 64, 3)
+    for (const [cx, cy, col] of [[11, 11, '#ff3d5a'], [46, 5, '#5ac8ff'], [81, 11, '#ff3d5a'], [46, 24, '#ff3d5a']] as const) { x.fillStyle = col; x.beginPath(); x.arc(cx, cy, 3.2, 0, 7); x.fill(); x.fillStyle = 'rgba(255,255,255,.8)'; x.beginPath(); x.arc(cx - 1, cy - 1, 1, 0, 7); x.fill() }
   } },
-  { id: 'gold', name: '골드 보석', need: '레벨 20', ok: p => p.level >= 20, draw(x) {
-    const pts = [[11, 22], [24, 11], [68, 11], [81, 22], [68, 33], [24, 33]]
-    x.shadowColor = '#ffcf4a'; x.shadowBlur = 10; poly(x, pts); x.fillStyle = vg(x, 11, 33, '#fff2b0', '#e0a800', '#8a5a00'); x.fill(); x.shadowBlur = 0
-    poly(x, pts); x.strokeStyle = '#fff4c8'; x.lineWidth = 1.8; x.stroke()
-    x.strokeStyle = 'rgba(255,240,180,.8)'; x.lineWidth = 1.2; x.beginPath(); x.moveTo(27, 22); x.lineTo(34, 22); x.moveTo(58, 22); x.lineTo(65, 22); x.stroke()
-    x.shadowColor = '#ff3d5a'; x.shadowBlur = 8; x.fillStyle = vg(x, 15, 29, '#ff8a9a', '#d4102f'); x.beginPath(); x.arc(46, 22, 7, 0, 7); x.fill(); x.shadowBlur = 0
-    x.fillStyle = 'rgba(255,255,255,.8)'; x.beginPath(); x.arc(43.5, 19.5, 2, 0, 7); x.fill()
+  { id: 'heart', name: '하트', need: '레벨 15', ok: p => p.level >= 15, draw(x, o) {
+    const p = pal(o, '#ff5f9a'); outline(x, p.lo, '#ff2f78'); x.lineWidth = 2
+    for (const [cx, cy, s] of [[19, 26, 6], [73, 18, 6], [46, 21, 14]] as const) { heartPath(x, cx, cy, s); x.fillStyle = vg(x, cy - s, cy + s, p.hi, p.col); x.fill(); x.stroke() }
+    x.shadowBlur = 0
   } },
-  { id: 'carbon', name: '카본 블레이드', need: '풀 콤보 25번', ok: p => p.fcs >= 25, draw(x, o, c) {
-    const k = pal(o, c), pts = [[11, 17], [19, 10], [73, 10], [81, 17], [81, 27], [73, 34], [19, 34], [11, 27]], edge = o ? lighten(c, 0.1) : '#ff3d5a'
-    poly(x, pts); x.fillStyle = '#14161b'; x.fill(); x.save(); poly(x, pts); x.clip(); x.fillStyle = 'rgba(255,255,255,.07)'
-    for (let px = 11; px < 81; px += 4) for (let py = 10; py < 34; py += 4) if (((px - 11 + py - 10) / 4) % 2 === 0) x.fillRect(px, py, 4, 4)
-    x.fillStyle = edge; x.fillRect(11, 10, 70, 3); x.fillRect(11, 31, 70, 3); x.restore()
-    x.shadowColor = edge; x.shadowBlur = 8; poly(x, [[30, 22], [38, 17], [54, 17], [62, 22], [54, 27], [38, 27]]); x.fillStyle = k.hi; x.fill(); x.shadowBlur = 0
-    poly(x, pts); x.strokeStyle = edge; x.lineWidth = 1.5; x.stroke()
+  { id: 'paw', name: '고양이 발바닥', need: '풀 콤보 25번', ok: p => p.fcs >= 25, draw(x, o) {
+    const p = pal(o, '#ff8fb0'); outline(x, p.lo, '#ff8fb0')
+    for (const [cx, cy, rx, ry, rot] of [[46, 29, 16, 10, 0], [26, 17, 5.5, 8, -0.5], [38, 9, 5.5, 8, -0.15], [54, 9, 5.5, 8, 0.15], [66, 17, 5.5, 8, 0.5]] as const) {
+      x.beginPath(); x.ellipse(cx, cy, rx, ry, rot, 0, 7); x.fillStyle = vg(x, cy - ry, cy + ry, p.hi, p.col); x.fill(); x.stroke()
+    }
+    x.shadowBlur = 0
   } }
 ]
 
