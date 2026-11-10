@@ -2,6 +2,7 @@
 import { FONT, glow, lighten, starPath } from './theme'
 import type { Profile } from '../data/Profile'
 import { skinSprite } from '../game/noteSkins'
+import { ART, type PathFn } from './skinsArt'
 
 const img = (src: string) => { const i = new Image(); i.src = src; return i }
 // 스킨마다 치비 한 쌍: assets/chibi/<스킨 id>-l.png, -r.png (없으면 steel의 것). 그림을 더하려면 tools/split-chibi.ps1
@@ -45,7 +46,7 @@ const STYLE_OF: Record<string, GearStyle> = {
 const styleOf = (id: string) => STYLE_OF[id] ?? STYLE_OF.steel
 const rnd = (i: number) => ((i * 7919 + 13) % 97) / 97 // 고정 난수 (무늬 위치가 깜빡이지 않게)
 // 두 색을 섞는다 (t=0이면 a, 1이면 b)
-const mix = (a: string, b: string, t: number) => '#' + [1, 3, 5].map(i => Math.round(parseInt(a.slice(i, i + 2), 16) * (1 - t) + parseInt(b.slice(i, i + 2), 16) * t).toString(16).padStart(2, '0')).join('')
+export const mix = (a: string, b: string, t: number) => '#' + [1, 3, 5].map(i => Math.round(parseInt(a.slice(i, i + 2), 16) * (1 - t) + parseInt(b.slice(i, i + 2), 16) * t).toString(16).padStart(2, '0')).join('')
 export interface Lit { hit: number; miss: number; combo: number } // hit·miss: 0~1 (방금 쳤을 때 1에서 줄어든다) · combo: 켜질 원판 수 0~3
 
 // 기어 한 칸 바깥 틀: 세로 강철 기둥 (가운데 홈에 체력 게이지가 들어간다)
@@ -87,7 +88,7 @@ function railDecor(g: CanvasRenderingContext2D, rx: number, d: number, k0: GearS
 }
 
 // 필드 바탕 무늬: 레인 뒤에 아주 옅게 깔린다. 일부는 천천히 움직인다
-function fieldDecor(g: CanvasRenderingContext2D, x: number, fw: number, jy: number, k0: GearSkin, style: FieldStyle) {
+export function fieldDecor(g: CanvasRenderingContext2D, x: number, fw: number, jy: number, k0: GearSkin, style: FieldStyle) {
   if (style === 'none') return
   const now = performance.now(), w = fw + 8, acc = k0.accent
   g.save(); g.beginPath(); g.rect(x - 4, 0, w, jy); g.clip(); g.lineWidth = 1
@@ -106,7 +107,7 @@ function fieldDecor(g: CanvasRenderingContext2D, x: number, fw: number, jy: numb
 }
 
 // 기둥 바깥 램프: 맞히면 시안 별이 빛나고, 놓치면 빨간 X가 켜지고, 콤보가 쌓이면 원판이 하나씩 켜진다
-function lamps(g: CanvasRenderingContext2D, cx: number, lit: Lit, k0: GearSkin) {
+export function lamps(g: CanvasRenderingContext2D, cx: number, lit: Lit, k0: GearSkin) {
   if (cx - 30 < 2 || cx + 30 > 1278) return // 화면 밖이면 그리지 않는다 (필드를 한쪽으로 붙였을 때)
   const plate = mix(k0.dark, '#000000', 0.15), line = mix(k0.mid, k0.dark, 0.35)
   g.fillStyle = plate; g.beginPath(); g.roundRect(cx - 27, 14, 54, 54, 8); g.fill(); g.strokeStyle = line; g.lineWidth = 2; g.stroke()
@@ -147,6 +148,7 @@ function wing(g: CanvasRenderingContext2D, rx: number, d: number, jy: number, k0
 
 // 필드 판과 양옆 기둥·램프 (노트 아래에 깔린다)
 export function drawGearBack(g: CanvasRenderingContext2D, x: number, fw: number, jy: number, pa: number, lit: Lit, k0: GearSkin) {
+  if (ART[k0.id]) return ART[k0.id].back(g, x, fw, jy, pa, lit, k0) // 스틸 말고는 스킨이 틀을 직접 그린다
   g.fillStyle = `rgba(${k0.field},${pa})`; g.fillRect(x - 4, 0, fw + 8, 720)
   fieldDecor(g, x, fw, jy, k0, styleOf(k0.id).field)
   rail(g, x - 30, -1, jy, k0); rail(g, x + fw + 4, 1, jy, k0)
@@ -156,6 +158,7 @@ export function drawGearBack(g: CanvasRenderingContext2D, x: number, fw: number,
 
 // 판정선 아래 콘솔의 몸통·스피커·선반·치비 캐릭터 (노트와 이펙트 위, 건반 아래)
 export function drawConsoleBack(g: CanvasRenderingContext2D, x: number, fw: number, jy: number, diffCol: string, chibi: boolean, k0: GearSkin) {
+  if (ART[k0.id]) return ART[k0.id].consoleBack(g, x, fw, jy, diffCol, chibi, k0)
   const top = jy + 22
   const ins = styleOf(k0.id).cut, drop = Math.round(ins * 1.6) // 윗모서리를 깎는 정도는 스킨마다 다르다
   g.beginPath(); g.moveTo(x - 64 + ins, top); g.lineTo(x + fw + 64 - ins, top); g.lineTo(x + fw + 64, top + drop); g.lineTo(x + fw + 64, 720); g.lineTo(x - 64, 720); g.lineTo(x - 64, top + drop); g.closePath()
@@ -168,11 +171,14 @@ export function drawConsoleBack(g: CanvasRenderingContext2D, x: number, fw: numb
   g.fillStyle = diffCol // 선반 가운데 쐐기 표시: 난이도 색
   const cx = x + fw / 2
   for (const d of [-1, 1]) for (const o of [10, 24]) { g.beginPath(); g.moveTo(cx + d * o, jy + 9); g.lineTo(cx + d * (o + 8), jy + 9); g.lineTo(cx + d * (o + 3), jy + 20); g.lineTo(cx + d * (o - 5), jy + 20); g.closePath(); g.globalAlpha = 0.9; g.fill(); g.globalAlpha = 1 }
-  if (chibi) { // 콘솔 양끝에 걸쳐 선 캐릭터 (화면 밖으로 나가면 그리지 않는다)
-    const ch = 176, [CL, CR] = pairOf(k0.id)
-    if (ready(CL)) { const w = ch * CL.naturalWidth / CL.naturalHeight, lx = x - 64 + 26 - w; if (lx >= -8) g.drawImage(CL, lx, 720 - ch, w, ch) }
-    if (ready(CR)) { const w = ch * CR.naturalWidth / CR.naturalHeight, rx = x + fw + 64 - 26; if (rx + w <= 1288) g.drawImage(CR, rx, 720 - ch, w, ch) }
-  }
+  if (chibi) chibis(g, x, fw, k0)
+}
+
+// 콘솔 양끝에 걸쳐 선 캐릭터 (edge: 콘솔 끝이 필드에서 떨어진 거리. 화면 밖으로 나가면 그리지 않는다)
+export function chibis(g: CanvasRenderingContext2D, x: number, fw: number, k0: GearSkin, edge = 64) {
+  const ch = 176, [CL, CR] = pairOf(k0.id)
+  if (ready(CL)) { const w = ch * CL.naturalWidth / CL.naturalHeight, lx = x - edge + 26 - w; if (lx >= -8) g.drawImage(CL, lx, 720 - ch, w, ch) }
+  if (ready(CR)) { const w = ch * CR.naturalWidth / CR.naturalHeight, rx = x + fw + edge - 26; if (rx + w <= 1288) g.drawImage(CR, rx, 720 - ch, w, ch) }
 }
 
 let dots: CanvasPattern | undefined
@@ -183,16 +189,18 @@ const dotPattern = (g: CanvasRenderingContext2D) => {
   return (dots = g.createPattern(c, 'repeat')!)
 }
 
+export const keyArt = (id: string) => ART[id]?.key // 스틸이 아니면 건반도 스킨이 그린다
+const rr6: PathFn = (g, x, y, w, h) => { g.beginPath(); g.roundRect(x, y, w, h, 6) }
 export interface Panel { score: number; scroll: number; mult: number; hp: number; hpLow: boolean }
 // 건반 아래: 점수 LCD와 칩 세 개(속도·콤보 배율·체력). 건반은 Play가 그린다
 export function drawConsoleFront(g: CanvasRenderingContext2D, x: number, fw: number, jy: number, p: Panel, k0: GearSkin) {
-  const lx = x + 10, lw = fw - 20, ly = jy + 104, lh = 44
-  g.fillStyle = mix(k0.dark, '#000000', 0.6); g.beginPath(); g.roundRect(lx, ly, lw, lh, 6); g.fill()
+  const lx = x + 10, lw = fw - 20, ly = jy + 104, lh = 44, lcdP = ART[k0.id]?.lcd ?? rr6, chipP = ART[k0.id]?.chip ?? rr6
+  g.fillStyle = mix(k0.dark, '#000000', 0.6); lcdP(g, lx, ly, lw, lh); g.fill()
   g.fillStyle = k0.lcd; g.textAlign = 'center'; g.font = `800 28px ${FONT}`
   glow(g, k0.lcd, 8, () => g.fillText(String(p.score).padStart(7, '0'), lx + lw / 2, ly + 35))
   g.font = `700 9px ${FONT}`; g.fillStyle = mix(k0.lcd, k0.dark, 0.5); g.textAlign = 'left'; g.fillText('S C O R E', lx + 8, ly + 12)
-  g.fillStyle = dotPattern(g); g.beginPath(); g.roundRect(lx, ly, lw, lh, 6); g.fill()
-  g.strokeStyle = mix(k0.mid, k0.light, 0.4); g.lineWidth = 1.5; g.beginPath(); g.roundRect(lx, ly, lw, lh, 6); g.stroke()
+  g.fillStyle = dotPattern(g); lcdP(g, lx, ly, lw, lh); g.fill()
+  g.strokeStyle = mix(k0.mid, k0.light, 0.4); g.lineWidth = 1.5; lcdP(g, lx, ly, lw, lh); g.stroke()
   const cw = (lw - 12) / 3, cy = jy + 156
   const chips: [string, string, string, string][] = [
     ['SPEED', p.scroll.toFixed(1), k0.chips[0], mix(k0.chips[0], '#000000', 0.4)],
@@ -201,7 +209,7 @@ export function drawConsoleFront(g: CanvasRenderingContext2D, x: number, fw: num
   ]
   chips.forEach(([label, value, c1, c2], i) => {
     const cx = lx + i * (cw + 6), k = g.createLinearGradient(0, cy, 0, cy + 32); k.addColorStop(0, c1); k.addColorStop(1, c2)
-    g.fillStyle = k; g.beginPath(); g.roundRect(cx, cy, cw, 32, 5); g.fill()
+    g.fillStyle = k; chipP(g, cx, cy, cw, 32); g.fill()
     g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 1; g.stroke()
     g.textAlign = 'center'; g.fillStyle = 'rgba(255,255,255,.8)'; g.font = `700 9px ${FONT}`; g.fillText(label.split('').join(' '), cx + cw / 2, cy + 11)
     g.fillStyle = '#fff'; g.font = `900 17px ${FONT}`; g.fillText(value, cx + cw / 2, cy + 27)

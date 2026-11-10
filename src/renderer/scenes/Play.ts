@@ -11,7 +11,7 @@ import { send, vs, waitFor } from '../core/Versus'
 import { startPlay } from '../data/Rank'
 import { skinSprite } from '../game/noteSkins'
 import { prof } from '../data/Profile'
-import { drawConsoleBack, drawConsoleFront, drawGearBack, gearOf } from '../render/gear'
+import { drawConsoleBack, drawConsoleFront, drawGearBack, gearOf, keyArt } from '../render/gear'
 import { FX_OF, drawHit } from '../render/hitfx'
 import { drawLoading } from '../render/loading'
 import { FONT, CYAN, AMBER, accentFill, ICE, NOTE_COLORS, artOf, drawBg, fit, fitFont, lighten, menuRow, rgbOf, slant, glow, card, meter, starPath, hit, press as pressKey, ease } from '../render/theme'
@@ -290,6 +290,7 @@ export const Play = (sm: SceneManager): Scene => {
       drawFx(g, t)
       activeKeys().slice(0, LANES).forEach((k, i) => {
         const on = down.has(i), blue = isBlue(i), x = FIELD_X + i * LANE_W + 4, w = LANE_W - 8, y = JUDGE_Y + 32 + (on ? 2 : 0), h = 60 - (on ? 2 : 0) // 디맥 키처럼 반듯한 네모 건반: 누르면 가라앉으며 빛난다
+        const ka = keyArt(gs.id); if (ka) { ka(g, x, y, w, h, on, blue, keyLabel(k), gs, noteColor()); return } // 스틸이 아니면 건반 모양도 스킨이 그린다
         const top = on ? (blue ? lighten(noteColor(), 0.5) : '#ffffff') : '#4a5262', bot = on ? (blue ? lighten(noteColor(), 0.15) : '#cfe3ff') : '#1b1f27' // 어두운 금속 건반: 누르면 켜진다
         const kg = g.createLinearGradient(0, y, 0, y + h); kg.addColorStop(0, top); kg.addColorStop(1, bot)
         if (on) glow(g, blue ? noteColor() : '#ffffff', 22, () => { g.beginPath(); g.roundRect(x, y, w, h, 6); g.fillStyle = kg; g.fill() })
