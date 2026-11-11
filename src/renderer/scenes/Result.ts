@@ -188,12 +188,14 @@ export const Result = (sm: SceneManager): Scene => {
         slant(g, 1052, 160, 202, 34, 10); g.fillStyle = 'rgba(120,128,142,.6)'; g.fill(); g.textAlign = 'center'; g.font = `300 20px ${FONT}`; g.fillStyle = '#fff'; g.fillText('ONLINE RANKING', 1153, 183)
         if (!board?.length) { g.font = `14px ${FONT}`; g.fillStyle = ICE; g.fillText(loading ? '순위를 불러오는 중…' : '순위를 불러오지 못했습니다', 1153, 360) }
         if (!account.token) { g.font = `700 12px ${FONT}`; g.fillStyle = AMBER; g.fillText('로그인하면 순위에 올라갑니다', 1153, 574) }
-        board?.slice(0, 10).forEach((r, i) => {
-          const y = 206 + i * 36, mine = !!account.token && r.nick === account.nick
-          g.fillStyle = mine ? 'rgba(255,159,26,.35)' : 'rgba(255,255,255,.07)'; g.fillRect(1036, y, 234, 30)
-          g.font = `800 14px ${FONT}`; g.fillStyle = i < 3 ? '#ffe27a' : '#fff'; g.textAlign = 'center'; g.fillText(String(i + 1), 1054, y + 20)
-          g.textAlign = 'left'; g.font = `700 13px ${FONT}`; g.fillStyle = '#fff'; g.fillText(fit(g, r.nick, 96), 1072, y + 20)
-          g.font = `800 14px ${FONT}`; g.textAlign = 'right'; g.fillStyle = '#ffd84a'; g.fillText(String(r.score), 1262, y + 20)
+        board?.slice(0, 10).forEach((r, i) => { // 줄마다: 순위 · 닉네임 · 점수 / 정확도 · 최대 콤보 · 레벨 · 올 퍼펙트(AP)·풀 콤보(FC)
+          const y = 206 + i * 38, mine = !!account.token && r.nick === account.nick
+          g.fillStyle = mine ? 'rgba(255,159,26,.35)' : 'rgba(255,255,255,.07)'; g.fillRect(1036, y, 234, 34)
+          g.font = `800 14px ${FONT}`; g.fillStyle = i < 3 ? '#ffe27a' : '#fff'; g.textAlign = 'center'; g.fillText(String(i + 1), 1054, y + 22)
+          g.textAlign = 'left'; g.font = `700 13px ${FONT}`; g.fillStyle = '#fff'; g.fillText(fit(g, r.nick, r.badge ? 78 : 100), 1072, y + 15)
+          if (r.badge) { g.font = `800 10px ${FONT}`; g.fillStyle = r.badge === 'ALL PERFECT' ? '#f2b705' : '#7ad8ff'; g.fillText(r.badge === 'ALL PERFECT' ? 'AP' : 'FC', 1154, y + 14) }
+          g.font = `600 10px ${FONT}`; g.fillStyle = 'rgba(230,240,255,.7)'; g.fillText(`${r.acc.toFixed(2)}%  ·  ${r.mc}콤보${r.lv ? `  ·  Lv ${r.lv}` : ''}`, 1072, y + 28)
+          g.font = `800 14px ${FONT}`; g.textAlign = 'right'; g.fillStyle = '#ffd84a'; g.fillText(String(r.score), 1262, y + 15)
         })
         g.restore()
       }
