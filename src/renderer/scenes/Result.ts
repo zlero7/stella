@@ -18,7 +18,7 @@ const COLORS = [ICE, '#7dff9a', '#ffe27a', '#ffb066', '#ff8a8a', '#ff4d6d']
 
 export const Result = (sm: SceneManager): Scene => {
   let applied: number | undefined // O 키로 맞춘 뒤의 판정 오프셋
-  let d: { song: Song; diff: string; sk: ScoreKeeper; failed?: boolean; practice?: boolean }, isNew = false
+  let d: { song: Song; diff: string; sk: ScoreKeeper; failed?: boolean; practice?: boolean; fromPct?: number }, isNew = false
   let at = 0, slammed = false, chimed = false, prev: number | undefined // 연출 시작 시각 · 소리 낸 적 있는지 · 이전 최고 점수
   let gain = 0, lvUp = 0 // 이번 판으로 받은 경험치 · 오른 레벨 (로그인했고 서버가 받아 준 경우)
   let detail = false // Space: 왼쪽 상세정보 패널
@@ -80,6 +80,7 @@ export const Result = (sm: SceneManager): Scene => {
       const im = artOf(song)!.img
       g.save(); g.beginPath(); g.roundRect(468, 16, 48, 48, 4); g.clip(); drawCover(g, im, im.width, im.height, 468, 16, 48, 48); g.restore()
       g.textAlign = 'left'; g.font = `600 11px ${FONT}`; g.fillStyle = 'rgba(230,240,255,.6)'; g.fillText(`${settings.keyMode}K TUNES`, 528, 24)
+      if (d.practice) { g.textAlign = 'right'; g.font = `800 14px ${FONT}`; g.fillStyle = '#9dd8ff'; g.fillText('PRACTICE · 기록과 순위에 올라가지 않습니다', 1240, 46); g.textAlign = 'left' }
       g.font = `800 18px ${FONT}`; g.fillStyle = '#fff'; g.fillText(fit(g, song.meta.title, 420), 528, 45)
       g.font = `600 12px ${FONT}`; g.fillStyle = 'rgba(230,240,255,.55)'; g.fillText(fit(g, song.meta.artist, 300), 528, 61)
       g.font = `800 13px ${FONT}`; g.fillStyle = '#ff9f1a'; g.fillText(diffName(d.diff).toUpperCase(), 528, 76)
@@ -212,7 +213,7 @@ export const Result = (sm: SceneManager): Scene => {
       else if ((e.key === 'Enter' || e.key === ' ') && performance.now() - at < INTRO * 1000) { at = performance.now() - INTRO * 1000; slammed = chimed = true } // 연출 중 Enter·Space: 바로 최종 화면으로
       else if (e.key === ' ') detail = !detail
       else if (e.key === 'Tab') { e.preventDefault(); showBoard = !showBoard }
-      else if (e.key === 'Enter') sm.go('play', { song: d.song, diff: d.diff })
+      else if (e.key === 'Enter') sm.go('play', { song: d.song, diff: d.diff, fromPct: d.fromPct }) // 연습으로 쳤으면 같은 시작 위치로 다시
       else if (e.key === 'Escape') sm.go('select')
     }
   }

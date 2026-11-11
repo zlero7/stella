@@ -235,7 +235,7 @@ export const Play = (sm: SceneManager): Scene => {
       if (resumeAt && performance.now() >= resumeAt) { resumeAt = 0; clock.resume() }
       if (!ready || paused || resumeAt || finished) return
       if (dying) { // 느려지는 중: 판정은 멈추고, 끝나면 결과로
-        if (performance.now() - dying > (DIE_S + 0.4) * 1000) { finished = true; clock.stop(); dropVideo(); sm.go(data.vs ? 'vsresult' : 'result', { song, diff: data.diff, sk, failed: true, keys: LANES, practice }) }
+        if (performance.now() - dying > (DIE_S + 0.4) * 1000) { finished = true; clock.stop(); dropVideo(); sm.go(data.vs ? 'vsresult' : 'result', { song, diff: data.diff, sk, failed: true, keys: LANES, practice, fromPct: data.fromPct }) }
         return
       }
       if (data.vs) { // 점수를 상대에게 알린다 (0.15초마다). 상대가 나가 버리면 지금까지의 결과로 끝낸다
@@ -257,7 +257,7 @@ export const Play = (sm: SceneManager): Scene => {
       if (sk.failed) { dying = performance.now(); dyT0 = t; down.clear(); clock.slowStop(DIE_S); return }
       if (t > endTime) {
         finished = true; clock.stop(); dropVideo()
-        sm.go(data.vs ? 'vsresult' : 'result', { song, diff: data.diff, sk, keys: LANES, practice })
+        sm.go(data.vs ? 'vsresult' : 'result', { song, diff: data.diff, sk, keys: LANES, practice, fromPct: data.fromPct })
       }
     },
     render(g) {
@@ -392,7 +392,7 @@ export const Play = (sm: SceneManager): Scene => {
       g.textAlign = 'left'
       // 곡 정보 카드: 필드와 안 겹치는 빈 쪽에 둔다 (가운데=왼쪽 끝, 왼쪽 필드=필드 오른쪽, 오른쪽 필드=점수 카드 옆)
       const px = [FIELD_X + fw + 40, 24, 380][settings.align] ?? 24, pw = settings.align === 1 ? 340 : 400, py = 24, iw = pw - 40
-      card(g, px, py, pw, 132, `${data.vs ? 'VERSUS' : 'NOW PLAYING'}  ·  ${LANES}K ${diffName(data.diff)}`)
+      card(g, px, py, pw, 132, `${data.vs ? 'VERSUS' : practice ? 'PRACTICE · 기록 안 됨' : 'NOW PLAYING'}  ·  ${LANES}K ${diffName(data.diff)}`)
       const line = `${song.meta.title} - ${song.meta.artist}`
       g.font = `800 19px ${FONT}`; g.fillStyle = '#fff'
       const tw = g.measureText(line).width

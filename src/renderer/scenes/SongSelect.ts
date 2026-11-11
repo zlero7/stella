@@ -284,6 +284,7 @@ export const SongSelect = (sm: SceneManager): Scene => {
         let hx = 24
         for (const [k, label] of hints) hx = chip(g, hx, 692, k, label, '#fff', k === '↑↓' || k === '←→' ? null : undefined)
       }
+      { const st = [SORTS[sortMode], FILTERS[fmode], prac ? `연습 ${PRACTICE[prac] * 100}%부터` : ''].filter((x, i) => x && !(i === 0 && sortMode === 0) && !(i === 1 && fmode === 0)).join('  ·  '); if (st) { g.font = `700 12px ${FONT}`; g.fillStyle = AMBER; g.textAlign = 'right'; g.fillText(st, 1240, 77); g.textAlign = 'left' } } // 정렬·필터·연습 시작 위치가 기본이 아니면 항상 보인다
       g.font = `700 13px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.75)'; g.textAlign = 'right' // 곡 번호는 아래 오른쪽 구석 (위쪽 띠 오른쪽은 프로필 카드 자리)
       g.fillText(`${idx + 1} / ${n}`, 1240, 706); g.textAlign = 'left'
       if (note && performance.now() < noteAt) { g.font = `800 18px ${FONT}`; const w = g.measureText(note).width + 48; pill(g, 640 - w / 2, 84, w, 40, 'rgba(6,11,28,.92)'); g.fillStyle = AMBER; g.textAlign = 'center'; g.fillText(note, 640, 110); g.textAlign = 'left' }
