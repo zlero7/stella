@@ -3,14 +3,15 @@ import { account, settings } from '../data/Storage'
 import { prof, refreshProfile } from '../data/Profile'
 import { APP_VERSION, updateInfo } from '../data/Update'
 import { profileCard } from '../render/profileCard'
-import { FONT, AMBER, accentFill, drawBg, slant, glow, hit, press, starPath, ease } from '../render/theme'
+import { FONT, AMBER, accentFill, chip, drawBg, footer, slant, glow, hit, press, starPath } from '../render/theme'
 
 const ITEMS: [string, string][] = [['START', '곡 선택'], ['LADDER', '랭크 매치 · 밴픽'], ['VERSUS', '친구와 대결'], ['COLLECTION', '프로필 · DJ CLASS · 꾸미기'], ['ACCOUNT', ''], ['SETTINGS', '환경 설정'], ['EXIT', '종료']] // ACCOUNT의 설명은 로그인 상태에 따라 바뀐다
+const COLORS = ['#ff9f1a', '#ff5c8a', '#4f9bff', '#b9a4ff', '#2ee6c8', '#9aa6b8', '#ff6b4a'] // 모드마다 다른 색 (START, LADDER, VERSUS, COLLECTION, ACCOUNT, SETTINGS, EXIT)
 const ign = (k: string) => /^(Shift|Control|Alt|Meta|CapsLock|NumLock|F\d+)$/.test(k) // 이 키로는 시작 화면을 넘기지 않는다
 let seen = false // 처음 켰을 때만 "PRESS ANY KEY" 화면을 거친다 (설정 등에서 돌아오면 바로 메뉴)
 
 export const Title = (sm: SceneManager): Scene => {
-  let sel = 0, menu = false, since = 0
+  let sel = 0, menu = false, since = 0, cp = 0, last = 0 // cp: 화면에 보이는 위치 (고른 칸으로 부드럽게 따라간다)
   const open = (v: boolean) => { menu = seen = v; since = performance.now() }
   return {
     enter() { menu = seen; since = performance.now() - 1000; void refreshProfile() },
@@ -58,7 +59,8 @@ export const Title = (sm: SceneManager): Scene => {
       }
 
       // 로고: 시작 화면에서는 한가운데에 크게, 메뉴가 열리면 왼쪽으로 옮겨 앉는다
-      const fs = 196 - 64 * m, by = 352 - 14 * m, cx = 640 - 255 * m
+      const fs = 196, by = 352, cx = 640
+      g.globalAlpha = 1 - m
       g.textAlign = 'center'
       g.font = `700 15px ${FONT}`; g.fillStyle = '#eaf6ff'
       g.fillText('S T E L L I V E   C O V E R   R H Y T H M', cx, by - fs * 0.76 - 14)
@@ -73,6 +75,7 @@ export const Title = (sm: SceneManager): Scene => {
       slant(g, cx - 210, by + 26, 420, 5, 2); g.fillStyle = accentFill(g, cx - 210, 420); g.fill()
       g.font = `15px ${FONT}`; g.fillStyle = '#eaf6ff'
       g.fillText(`${settings.keyMode}K  ·  세로 리듬 게임`, cx, by + 62)
+      g.globalAlpha = 1
 
       const up = updateInfo.value // 새 버전이 있으면 아래에 안내 (앱에는 자동 업데이트가 없다)
       if (up) { g.textAlign = 'center'; g.font = `700 15px ${FONT}`; g.fillStyle = AMBER; g.fillText(`새 버전 v${up.latest}이 나왔습니다 — ${up.url.replace('https://', '')} 에서 받아 설치하세요 (현재 v${APP_VERSION})`, 640, 690); g.textAlign = 'left' }
@@ -89,30 +92,53 @@ export const Title = (sm: SceneManager): Scene => {
         g.globalAlpha = 1
       }
 
-      // 메뉴: 오른쪽에서 밀려 들어오는 비스듬한 세로 띠. 고른 줄은 주황으로 길게 뻗는다
+      // 메뉴: 디맥처럼 모드 하나가 화면 가운데에 크게, 좌우 화살표로 넘긴다. 모드마다 색이 다르다
       if (m > 0) {
+        const n = ITEMS.length, dt = Math.min((now - last) / 1000, 0.05); last = now
+        let dd = ((sel - cp) % n + n) % n; if (dd > n / 2) dd -= n
+        cp += dd * Math.min(dt * 11, 1); cp = (cp + n) % n
+        const near = (v: number) => { let d = ((v - cp) % n + n) % n; if (d > n / 2) d -= n; return d } // 가운데에서 몇 칸 떨어졌나 (부호 있음)
+        const col = COLORS[sel % COLORS.length]
+        g.globalAlpha = m
+        // 모드 색 바탕: 큰 빛무리 · 사선 띠 · 천천히 도는 고리
+        const wash = g.createRadialGradient(640, 330, 20, 640, 330, 640); wash.addColorStop(0, col + '66'); wash.addColorStop(1, col + '00')
+        g.fillStyle = wash; g.fillRect(0, 0, 1280, 720)
+        g.save(); g.translate(640, 330)
+        for (const [r, sp, a0] of [[250, 0.12, 0.35], [330, -0.08, 0.22], [420, 0.05, 0.14]] as const) {
+          g.save(); g.rotate(t * sp); g.strokeStyle = col; g.globalAlpha = m * a0; g.lineWidth = 2; g.setLineDash([60, 40, 8, 40]); g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2); g.stroke(); g.restore()
+        }
+        g.restore()
+        g.globalAlpha = m * 0.16; g.fillStyle = col
+        slant(g, -80, 250, 1500, 70, 40); g.fill(); slant(g, -80, 400, 1500, 24, 40); g.fill()
         g.globalAlpha = m
         profileCard(g, 40, 24, prof.v)
         ITEMS.forEach(([name, sub], i) => {
-          const k = ease('title' + i, i === sel), on = k > 0.5, h = 58, w = 440 + 40 * k, x = 770 - 40 * k + (1 - m) * 160, y = 360 - (ITEMS.length * 68 - 10) / 2 + i * 68
-          slant(g, x, y, w, h, 22); g.fillStyle = 'rgba(6,11,28,.74)'; g.fill()
-          g.strokeStyle = `rgba(255,255,255,${0.3 * (1 - k)})`; g.lineWidth = 1; g.stroke()
-          if (k > 0.01) {
-            g.save(); g.globalAlpha *= k
-            const og = g.createLinearGradient(x, 0, x + w, 0); og.addColorStop(0, '#ffb13b'); og.addColorStop(0.7, '#ff7a59'); og.addColorStop(1, '#ff5c8a')
-            glow(g, 'rgba(255,140,60,.6)', 16, () => { slant(g, x, y, w, h, 22); g.fillStyle = og; g.fill() })
-            g.restore()
+          const d = near(i), ad = Math.abs(d); if (ad > 1.6) return
+          const x = 640 + d * 470, fsz = 128 - 64 * Math.min(ad, 1), al = Math.max(0, 1 - ad * 0.55)
+          g.globalAlpha = m * al; g.textAlign = 'center'; g.font = `900 ${fsz.toFixed(0)}px ${FONT}`
+          if (ad < 0.5) { g.fillStyle = col; g.fillText(name, x - 5, 360 + 3); g.fillStyle = 'rgba(255,255,255,.35)'; g.fillText(name, x + 5, 360 - 3) } // 어긋난 그림자 (디맥의 지직거리는 글자)
+          g.fillStyle = '#fff'; glow(g, ad < 0.5 ? col : 'rgba(0,0,0,0)', 26, () => g.fillText(name, x, 360))
+          if (ad < 0.6) {
+            g.globalAlpha = m * (1 - ad / 0.6); g.font = `600 20px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.85)'
+            g.fillText(name === 'ACCOUNT' ? (account.token ? `${account.nick}  ·  내 계정` : '로그인 / 회원가입') : sub, x, 408)
           }
-          if (m > 0.6) hit(x, y, w, h, () => { sel = i; press('Enter') }, () => { sel = i }) // 위에 올리면 고르고, 누르면 실행
-          g.textAlign = 'left'
-          g.fillStyle = '#fff'; g.font = `${on ? 800 : 600} ${(24 + 3 * k).toFixed(1)}px ${FONT}`
-          g.fillText(name.split('').join(' '), x + 46, y + 29)
-          g.font = `${(14 + k).toFixed(1)}px ${FONT}`; g.fillStyle = `rgba(255,255,255,${0.65 + 0.35 * k})`
-          g.fillText(name === 'ACCOUNT' ? (account.token ? `${account.nick}  ·  내 계정` : '로그인 / 회원가입') : sub, x + 46, y + 49)
-          if (on) { g.textAlign = 'right'; g.font = `800 22px ${FONT}`; g.fillStyle = '#fff'; g.fillText('▶', x + w - 34, y + 37) }
         })
-        g.textAlign = 'center'; g.font = `14px ${FONT}`; g.fillStyle = '#0b2a6b'
-        g.fillText('↑ ↓  선택   ·   Enter  확인   ·   Esc  뒤로', 640, 696)
+        g.globalAlpha = m; g.textAlign = 'left'
+        // 좌우 화살표 · 현재 위치 점
+        if (m > 0.6) {
+          for (const dir of [-1, 1] as const) {
+            const ax = dir < 0 ? 60 : 1220; hit(ax - 40, 290, 80, 80, () => press(dir < 0 ? 'ArrowLeft' : 'ArrowRight'))
+            g.lineWidth = 6; g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = '#fff'
+            g.beginPath(); g.moveTo(ax + 12 * dir * -1, 306); g.lineTo(ax + 12 * dir, 330); g.lineTo(ax + 12 * dir * -1, 354); g.stroke()
+            g.lineWidth = 2; g.strokeStyle = col; g.beginPath(); g.moveTo(ax + 20 * dir * -1, 302); g.lineTo(ax + 20 * dir, 330); g.lineTo(ax + 20 * dir * -1, 358); g.stroke()
+          }
+          hit(440, 270, 400, 120, () => press('Enter')) // 가운데 이름을 누르면 실행
+        }
+        ITEMS.forEach((_, i) => { g.fillStyle = i === sel ? col : 'rgba(255,255,255,.3)'; g.beginPath(); g.arc(640 + (i - (n - 1) / 2) * 22, 560, i === sel ? 5 : 3.5, 0, Math.PI * 2); g.fill() })
+        g.globalAlpha = m
+        footer(g)
+        let kx = 24
+        for (const [k, label, real] of [['←→', '모드 선택', null], ['Enter', '확인', undefined], ['Esc', '뒤로', undefined]] as [string, string, string | null | undefined][]) kx = chip(g, kx, 684, k, label, '#fff', real, 24, 13)
         g.globalAlpha = 1
       }
       g.textAlign = 'left'

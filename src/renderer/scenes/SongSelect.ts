@@ -2,7 +2,7 @@ import type { Scene, SceneManager } from '../core/SceneManager'
 import type { Chart, Song } from '../../shared/types'
 import { prof } from '../data/Profile'
 import { profileCard } from '../render/profileCard'
-import { FONT, CYAN, AMBER, NOTE_COLORS, accentFill, artOf, drawBg, drawCover, ease, fit, glow, hit, marquee, overRect, pill, press, starPath, chip } from '../render/theme'
+import { footer, slant, FONT, CYAN, AMBER, NOTE_COLORS, accentFill, artOf, drawBg, drawCover, ease, fit, glow, hit, marquee, overRect, pill, press, starPath, chip } from '../render/theme'
 import { chartFile, diffName, diffsOf, ensureSong, loadSongs, songUrl } from '../data/Songs'
 import { needsRegen } from '../game/AutoChart'
 import { getRecords, isFav, saveSettings, settings, toggleFav } from '../data/Storage'
@@ -134,7 +134,7 @@ export const SongSelect = (sm: SceneManager): Scene => {
       }
       const lerp = (u: number, v: number, k: number) => u + (v - u) * k
       // 위쪽 띠: 로고 · 가수 분류 알약(Tab으로 넘긴다) · 모드
-      g.fillStyle = 'rgba(14,52,140,.62)'; g.fillRect(0, 0, 1280, 68)
+      g.fillStyle = 'rgba(6,11,26,.78)'; g.fillRect(0, 0, 1280, 68)
       g.fillStyle = accentFill(g, 0, 1280); g.fillRect(0, 67, 1280, 2)
       glow(g, AMBER, 10, () => { starPath(g, 52, 34, 13); g.fillStyle = '#fff6d6'; g.fill() })
       g.font = `900 28px ${FONT}`; g.fillStyle = '#fff'; g.fillText('STELLA', 78, 44)
@@ -154,9 +154,9 @@ export const SongSelect = (sm: SceneManager): Scene => {
           const c = cats[(ci + k + cats.length) % cats.length], label = fit(g, c === 'ALL' ? '전체' : c, 150), w = g.measureText(label).width + 36
           if (px + w > 930) break
           if (k !== 0) hit(px, 16, w, 36, () => { cat = c; applyCat() }) // 탭을 누르면 그 가수로
-          if (k === 0) glow(g, CYAN, 12, () => pill(g, px, 16, w, 36, accentFill(g, px, w)))
-          else { pill(g, px, 16, w, 36, 'rgba(6,11,28,.55)'); g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 1.5; g.stroke() }
-          g.fillStyle = k === 0 ? '#fff' : 'rgba(255,255,255,.75)'; g.fillText(label, px + 18, 40)
+          if (k === 0) { slant(g, px, 16, w, 36, 10); g.fillStyle = '#fff'; g.fill() } // 고른 탭은 흰 사선 띠 (디맥 카테고리 탭)
+          else { slant(g, px, 16, w, 36, 10); g.fillStyle = 'rgba(6,11,28,.55)'; g.fill(); g.strokeStyle = 'rgba(255,255,255,.25)'; g.lineWidth = 1; g.stroke() }
+          g.fillStyle = k === 0 ? '#101828' : 'rgba(255,255,255,.75)'; g.fillText(label, px + 18, 40)
           px += w + 8
         }
         g.font = `700 14px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.7)'; g.fillText('TAB', 232, 40)
@@ -244,31 +244,31 @@ export const SongSelect = (sm: SceneManager): Scene => {
           if (hb > hy) hit(x, hy, w, hb - hy, () => { if (sel) press('Enter'); else { target = i; idx = wrap(i, n); di = Math.min(di, diffs().length - 1); schedulePreview() } }) }
         g.globalAlpha = Math.max(0, 1 - ad * 0.13)
         if (sel) {
-          const og = g.createLinearGradient(x, 0, x + w, 0); og.addColorStop(0, '#ffb13b'); og.addColorStop(0.7, '#ff7a59'); og.addColorStop(1, '#ff5c8a')
-          const cut = () => { g.beginPath(); g.roundRect(x, y, w, h, 14) } // 다른 줄과 같은 둥근 모양
+          const og = g.createLinearGradient(x, 0, x + w, 0); og.addColorStop(0, '#ffd84a'); og.addColorStop(0.7, '#ffae2b'); og.addColorStop(1, '#ff8a1f')
+          const cut = () => slant(g, x, y, w, h, 14) // 디맥처럼 오른쪽 끝이 사선으로 잘린 띠
           g.fillStyle = og; glow(g, '#ff9f1a', 18, () => { cut(); g.fill() })
           g.save(); cut(); g.clip()
           // 지나가는 빛줄기
           const sx = x - 100 + ((t * 300) % 900)
           g.fillStyle = 'rgba(255,255,255,.25)'; g.beginPath(); g.moveTo(sx, y); g.lineTo(sx + 40, y); g.lineTo(sx + 6, y + h); g.lineTo(sx - 34, y + h); g.fill()
           g.restore()
-        } else { g.fillStyle = 'rgba(6,11,28,.74)'; g.beginPath(); g.roundRect(x, y, w, h, 14); g.fill(); g.strokeStyle = 'rgba(255,255,255,.22)'; g.lineWidth = 1; g.stroke() }
+        } else { g.fillStyle = 'rgba(6,11,28,.74)'; slant(g, x, y, w, h, 14); g.fill(); g.strokeStyle = 'rgba(255,255,255,.18)'; g.lineWidth = 1; g.stroke() }
         const rec = bestOf(s), th = h - 12, tx = x + 12, thumb = artOf(s)?.img // 왼쪽 썸네일
         if (thumb) { g.save(); g.beginPath(); g.roundRect(tx, y + 6, th, th, 8); g.clip(); drawCover(g, thumb, thumb.width, thumb.height, tx, y + 6, th, th); g.restore(); g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 1.5; g.beginPath(); g.roundRect(tx, y + 6, th, th, 8); g.stroke() }
         if (isFav(s.dir)) { g.font = `900 18px ${FONT}`; g.lineJoin = 'round'; g.lineWidth = 4; g.strokeStyle = 'rgba(4,9,24,.9)'; g.strokeText('★', tx + 3, y + 25); g.fillStyle = AMBER; g.fillText('★', tx + 3, y + 25) } // 즐겨찾기 별
         const lx0 = tx + th + 16, tw = (rec ? w - 250 : w - 80) - (lx0 - x - 28)
-        g.font = `800 ${sel ? 22 : 19}px ${FONT}`; g.fillStyle = '#fff'
+        g.font = `800 ${sel ? 22 : 19}px ${FONT}`; g.fillStyle = sel ? '#1a1200' : '#fff'
         if (sel) marquee(g, s.meta.title, lx0, y + 28, tw, 22, selSince); else g.fillText(fit(g, s.meta.title, tw), lx0, y + 21) // 고른 곡만 긴 이름이 흐른다
-        g.font = `${sel ? 15 : 13}px ${FONT}`; g.fillStyle = sel ? 'rgba(255,255,255,.95)' : '#cfe6ff'
+        g.font = `${sel ? 15 : 13}px ${FONT}`; g.fillStyle = sel ? 'rgba(40,24,0,.78)' : '#cfe6ff'
         if (sel) marquee(g, s.meta.artist, lx0, y + 50, tw, 15, selSince); else g.fillText(fit(g, s.meta.artist, tw), lx0, y + 38)
         if (rec) { // 램프와 등급 (곡 전체 난이도 중 최고 기록)
           const lx = x + w - 190, ly = y + h / 2
           drawLamp(g, rec.badge, lx, ly, sel ? 1.1 : 0.9)
-          g.font = `800 ${sel ? 22 : 18}px ${FONT}`; g.fillStyle = '#fff'; g.textAlign = 'right'; g.fillText(rec.rank, lx + 46, ly + 7)
-          g.font = `700 10px ${FONT}`; g.fillStyle = sel ? 'rgba(255,255,255,.85)' : CYAN; g.fillText('SCORE', x + w - 22, ly - 6) // 디맥 목록처럼 오른쪽 끝에 최고 점수
-          g.font = `800 ${sel ? 18 : 16}px ${FONT}`; g.fillStyle = '#fff'; g.fillText(String(rec.score).padStart(7, '0'), x + w - 22, ly + 14); g.textAlign = 'left'
+          g.font = `800 ${sel ? 22 : 18}px ${FONT}`; g.fillStyle = sel ? '#1a1200' : '#fff'; g.textAlign = 'right'; g.fillText(rec.rank, lx + 46, ly + 7)
+          g.font = `700 10px ${FONT}`; g.fillStyle = sel ? 'rgba(40,24,0,.7)' : CYAN; g.fillText('SCORE', x + w - 22, ly - 6) // 디맥 목록처럼 오른쪽 끝에 최고 점수
+          g.font = `800 ${sel ? 18 : 16}px ${FONT}`; g.fillStyle = sel ? '#1a1200' : '#fff'; g.fillText(String(rec.score).padStart(7, '0'), x + w - 22, ly + 14); g.textAlign = 'left'
         }
-        if (sel && !rec) { g.fillStyle = '#fff'; for (let k = 0; k < 4; k++) { const bh = 6 + 18 * Math.abs(Math.sin(t * 5 + k * 1.7)); g.fillRect(x + w - 40 + k * 8, y + h - 12 - bh, 5, bh) } } // 소리 막대
+        if (sel && !rec) { g.fillStyle = '#1a1200'; for (let k = 0; k < 4; k++) { const bh = 6 + 18 * Math.abs(Math.sin(t * 5 + k * 1.7)); g.fillRect(x + w - 40 + k * 8, y + h - 12 - bh, 5, bh) } } // 소리 막대
       }
       g.restore()
       g.globalAlpha = 1
@@ -277,7 +277,7 @@ export const SongSelect = (sm: SceneManager): Scene => {
       g.fillStyle = '#fff'; g.fillRect(1256, 90 + (n > 1 ? idx / (n - 1) : 0) * 520, 4, 40)
 
       // 아래 안내
-      g.fillStyle = 'rgba(6,18,56,.55)'; g.fillRect(0, 676, 1280, 44); g.fillStyle = 'rgba(255,255,255,.25)'; g.fillRect(0, 676, 1280, 1)
+      footer(g)
       {
         const hints: [string, string][] = [['↑↓', '곡'], ['←→', '난이도'], ['Tab', '가수'], ['F2', '검색'], ['F4', '정렬'], ['1 2', '속도'], ['F3', '4/6키'], ['F5', '연습'], ['F6', '즐겨찾기'], ['F7', '필터'], ['Enter', '시작'], ['F1', '설정'], ['Esc', '뒤로']]
         let hx = 24
