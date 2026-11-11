@@ -406,7 +406,7 @@ export const Play = (sm: SceneManager): Scene => {
       g.font = `600 13px ${FONT}`; g.fillStyle = ICE; g.fillText(mmss(cur), px + 20, py + 116)
       g.textAlign = 'right'; g.fillText(mmss(dur), px + 20 + iw, py + 116); g.textAlign = 'left'
       const hx = px
-      g.font = `16px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.85)'; g.fillText(data.vs ? 'Esc 두 번 기권   ↑↓ 속도' : 'Esc 일시정지   ↑↓ 속도', hx, 700)
+      g.font = `16px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.85)'; g.fillText(data.vs ? 'Esc 두 번 기권   ↑↓ 속도' : 'Esc 일시정지   F5 다시   ↑↓ 속도', hx, 700)
       if (data.vs && performance.now() - giveUpAt < 2000) { g.font = `800 24px ${FONT}`; g.fillStyle = '#ff8a8a'; g.textAlign = 'center'; g.fillText('Esc를 한 번 더 누르면 기권합니다', CX, 330); g.textAlign = 'left' }
       if (performance.now() - speedAt < 1200) { // 속도를 바꾼 직후에만 잠깐 표시
         g.font = `800 22px ${FONT}`; g.fillStyle = AMBER; g.textAlign = 'center'
@@ -453,6 +453,7 @@ export const Play = (sm: SceneManager): Scene => {
         return
       }
       if (dying) return // 실패 연출 중에는 일시정지 불가
+      if (e.key === 'F5' && !data.vs) { e.preventDefault(); sm.go('play', data); return } // 빠른 재시작: 일시정지 메뉴를 거치지 않고 처음부터 (대결·래더는 제외)
       if (data.vs && e.key === 'Escape') { if (performance.now() - giveUpAt < 2000) sk.hp = 0; else giveUpAt = performance.now(); return } // 대결 중에는 멈출 수 없다: Esc를 두 번 누르면 기권(실패 처리)
       if (e.key === 'Escape') { paused = true; resumeAt = 0; pSel = 0; down.clear(); clock.pause(); return }
       if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { // 플레이 중 스크롤 속도 조절: 한 번에 0.1, 꾹 누르면 이어서 바뀐다 (디맥과 같은 단위)
