@@ -1,5 +1,6 @@
 import { PLATE_COLOR, TIER_COLOR, type Profile } from '../data/Profile'
 import { avatarImg } from '../data/Avatar'
+import { account } from '../data/Storage'
 import { AMBER, FONT, fit, glow, lighten, slant } from './theme'
 
 // 프로필 카드: 디맥 곡 선택 화면 오른쪽 위의 작은 카드(아이콘 · 닉네임 · Lv · 경험치 막대)를 본떴다. 플레이트가 카드 색이 된다. 로그인 전이면 GUEST
@@ -73,9 +74,9 @@ export function profileCard(g: CanvasRenderingContext2D, x: number, y: number, p
   // 이름·칭호·레벨
   const tx = ix + ir + 16, tw = x + w - tx - (big ? 20 : 26)
   g.textAlign = 'left'; g.font = `800 ${big ? 24 : 17}px ${FONT}`; g.fillStyle = '#fff'
-  g.fillText(fit(g, p?.nick ?? 'GUEST', tw), tx, y + (big ? 40 : 25))
+  g.fillText(fit(g, p?.nick ?? (account.token ? account.nick : 'GUEST'), tw), tx, y + (big ? 40 : 25))
   g.font = `600 ${big ? 13 : 11}px ${FONT}`; g.fillStyle = p ? AMBER : 'rgba(255,255,255,.7)'
-  g.fillText(fit(g, p ? p.titleName || 'STELLA' : '로그인하면 레벨이 올라갑니다', tw), tx, y + (big ? 60 : 41))
+  g.fillText(fit(g, p ? p.titleName || 'STELLA' : account.token ? '서버에 연결하지 못했습니다' : '로그인하면 레벨이 올라갑니다', tw), tx, y + (big ? 60 : 41))
   if (p) {
     g.font = `800 ${big ? 15 : 12}px ${FONT}`; g.fillStyle = '#fff'; const lvText = `Lv ${p.level}`; g.fillText(lvText, tx, y + (big ? 86 : 57))
     const bx = tx + g.measureText(lvText).width + 10, bw = Math.max(20, x + w - bx - (big ? 20 : 26)), f = p.need ? p.cur / p.need : 1 // 레벨 글자 폭을 재서 막대를 그 뒤에 (Lv 999여도 겹치지 않게)

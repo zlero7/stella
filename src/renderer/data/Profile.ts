@@ -10,8 +10,11 @@ export interface Profile {
   avatar: string; plate: string; title: string; titleName: string; plates: Item[]; titles: Item[]
 }
 // 다른 계정으로 바꾸거나 로그아웃하면 이전 사람의 프로필이 잠깐이라도 보이지 않게, 지금 로그인한 계정의 것일 때만 돌려준다
+// 마지막으로 받은 프로필은 이 PC에도 저장해 둔다: 서버가 꺼져 있어도 로그인한 채로 닉네임·레벨이 보인다 (로그인 정보 자체는 따로 저장돼 있다)
+const KEY = 'stella.profile'
 let cache: Profile | undefined
-export const prof = { get v() { return account.token && cache?.id === account.id ? cache : undefined }, set v(p: Profile | undefined) { cache = p } }
+try { cache = JSON.parse(localStorage.getItem(KEY) ?? 'null') ?? undefined } catch { /* 없거나 깨졌으면 서버에서 다시 받는다 */ }
+export const prof = { get v() { return account.token && cache?.id === account.id ? cache : undefined }, set v(p: Profile | undefined) { cache = p; try { if (p) localStorage.setItem(KEY, JSON.stringify(p)); else localStorage.removeItem(KEY) } catch { /* 저장 못 해도 이번 실행은 계속 */ } } }
 
 export const refreshProfile = () => account.token
   ? api<Profile>('profile/me').then(p => { prof.v = p; return p }, () => prof.v)
