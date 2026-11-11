@@ -70,6 +70,8 @@ export async function loadSongs(): Promise<Song[]> {
     return { dir: e.dir, meta: e.meta, remote: true }
   })
   if (changed) writeVers(vers)
+  const known = new Set(entries.map(e => e.dir))
+  for (const s of have.values()) if (!known.has(s.dir)) list.push(s) // 서버 목록에 없는 곡도 이 PC 곡 폴더에 있으면 보인다 (서버가 꺼져 있을 때, 또는 방금 직접 넣은 곡)
   return list
 }
 
