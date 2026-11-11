@@ -145,12 +145,12 @@ export const Result = (sm: SceneManager): Scene => {
       const chipA = ease(prog(3.6, 4.0)) // 칩은 점수가 다 올라간 뒤에 뜬다
       g.globalAlpha = sa
       const pv = prof.v, lv = pv?.level
-      g.fillStyle = 'rgba(30,34,52,.9)'; g.fillRect(514, 568, 252, 40)
-      g.fillStyle = 'rgba(255,255,255,.1)'; g.fillRect(514, 568, 40, 40)
-      g.textAlign = 'center'; g.font = `800 20px ${FONT}`; g.fillStyle = '#fff'; g.fillText([...(account.token ? account.nick : 'G')][0]?.toUpperCase() ?? 'G', 534, 596)
-      g.textAlign = 'left'; g.font = `700 13px ${FONT}`; g.fillStyle = '#fff'; g.fillText(fit(g, account.token ? account.nick : 'GUEST', 120), 562, 584)
-      if (lv) { g.font = `300 24px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.8)'; g.fillText(`${lv}`, 562, 603); g.font = `700 9px ${FONT}`; g.fillText('LV', 562, 574) }
-      if (pv && pv.need) { g.fillStyle = 'rgba(255,255,255,.2)'; g.fillRect(562, 604, 198, 3); g.fillStyle = '#ffc233'; g.fillRect(562, 604, 198 * Math.min(pv.cur / pv.need, 1), 3) }
+      g.fillStyle = 'rgba(30,34,52,.9)'; g.fillRect(514, 568, 252, 46)
+      g.fillStyle = 'rgba(255,255,255,.1)'; g.fillRect(514, 568, 46, 46)
+      g.textAlign = 'center'; g.font = `800 22px ${FONT}`; g.fillStyle = '#fff'; g.fillText([...(account.token ? account.nick : 'G')][0]?.toUpperCase() ?? 'G', 537, 598)
+      g.textAlign = 'left'; g.font = `700 13px ${FONT}`; g.fillStyle = '#fff'; g.fillText(fit(g, account.token ? account.nick : 'GUEST', 190), 570, 585)
+      if (lv) { g.font = `700 9px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.6)'; g.fillText('LV', 570, 603); g.font = `300 20px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.9)'; g.fillText(`${lv}`, 586, 605) } // 닉네임 · 레벨 · 경험치 막대가 서로 겹치지 않게 세 줄로 나눈다
+      if (pv && pv.need) { g.fillStyle = 'rgba(255,255,255,.2)'; g.fillRect(570, 609, 188, 3); g.fillStyle = '#ffc233'; g.fillRect(570, 609, 188 * Math.min(pv.cur / pv.need, 1), 3) }
       g.globalAlpha = 1
       // 아래 왼쪽: 이전 최고 기록과의 차이 · 오른쪽: 경험치
       g.globalAlpha = chipA; g.textAlign = 'left'
