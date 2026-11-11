@@ -3,22 +3,30 @@ import type { Song } from '../../shared/types'
 import { JUDGES, ScoreKeeper } from '../game/ScoreKeeper'
 import { diffName } from '../data/Songs'
 import { account, saveSettings, settings } from '../data/Storage'
-import { setBest } from '../data/Storage'
+import { getBest, setBest } from '../data/Storage'
+import { sfx } from '../core/Sfx'
 import { fetchRank, submitRank, rankMsg, type RankRow } from '../data/Rank'
 import { prof, refreshProfile } from '../data/Profile'
 import { FONT, CYAN, ICE, AMBER, artOf, card, chip, drawBg, drawCover, fit, glow, meter, pill, starPath } from '../render/theme'
+
+const ease = (x: number) => 1 - (1 - x) ** 3
+const back = (x: number) => 1 + 2.2 * (x - 1) ** 3 + 1.2 * (x - 1) ** 2 // 살짝 튕기며 멈춘다
+const INTRO = 2.6 // 연출이 끝나는 시각(초). 이 안에 Enter를 누르면 연출만 건너뛴다
 
 const COLORS = [ICE, '#7dff9a', '#ffe27a', '#ffb066', '#ff8a8a', '#ff4d6d']
 
 export const Result = (sm: SceneManager): Scene => {
   let applied: number | undefined // O 키로 맞춘 뒤의 판정 오프셋
   let d: { song: Song; diff: string; sk: ScoreKeeper; failed?: boolean; practice?: boolean }, isNew = false
+  let at = 0, slammed = false, chimed = false, prev: number | undefined // 연출 시작 시각 · 소리 낸 적 있는지 · 이전 최고 점수
   let gain = 0, lvUp = 0 // 이번 판으로 받은 경험치 · 오른 레벨 (로그인했고 서버가 받아 준 경우)
   let board: RankRow[] | undefined, loading = false, showBoard = false // 온라인 순위: 서버 응답 · 받는 중 · 오른쪽 카드를 순위로 볼지(Tab)
   return {
     enter(data) {
       d = data as typeof d
       applied = undefined
+      at = performance.now(); slammed = chimed = false
+      prev = d.failed || d.practice ? undefined : getBest(d.song.dir, d.diff)?.score
       isNew = d.failed || d.practice ? false : setBest(d.song.dir, d.diff, d.sk) // 체력이 다해 끝난 플레이는 기록하지 않는다
       board = undefined; loading = true; showBoard = false; gain = lvUp = 0
       const mine = d, before = prof.v // 받는 동안 화면을 떠났다 돌아와도 이전 응답이 덮지 않게
@@ -28,7 +36,9 @@ export const Result = (sm: SceneManager): Scene => {
       })
     },
     render(g) {
-      const { song, sk } = d, t = performance.now() / 1000
+      const { song, sk } = d, t = performance.now() / 1000, el = (performance.now() - at) / 1000
+      const prog = (a: number, b: number) => Math.min(Math.max((el - a) / (b - a), 0), 1) // 연출 시각 a~b초 사이의 진행도 0~1
+      const cnt = ease(prog(0.25, 1.6)) // 숫자 올라가는 속도 (처음엔 빠르게 끝으로 갈수록 느리게)
       drawBg(g, song)
       g.textAlign = 'left'
       // 위쪽 카드: 곡 정보 (표지는 둥글게)
@@ -49,24 +59,30 @@ export const Result = (sm: SceneManager): Scene => {
       card(g, 40, 140, 380, 456, 'JUDGEMENT')
       const tot = sk.counts.reduce((x, y) => x + y, 0) || 1
       JUDGES.forEach((j, i) => {
-        const y = 172 + i * 44, f = sk.counts[i] / tot
+        const y = 172 + i * 44, f = sk.counts[i] / tot, rp = ease(prog(0.05 + i * 0.07, 0.5 + i * 0.07))
+        g.save(); g.globalAlpha = rp; g.translate(-36 * (1 - rp), 0)
         g.fillStyle = 'rgba(255,255,255,.08)'; g.beginPath(); g.roundRect(60, y, 340, 36, 10); g.fill()
-        if (f > 0) { g.fillStyle = COLORS[i]; g.globalAlpha = 0.34; g.beginPath(); g.roundRect(60, y, Math.max(340 * f, 20), 36, 10); g.fill(); g.globalAlpha = 1 }
+        if (f > 0) { g.fillStyle = COLORS[i]; g.globalAlpha = 0.34; g.beginPath(); g.roundRect(60, y, Math.max(340 * f * rp, 20), 36, 10); g.fill(); g.globalAlpha = rp }
         g.fillStyle = COLORS[i]; g.beginPath(); g.roundRect(70, y + 10, 4, 16, 2); g.fill()
         g.font = `800 16px ${FONT}`; g.fillText(j.name, 88, y + 24)
         if (i === 0 && sk.maxCount) { const nw = g.measureText(j.name).width; g.font = `800 13px ${FONT}`; g.fillStyle = '#ffd04a'; g.fillText(`MAX ${sk.maxCount}`, 88 + nw + 10, y + 24) } // PERFECT 중 ±25ms 이내
-        g.font = `800 22px ${FONT}`; g.fillStyle = '#fff'; g.textAlign = 'right'; g.fillText(String(sk.counts[i]), 388, y + 26); g.textAlign = 'left'
+        g.font = `800 22px ${FONT}`; g.fillStyle = '#fff'; g.textAlign = 'right'; g.fillText(String(Math.round(sk.counts[i] * cnt)), 388, y + 26); g.textAlign = 'left'
+        g.restore()
       })
       g.fillStyle = 'rgba(255,255,255,.2)'; g.fillRect(60, 460, 340, 1)
       g.font = `600 14px ${FONT}`; g.fillStyle = ICE; g.fillText('MAX COMBO', 60, 498); g.fillText('ACCURACY', 60, 546)
       g.font = `800 26px ${FONT}`; g.fillStyle = '#fff'; g.textAlign = 'right'
-      g.fillText(String(sk.maxCombo), 400, 500); g.fillText(`${sk.accuracy.toFixed(2)}%`, 400, 548); g.textAlign = 'left'
+      g.fillText(String(Math.round(sk.maxCombo * cnt)), 400, 500); g.fillText(`${(sk.accuracy * cnt).toFixed(2)}%`, 400, 548); g.textAlign = 'left'
 
       // 가운데: 등급 카드 · 점수 카드
       const cx = 640
       card(g, 460, 140, 360, 262, 'RANK')
       // 등급 엠블럼: 처음 모양 그대로의 원 (카드 안에 들어가게 반지름만 100으로)
-      const cy = 262, R = 84, ring = g.createLinearGradient(cx - R, cy - R, cx + R, cy + R)
+      const cy = 262, R = 84, ep = prog(1.6, 2.1), land = el >= 2.1 // 등급이 커졌다가 쾅 내려앉는다
+      if (el >= 2.0 && !slammed) { slammed = true; sfx.slam() }
+      if (ep > 0) {
+      g.save(); const es = 1 + 1.6 * (1 - back(ep)); g.globalAlpha = Math.min(ep * 3, 1); g.translate(cx, cy); g.scale(es, es); g.translate(-cx, -cy)
+      const ring = g.createLinearGradient(cx - R, cy - R, cx + R, cy + R)
       ring.addColorStop(0, d.failed ? '#ff8a8a' : '#ffe27a'); ring.addColorStop(0.5, '#fff'); ring.addColorStop(1, d.failed ? '#a33' : '#7ad8ff')
       glow(g, d.failed ? 'rgba(255,90,110,.5)' : 'rgba(255,226,122,.6)', 34, () => { g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.fillStyle = 'rgba(8,28,80,.9)'; g.fill() })
       g.lineWidth = 8; g.strokeStyle = ring; g.beginPath(); g.arc(cx, cy, R - 2, 0, Math.PI * 2); g.stroke()
@@ -74,25 +90,35 @@ export const Result = (sm: SceneManager): Scene => {
       g.font = `900 84px ${FONT}`; g.textAlign = 'center'
       const rg = g.createLinearGradient(0, cy - 48, 0, cy + 42); rg.addColorStop(0, '#fff'); rg.addColorStop(1, d.failed ? '#ffb0b0' : '#9aeaff')
       glow(g, 'rgba(120,210,255,.6)', 20, () => { g.fillStyle = rg; g.fillText(d.failed ? 'F' : sk.rank, cx, cy + 29) })
-      if (!d.failed) for (const [dx, dy, r, ph] of [[70, -68, 15, 0], [-74, -46, 9, 1.4], [76, 30, 8, 2.6]] as const) glow(g, AMBER, 14, () => { starPath(g, cx + dx, cy + dy, r * (0.6 + 0.4 * Math.sin(t * 2.6 + ph))); g.fillStyle = '#fff6d6'; g.fill() })
+      g.restore()
+      }
+      if (land) { const sp = prog(2.1, 2.8); if (sp < 1) { g.save(); g.globalAlpha = (1 - sp) * 0.8; g.strokeStyle = d.failed ? '#ff8a8a' : '#fff6d6'; g.lineWidth = 6 * (1 - sp) + 1; g.beginPath(); g.arc(cx, cy, R + 130 * ease(sp), 0, Math.PI * 2); g.stroke(); g.restore() } } // 충격파
+      if (!d.failed && land) for (const [dx, dy, r, ph] of [[70, -68, 15, 0], [-74, -46, 9, 1.4], [76, 30, 8, 2.6]] as const) glow(g, AMBER, 14, () => { starPath(g, cx + dx, cy + dy, r * (0.6 + 0.4 * Math.sin(t * 2.6 + ph))); g.fillStyle = '#fff6d6'; g.fill() })
       const tag = d.failed ? 'FAILED' : sk.badge // 올 퍼펙트·풀 콤보 칩 (색만이 아니라 글자로도)
-      if (tag) {
+      if (tag && el >= 2.15) {
+        g.save(); const tp = back(prog(2.15, 2.5)); g.globalAlpha = Math.min(tp * 2, 1); g.translate(cx, 373); g.scale(tp, tp); g.translate(-cx, -373)
         g.font = `800 16px ${FONT}`; const w = g.measureText(tag).width + 44
         pill(g, cx - w / 2, 358, w, 30, d.failed ? '#c0392b' : tag === 'ALL PERFECT' ? '#f2b705' : '#2f8cff')
         g.fillStyle = tag === 'ALL PERFECT' ? '#3a2a00' : '#fff'; g.fillText(tag, cx, 378)
+        g.restore()
       }
       card(g, 460, 418, 360, 178, 'SCORE')
+      const chipA = ease(prog(2.2, 2.6)) // 칩은 점수가 다 올라간 뒤에 뜬다
+      if (isNew && el >= 2.2 && !chimed) { chimed = true; sfx.chime() }
+      g.globalAlpha = chipA
       if (gain) { // 경험치 칩 (레벨이 오르면 함께)
         g.font = `800 13px ${FONT}`; const t1 = lvUp > 0 ? `EXP +${gain}  ·  LEVEL UP  Lv ${prof.v?.level}` : `EXP +${gain}`, w = g.measureText(t1).width + 28
         pill(g, 480, 430, w, 26, lvUp > 0 ? '#9b6bff' : 'rgba(155,107,255,.75)'); g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText(t1, 480 + w / 2, 448)
       }
+      if (isNew && prev !== undefined) { g.font = `700 13px ${FONT}`; g.fillStyle = AMBER; g.textAlign = 'left'; g.fillText(`+${(sk.score - prev).toLocaleString()}`, 480, 576) } // 이전 최고 기록보다 얼마나 올랐는지
       if (isNew) { // 신기록 칩: 디맥처럼 주황
         g.font = `800 13px ${FONT}`; const w = g.measureText('NEW RECORD').width + 28
         pill(g, 460 + 360 - 20 - w, 430, w, 26, '#ff9f1a'); g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText('NEW RECORD', 460 + 360 - 20 - w / 2, 448)
       }
-      g.textAlign = 'center'; g.font = `900 70px ${FONT}`; g.fillStyle = '#fff'; g.fillText(String(sk.score).padStart(7, '0'), cx, 512)
-      meter(g, 480, 534, 320, sk.accuracy / 100)
-      g.font = `600 13px ${FONT}`; g.fillStyle = ICE; g.textAlign = 'left'; g.fillText('ACCURACY', 480, 566); g.textAlign = 'right'; g.fillText(`${sk.accuracy.toFixed(2)}%`, 800, 566); g.textAlign = 'left'
+      g.globalAlpha = 1
+      g.textAlign = 'center'; g.font = `900 70px ${FONT}`; g.fillStyle = '#fff'; g.fillText(String(Math.round(sk.score * cnt)).padStart(7, '0'), cx, 512)
+      meter(g, 480, 534, 320, (sk.accuracy / 100) * cnt)
+      g.font = `600 13px ${FONT}`; g.fillStyle = ICE; g.textAlign = 'left'; g.fillText('ACCURACY', 480, 566); g.textAlign = 'right'; g.fillText(`${(sk.accuracy * cnt).toFixed(2)}%`, 800, 566); g.textAlign = 'left'
 
       // 오른쪽 카드: 타이밍 오차 분포 (가운데가 정확히 맞춘 곳)
       if (showBoard) {
@@ -139,6 +165,7 @@ export const Result = (sm: SceneManager): Scene => {
         settings.judgeOffset = Math.min(Math.max(settings.judgeOffset - rec, -100), 100); saveSettings(); applied = settings.judgeOffset
       }
       else if (e.key === 'Tab') { e.preventDefault(); showBoard = !showBoard }
+      else if ((e.key === 'Enter' || e.key === ' ') && performance.now() - at < INTRO * 1000) { at = performance.now() - INTRO * 1000; slammed = chimed = true } // 연출 중 Enter: 바로 최종 화면으로
       else if (e.key === 'Enter') sm.go('play', { song: d.song, diff: d.diff })
       else if (e.key === 'Escape') sm.go('select')
     }
