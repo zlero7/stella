@@ -68,7 +68,7 @@ export const Ladder = (sm: SceneManager): Scene => {
         const s = Math.floor((now - since) / 1000)
         g.font = `800 30px ${FONT}`; g.fillStyle = '#fff'; g.fillText('상대를 찾는 중' + '.'.repeat(1 + Math.floor(t * 2) % 3), 640, 600)
         g.font = `700 20px ${FONT}`; g.fillStyle = AMBER; g.fillText(mmss(s), 640, 632)
-        g.font = `13px ${FONT}`; g.fillStyle = ICE; g.fillText(s < 20 ? '비슷한 LP의 상대를 먼저 찾고, 오래 기다리면 범위를 넓힙니다' : '범위를 넓혀 찾는 중입니다', 640, 658)
+        g.font = `13px ${FONT}`; g.fillStyle = ICE; g.fillText(s < 20 ? '비슷한 LP의 상대를 먼저 찾고, 오래 기다리면 범위를 넓힙니다' : (me?.lp ?? 0) < 800 && s < 45 ? `범위를 넓혀 찾는 중입니다 · ${45 - s}초 뒤에도 상대가 없으면 스텔라 봇과 대결합니다` : (me?.lp ?? 0) < 800 ? '상대가 없어 스텔라 봇과 연결하는 중입니다' : '범위를 넓혀 찾는 중입니다', 640, 658)
       } else if (l) {
         side(g, 70, 'YOU', me, l.turn === 'you'); side(g, 940, 'RIVAL', l.opp, l.turn === 'opp')
         // 가운데: 곡 카드 5장
