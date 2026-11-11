@@ -71,3 +71,12 @@ test('닉네임 중복 키: 대소문자·공백·전각·_·-만 다른 이름�
   assert.notEqual(nickKey('nova'), nickKey('novb'))
   assert.equal(nickKey('스텔 라'), nickKey('스텔라'))
 })
+
+test('같은 곡을 같은 날 반복하면 경험치가 줄고, 다음 날에는 다시 전부 받는다', () => {
+  const u = {}, day1 = Date.UTC(2026, 10, 11, 3), day2 = Date.UTC(2026, 10, 12, 3)
+  const g1 = applyPlay(u, 'a/4k-hard', 900000, '', day1), g2 = applyPlay(u, 'a/4k-hard', 900000, '', day1 + 1000)
+  assert.equal(g1, playExp(900000, '')); assert.equal(g2, Math.max(5, Math.floor(g1 * 0.25)))
+  assert.equal(applyPlay(u, 'b/4k-hard', 900000, '', day1 + 2000), g1) // 다른 곡은 전부
+  assert.equal(applyPlay(u, 'a/4k-hard', 900000, '', day2), g1) // 다음 날은 전부
+  assert.equal(u.plays, 4) // 플레이 수는 그대로 센다
+})

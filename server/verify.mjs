@@ -3,11 +3,12 @@
 const W = [1, 0.7, 0.4, 0.2, 0.1, 0] // 판정별 가중치 (앱의 JUDGES.weight와 같다)
 const COMBO_MAX = 1.5 // 점수의 콤보 배율 상한 (앱의 comboMult와 같다)
 
-// n: 판정 개수 6칸(PERFECT·GREAT·GOOD·NICE·BAD·MISS). total을 알면 합이 노트 수와 같은지도 본다
+// n: 판정 개수 6칸(PERFECT·GREAT·GOOD·NICE·BAD·MISS). total(그 채보의 판정 총수)을 알면 합이 그 수와 거의 같은지도 본다.
+// 앱이 내려받은 채보가 서버와 조금 다를 수 있어(자동 채보 재생성) 1%(최소 2) 안쪽 차이는 허용한다. 노트를 몇 개만 친 것처럼 꾸민 제출을 막는 용도다
 export function plausible({ score, acc, mc, badge, n }, total) {
   if (!Array.isArray(n) || n.length !== 6 || !n.every(x => Number.isInteger(x) && x >= 0 && x <= 99999)) return false
   const sum = n.reduce((a, b) => a + b, 0)
-  if (sum === 0 || (total && sum !== total) || mc > sum) return false
+  if (sum === 0 || (total && Math.abs(sum - total) > Math.max(2, total * 0.01)) || mc > sum) return false
   const frac = n.reduce((s, c, i) => s + c * W[i], 0) / sum // 가중치 평균 0~1
   if (Math.abs(acc - 100 * frac) > 0.05) return false
   // 점수 = 100만 × (배율 곱한 가중치 합 / 배율 합), 배율은 1~1.5라서 이 범위를 벗어날 수 없다

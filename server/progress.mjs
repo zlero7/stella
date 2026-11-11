@@ -99,8 +99,13 @@ export function profileView(u) {
 export const publicView = u => { const v = profileView(u); return { nick: v.nick, level: v.level, tier: v.tier, div: v.div, tierLabel: v.tierLabel, lp: v.lp, titleName: v.titleName, avatar: v.avatar } }
 
 // 한 판의 결과를 계정에 쌓는다: 경험치·플레이 수·풀콤보/올퍼펙트·곡별 최고 점수. 받은 경험치를 돌려준다
-export function applyPlay(u, boardKey, score, badge) {
-  const gain = playExp(score, badge)
+// 같은 곡·난이도를 같은 날 다시 치면 경험치는 4분의 1(최소 5)만 준다: 한 곡 반복으로 레벨을 올리지 못하게. 플레이 수·풀콤보·올 퍼펙트·최고 점수는 그대로 쌓인다
+export const REPEAT_EXP = 0.25
+export function applyPlay(u, boardKey, score, badge, now = Date.now()) {
+  const day = new Date(now + 9 * 3600e3).toISOString().slice(0, 10) // 한국 시간 기준 하루
+  if (u.expDay !== day) { u.expDay = day; u.expBoards = {} }
+  const seen = u.expBoards[boardKey] = (u.expBoards[boardKey] ?? 0) + 1
+  const full = playExp(score, badge), gain = seen === 1 ? full : Math.max(5, Math.floor(full * REPEAT_EXP))
   u.exp = (u.exp ?? 0) + gain; u.plays = (u.plays ?? 0) + 1
   if (badge === 'ALL PERFECT') u.aps = (u.aps ?? 0) + 1
   if (badge === 'FULL COMBO') u.fcs = (u.fcs ?? 0) + 1

@@ -10,6 +10,9 @@ import { WebSocketServer } from 'ws'
 import { applyPlay, canEquip, levelOf, nickKey, profileView } from './progress.mjs'
 import { createLadder } from './ladder.mjs'
 import { plausible } from './verify.mjs'
+// 앱이 판정 개수를 셀 때 쓰는 채보 정리(cleanChart)를 서버도 같이 써서 노트 총수를 구한다. 불러오지 못하면 총수 대조만 건너뛴다
+let cleanChart
+try { ({ cleanChart } = await import('../src/renderer/game/chartCheck.ts')) } catch (e) { console.error('채보 정리 모듈을 못 불러와 노트 총수 대조를 건너뜁니다:', e.message) }
 
 const PORT = Number(process.env.PORT) || 9777
 const MAX_ROOMS = 200, WAIT_MS = 10 * 60 * 1000 // 짝이 안 맞는 방은 10분 뒤에 닫는다
@@ -208,11 +211,13 @@ const chartLen = (dir, key) => {
   try {
     const mt = fs.statSync(f).mtimeMs, c = lenCache.get(f)
     if (c?.mt === mt) return c.len
-    const len = JSON.parse(fs.readFileSync(f, 'utf8')).notes.at(-1)?.time ?? 0
-    lenCache.set(f, { mt, len }); return len
+    const notes = JSON.parse(fs.readFileSync(f, 'utf8')).notes, len = notes.at(-1)?.time ?? 0
+    const lanes = +/^(\d)k-/.exec(key)?.[1] || 4, total = cleanChart ? cleanChart(notes, lanes).notes.reduce((n, x) => n + (x.duration ? 2 : 1), 0) : undefined // 롱노트는 시작·끝 두 번
+    lenCache.set(f, { mt, len, total }); return len
   } catch { return undefined }
 }
 const REQUIRE_COUNTS = false // true면 판정 개수가 없는 점수는 받지 않는다 (옛 앱 호환을 위해 아직 꺼 둔다)
+const chartTotal = (dir, key) => { chartLen(dir, key); return lenCache.get(path.join(SONGS, dir, key + '.json'))?.total } // 앱이 세는 판정 총수 (롱노트 2)
 const plays = new Map() // 계정 id -> {board, at}: 지금 치고 있는 곡 (한 번 쓰면 지운다)
 function rankApi(req, res, dir, key) {
   if (chartLen(dir, key) === undefined) return json(res, 404, { error: '없는 곡' })
@@ -228,7 +233,7 @@ function rankApi(req, res, dir, key) {
     const score = m.score, acc = m.acc, mc = m.mc
     if (!Number.isInteger(score) || score < 0 || score > 1_000_000 || !(acc >= 0 && acc <= 100) || !Number.isInteger(mc) || mc < 0 || mc > 99999) return json(res, 400, { error: '값' })
     // 판정 개수(n)를 보낸 요청은 점수와 앞뒤가 맞는지 본다. 옛 앱은 n을 안 보내서 일단 받아 준다 (앱이 다 바뀌면 REQUIRE_COUNTS를 켠다)
-    if (m.n === undefined ? REQUIRE_COUNTS : !plausible({ score, acc, mc, badge: typeof m.badge === 'string' ? m.badge : '', n: m.n })) return json(res, 400, { error: '점수 검증 실패' })
+    if (m.n === undefined ? REQUIRE_COUNTS : !plausible({ score, acc, mc, badge: typeof m.badge === 'string' ? m.badge : '', n: m.n }, chartTotal(dir, key))) return json(res, 400, { error: '점수 검증 실패' })
     const p = plays.get(user.id)
     if (p?.board !== id || Date.now() - p.at < chartLen(dir, key) * 1000 * MIN_PLAY) return json(res, 409, { error: '곡을 시작한 기록이 없거나 너무 빨리 끝났습니다' })
     plays.delete(user.id)
