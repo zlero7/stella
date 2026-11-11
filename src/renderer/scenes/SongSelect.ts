@@ -29,7 +29,7 @@ export const SongSelect = (sm: SceneManager): Scene => {
   let worker: Worker | undefined
   let query = '', searching = false, sortMode = 0 // 검색어(제목·가수 포함) · F2로 입력 중인지 · F4 정렬: 0 서버 순서, 1 제목, 2 가수
   let inp: HTMLInputElement | undefined // 한글(IME)도 받으려고 화면 밖 입력칸을 쓴다. 캔버스에는 검색창만 그린다
-  const SORTS = ['기본 순서', '제목순', '가수순']
+  const SORTS = ['기본 순서', '제목순', '가수순', '내 점수순', '최근 플레이순']
   const FILTERS = ['전체 곡', '즐겨찾기만', '안 쳐 본 곡만']; let fmode = 0 // F6 즐겨찾기 넣고 빼기 · F7 목록 거르기
   const PRACTICE = [0, 0.25, 0.5, 0.75]; let prac = 0 // F5: 연습 시작 위치 (곡의 0·25·50·75%). 0이 아니면 점수·EXP는 기록되지 않는다
   const pending = new Set<string>() // 워커가 만드는 중인 곡+난이도+키 수
@@ -85,7 +85,14 @@ export const SongSelect = (sm: SceneManager): Scene => {
   const applyCat = (focus = songs[idx]?.dir) => {
     const q = query.trim().toLowerCase()
     songs = cat === 'ALL' && !q && !fmode ? all : all.filter(s => (cat === 'ALL' || singers(s).includes(cat)) && (fmode === 0 || (fmode === 1 ? isFav(s.dir) : !bestOf(s))) && (!q || [s.meta.title, s.meta.artist, ...singers(s)].join(' ').toLowerCase().includes(q)))
-    if (sortMode) songs = [...songs].sort((a, b) => (sortMode === 2 ? a.meta.artist.localeCompare(b.meta.artist, 'ko') : 0) || a.meta.title.localeCompare(b.meta.title, 'ko'))
+    if (sortMode) {
+      const byTitle = (a: Song, b: Song) => a.meta.title.localeCompare(b.meta.title, 'ko')
+      if (sortMode < 3) songs = [...songs].sort((a, b) => (sortMode === 2 ? a.meta.artist.localeCompare(b.meta.artist, 'ko') : 0) || byTitle(a, b))
+      else { // 내 점수순(안 쳐 본 곡은 맨 뒤) · 최근 플레이순: 곡마다 한 번만 계산해 둔다
+        const key = new Map(songs.map(x => [x.dir, sortMode === 3 ? bestOf(x)?.score ?? -1 : Math.max(0, ...diffsOf(x).flatMap(d => getRecords(x.dir, d).map(r => r.at ?? 0)))]))
+        songs = [...songs].sort((a, b) => key.get(b.dir)! - key.get(a.dir)! || byTitle(a, b))
+      }
+    }
     idx = Math.max(songs.findIndex(s => s.dir === focus), 0)
     target = pos = idx; di = 0
     schedulePreview()
