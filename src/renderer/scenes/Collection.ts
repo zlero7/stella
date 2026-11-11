@@ -40,7 +40,7 @@ export const Collection = (sm: SceneManager): Scene => {
       TABS.forEach((name, i) => {
         const on = i === tab, k = ease('coltab' + i, on), x = 300 + i * 170, w = 160
         hit(x, 30, w, 36, () => setTab(i))
-        slant(g, x, 30, w, 36, 14); g.fillStyle = on ? '#ff9f1a' : 'rgba(8,24,70,.74)'; g.fill(); g.strokeStyle = `rgba(255,255,255,${0.35 * (1 - k)})`; g.lineWidth = 1; g.stroke()
+        slant(g, x, 30, w, 36, 14); g.fillStyle = on ? '#ff9f1a' : 'rgba(6,11,28,.74)'; g.fill(); g.strokeStyle = `rgba(255,255,255,${0.35 * (1 - k)})`; g.lineWidth = 1; g.stroke()
         g.textAlign = 'center'; g.font = `${on ? 800 : 600} 16px ${FONT}`; g.fillStyle = '#fff'; g.fillText(name, x + w / 2, 54)
       })
       // 왼쪽: 프로필 카드 + 기록
@@ -87,7 +87,7 @@ export const Collection = (sm: SceneManager): Scene => {
             g.textAlign = 'center'; g.font = `800 17px ${FONT}`; g.fillStyle = '#fff'; g.fillText(x.name, cx + cw / 2, cy + 82)
             g.font = `600 12px ${FONT}`; g.fillStyle = x.on ? 'rgba(255,255,255,.85)' : '#ffd0d0'; g.fillText(x.on ? (worn ? '사용 중' : '') : `🔒 ${x.need}`, cx + cw / 2, cy + 106)
           } else {
-            slant(g, cx, cy, cw, ch, 14); g.fillStyle = 'rgba(8,24,70,.74)'; g.fill(); g.strokeStyle = `rgba(255,255,255,${0.3 * (1 - k)})`; g.lineWidth = 1; g.stroke()
+            slant(g, cx, cy, cw, ch, 14); g.fillStyle = 'rgba(6,11,28,.74)'; g.fill(); g.strokeStyle = `rgba(255,255,255,${0.3 * (1 - k)})`; g.lineWidth = 1; g.stroke()
             if (k > 0.01) { g.save(); g.globalAlpha *= k; const og = g.createLinearGradient(cx, 0, cx + cw, 0); og.addColorStop(0, '#ffb13b'); og.addColorStop(0.7, '#ff7a59'); og.addColorStop(1, '#ff5c8a'); slant(g, cx, cy, cw, ch, 14); g.fillStyle = og; g.fill(); g.restore() }
             g.textAlign = 'left'; g.font = `${cur ? 800 : 600} 17px ${FONT}`; g.fillStyle = x.on ? '#fff' : 'rgba(255,255,255,.45)'; g.fillText(fit(g, x.name, 380), cx + 34, cy + 26)
             g.textAlign = 'right'; g.font = `600 13px ${FONT}`; g.fillStyle = worn ? '#fff' : x.on ? 'rgba(255,255,255,.75)' : '#ffd0d0'

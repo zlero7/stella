@@ -128,7 +128,7 @@ export const SongSelect = (sm: SceneManager): Scene => {
         drawCover(g, v, v.videoWidth, v.videoHeight, 0, 0, 1280, 720)
         if (!shade) {
           shade = g.createLinearGradient(0, 0, 1280, 0)
-          shade.addColorStop(0, 'rgba(10,40,110,.88)'); shade.addColorStop(0.5, 'rgba(10,40,110,.4)'); shade.addColorStop(1, 'rgba(10,40,110,.72)')
+          shade.addColorStop(0, 'rgba(6,12,32,.88)'); shade.addColorStop(0.5, 'rgba(6,12,32,.4)'); shade.addColorStop(1, 'rgba(6,12,32,.72)')
         }
         g.fillStyle = shade; g.fillRect(0, 0, 1280, 720)
       }
@@ -140,7 +140,7 @@ export const SongSelect = (sm: SceneManager): Scene => {
       g.font = `900 28px ${FONT}`; g.fillStyle = '#fff'; g.fillText('STELLA', 78, 44)
       if (searching || query) {
         hit(232, 16, 698, 36, () => openSearch(true))
-        pill(g, 232, 16, 698, 36, 'rgba(8,24,70,.7)'); g.strokeStyle = searching ? CYAN : 'rgba(255,255,255,.45)'; g.lineWidth = searching ? 2.5 : 1.5; g.stroke()
+        pill(g, 232, 16, 698, 36, 'rgba(6,11,28,.7)'); g.strokeStyle = searching ? CYAN : 'rgba(255,255,255,.45)'; g.lineWidth = searching ? 2.5 : 1.5; g.stroke()
         g.font = `800 14px ${FONT}`; g.fillStyle = CYAN; g.fillText('SEARCH', 252, 40)
         g.font = `700 18px ${FONT}`; g.fillStyle = '#fff'
         const shown = fit(g, query, 560) + (searching && Math.floor(performance.now() / 500) % 2 === 0 ? '|' : '')
@@ -155,7 +155,7 @@ export const SongSelect = (sm: SceneManager): Scene => {
           if (px + w > 930) break
           if (k !== 0) hit(px, 16, w, 36, () => { cat = c; applyCat() }) // 탭을 누르면 그 가수로
           if (k === 0) glow(g, CYAN, 12, () => pill(g, px, 16, w, 36, accentFill(g, px, w)))
-          else { pill(g, px, 16, w, 36, 'rgba(8,24,70,.55)'); g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 1.5; g.stroke() }
+          else { pill(g, px, 16, w, 36, 'rgba(6,11,28,.55)'); g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 1.5; g.stroke() }
           g.fillStyle = k === 0 ? '#fff' : 'rgba(255,255,255,.75)'; g.fillText(label, px + 18, 40)
           px += w + 8
         }
@@ -203,7 +203,7 @@ export const SongSelect = (sm: SceneManager): Scene => {
         hit(x, y, w, h, () => { di = i })
         g.save(); g.beginPath(); g.moveTo(x + 10, y); g.lineTo(x + w, y); g.lineTo(x + w - 10, y + h); g.lineTo(x, y + h); g.closePath()
         const pg = g.createLinearGradient(0, y, 0, y + h); pg.addColorStop(0, col); pg.addColorStop(1, 'rgba(10,36,100,.92)')
-        g.fillStyle = sel ? pg : 'rgba(8,24,70,.82)'; if (sel) glow(g, col, 14, () => g.fill()); else g.fill()
+        g.fillStyle = sel ? pg : 'rgba(6,11,28,.82)'; if (sel) glow(g, col, 14, () => g.fill()); else g.fill()
         g.strokeStyle = sel ? '#fff' : 'rgba(255,255,255,.3)'; g.lineWidth = sel ? 2.5 : 1.2; g.stroke(); g.restore()
         g.font = `800 11px ${FONT}`; g.fillStyle = sel ? '#fff' : col; g.textAlign = 'left'; g.fillText(diffName(d), x + 16, y + 17)
         g.font = `900 ${sel ? 32 : 26}px ${FONT}`; g.fillStyle = '#fff'; g.textAlign = 'center'
@@ -214,7 +214,7 @@ export const SongSelect = (sm: SceneManager): Scene => {
       })
       // 기록: 점수 · 정확도 · 최대 콤보 (고른 난이도)
       const top = getRecords(song.dir, ds[di])[0]
-      g.fillStyle = 'rgba(8,24,70,.7)'; g.fillRect(PX + 8, 486, PW - 16, 90); g.fillStyle = 'rgba(255,255,255,.2)'; g.fillRect(PX + 8, 486, PW - 16, 1)
+      g.fillStyle = 'rgba(6,11,28,.7)'; g.fillRect(PX + 8, 486, PW - 16, 90); g.fillStyle = 'rgba(255,255,255,.2)'; g.fillRect(PX + 8, 486, PW - 16, 1)
       ;[['SCORE', top ? String(top.score).padStart(7, '0') : '-'], ['RATE', top ? `${top.accuracy.toFixed(2)}%` : '-'], ['MAX COMBO', top ? String(top.maxCombo) : '-']].forEach(([lab, val], k) => {
         const y = 510 + k * 28
         g.font = `700 12px ${FONT}`; g.fillStyle = CYAN; g.fillText(lab, PX + 26, y); g.font = `800 20px ${FONT}`; g.fillStyle = top ? '#fff' : 'rgba(255,255,255,.4)'; g.textAlign = 'right'; g.fillText(val, PX + PW - 28, y + 3); g.textAlign = 'left'
@@ -252,10 +252,10 @@ export const SongSelect = (sm: SceneManager): Scene => {
           const sx = x - 100 + ((t * 300) % 900)
           g.fillStyle = 'rgba(255,255,255,.25)'; g.beginPath(); g.moveTo(sx, y); g.lineTo(sx + 40, y); g.lineTo(sx + 6, y + h); g.lineTo(sx - 34, y + h); g.fill()
           g.restore()
-        } else { g.fillStyle = 'rgba(8,24,70,.74)'; g.beginPath(); g.roundRect(x, y, w, h, 14); g.fill(); g.strokeStyle = 'rgba(255,255,255,.22)'; g.lineWidth = 1; g.stroke() }
+        } else { g.fillStyle = 'rgba(6,11,28,.74)'; g.beginPath(); g.roundRect(x, y, w, h, 14); g.fill(); g.strokeStyle = 'rgba(255,255,255,.22)'; g.lineWidth = 1; g.stroke() }
         const rec = bestOf(s), th = h - 12, tx = x + 12, thumb = artOf(s)?.img // 왼쪽 썸네일
         if (thumb) { g.save(); g.beginPath(); g.roundRect(tx, y + 6, th, th, 8); g.clip(); drawCover(g, thumb, thumb.width, thumb.height, tx, y + 6, th, th); g.restore(); g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 1.5; g.beginPath(); g.roundRect(tx, y + 6, th, th, 8); g.stroke() }
-        if (isFav(s.dir)) { g.font = `900 18px ${FONT}`; g.lineJoin = 'round'; g.lineWidth = 4; g.strokeStyle = 'rgba(6,20,70,.9)'; g.strokeText('★', tx + 3, y + 25); g.fillStyle = AMBER; g.fillText('★', tx + 3, y + 25) } // 즐겨찾기 별
+        if (isFav(s.dir)) { g.font = `900 18px ${FONT}`; g.lineJoin = 'round'; g.lineWidth = 4; g.strokeStyle = 'rgba(4,9,24,.9)'; g.strokeText('★', tx + 3, y + 25); g.fillStyle = AMBER; g.fillText('★', tx + 3, y + 25) } // 즐겨찾기 별
         const lx0 = tx + th + 16, tw = (rec ? w - 250 : w - 80) - (lx0 - x - 28)
         g.font = `800 ${sel ? 22 : 19}px ${FONT}`; g.fillStyle = '#fff'
         if (sel) marquee(g, s.meta.title, lx0, y + 28, tw, 22, selSince); else g.fillText(fit(g, s.meta.title, tw), lx0, y + 21) // 고른 곡만 긴 이름이 흐른다
@@ -285,7 +285,7 @@ export const SongSelect = (sm: SceneManager): Scene => {
       }
       g.font = `700 13px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.75)'; g.textAlign = 'right' // 곡 번호는 아래 오른쪽 구석 (위쪽 띠 오른쪽은 프로필 카드 자리)
       g.fillText(`${idx + 1} / ${n}`, 1240, 706); g.textAlign = 'left'
-      if (note && performance.now() < noteAt) { g.font = `800 18px ${FONT}`; const w = g.measureText(note).width + 48; pill(g, 640 - w / 2, 84, w, 40, 'rgba(8,24,70,.92)'); g.fillStyle = AMBER; g.textAlign = 'center'; g.fillText(note, 640, 110); g.textAlign = 'left' }
+      if (note && performance.now() < noteAt) { g.font = `800 18px ${FONT}`; const w = g.measureText(note).width + 48; pill(g, 640 - w / 2, 84, w, 40, 'rgba(6,11,28,.92)'); g.fillStyle = AMBER; g.textAlign = 'center'; g.fillText(note, 640, 110); g.textAlign = 'left' }
     },
     wheel(dy) { // 휠로 곡 넘기기
       if (!songs.length) return

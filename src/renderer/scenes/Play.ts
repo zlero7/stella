@@ -47,7 +47,7 @@ function blurred(g: CanvasRenderingContext2D, src: CanvasImageSource, sw: number
   if (blur) g.filter = 'blur(3px)'
   g.drawImage(src, (1280 - sw * k) / 2, (720 - sh * k) / 2, sw * k, sh * k)
   g.filter = 'none'
-  g.fillStyle = `rgba(8,30,90,${1 - settings.bgBright / 100})`; g.fillRect(0, 0, 1280, 720) // 설정의 배경 밝기
+  g.fillStyle = `rgba(5,12,34,${1 - settings.bgBright / 100})`; g.fillRect(0, 0, 1280, 720) // 설정의 배경 밝기
 }
 
 // 채보도 음원도 없을 때 쓰는 데모 노트
@@ -272,7 +272,7 @@ export const Play = (sm: SceneManager): Scene => {
         laneGlow = { o: g.createLinearGradient(0, JUDGE_Y - beamLen(), 0, JUDGE_Y), i: g.createLinearGradient(0, JUDGE_Y - beamLen(), 0, JUDGE_Y) }
         laneGlow.o.addColorStop(0, `rgba(${rgbOf(noteColor())},0)`); laneGlow.o.addColorStop(1, `rgba(${rgbOf(noteColor())},.55)`)
         laneGlow.i.addColorStop(0, 'rgba(255,255,255,0)'); laneGlow.i.addColorStop(1, 'rgba(255,255,255,.4)')
-        fieldGr = g.createLinearGradient(0, 0, 0, 720); const pa = settings.panelA / 100; fieldGr.addColorStop(0, `rgba(10,32,90,${pa * 0.8})`); fieldGr.addColorStop(0.7, `rgba(8,28,80,${pa})`); fieldGr.addColorStop(1, `rgba(8,24,70,${Math.min(pa + 0.08, 1)})`)
+        fieldGr = g.createLinearGradient(0, 0, 0, 720); const pa = settings.panelA / 100; fieldGr.addColorStop(0, `rgba(10,32,90,${pa * 0.8})`); fieldGr.addColorStop(0.7, `rgba(6,12,30,${pa})`); fieldGr.addColorStop(1, `rgba(6,11,28,${Math.min(pa + 0.08, 1)})`)
         edgeGr = g.createLinearGradient(0, 0, 0, 720); edgeGr.addColorStop(0, 'rgba(255,255,255,.1)'); edgeGr.addColorStop(0.7, 'rgba(255,255,255,.85)'); edgeGr.addColorStop(1, 'rgba(170,220,255,.95)')
        
       }
@@ -312,7 +312,7 @@ export const Play = (sm: SceneManager): Scene => {
         if (on) glow(g, blue ? noteColor() : '#ffffff', 22, () => { g.beginPath(); g.roundRect(x, y, w, h, 6); g.fillStyle = kg; g.fill() })
         else { g.beginPath(); g.roundRect(x, y, w, h, 6); g.fillStyle = kg; g.fill() }
         g.fillStyle = 'rgba(255,255,255,.55)'; g.fillRect(x + 4, y + 2, w - 8, 3) // 윗면 하이라이트
-        g.fillStyle = 'rgba(6,20,60,.35)'; g.fillRect(x + 2, y + h - 6, w - 4, 4) // 아랫면 그림자
+        g.fillStyle = 'rgba(4,9,24,.35)'; g.fillRect(x + 2, y + h - 6, w - 4, 4) // 아랫면 그림자
         g.beginPath(); g.roundRect(x, y, w, h, 6); g.strokeStyle = on ? '#fff' : 'rgba(255,255,255,.65)'; g.lineWidth = 1.5; g.stroke()
         g.font = `900 ${keyLabel(k).length > 2 ? 15 : 26}px ${FONT}`; g.fillStyle = on ? '#0b2a6b' : blue ? lighten(noteColor(), 0.3) : '#e7edf7'; g.textAlign = 'center'
         g.fillText(keyLabel(k), x + w / 2, y + h / 2 + (keyLabel(k).length > 2 ? 5 : 9))
@@ -328,7 +328,7 @@ export const Play = (sm: SceneManager): Scene => {
         g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(gx, hy, 8, hh)
         g.fillStyle = dispHp > 50 ? CYAN : dispHp > 25 ? AMBER : (Math.floor(performance.now() / 160) % 2 ? '#ff5a6e' : '#ff9aa6')
         g.fillRect(gx, hy + hh - fillH, 8, fillH)
-        g.fillStyle = 'rgba(6,20,60,.9)'; for (const q of [0.25, 0.5, 0.75]) g.fillRect(gx, hy + hh * q, 8, 1.5) // 눈금
+        g.fillStyle = 'rgba(4,9,24,.9)'; for (const q of [0.25, 0.5, 0.75]) g.fillRect(gx, hy + hh * q, 8, 1.5) // 눈금
       }
       g.fillStyle = AMBER; g.fillRect(0, 0, 1280 * Math.min(Math.max(t / endTime, 0), 1), 5)
       // 점수 카드: 곡 정보 카드와 같은 모양. 필드가 오른쪽이면 왼쪽 끝으로 옮긴다
@@ -370,7 +370,7 @@ export const Play = (sm: SceneManager): Scene => {
       if (age < 500) {
         g.globalAlpha = 1 - age / 500
         const jn = flash.j === 0 && Math.abs(flash.dt) <= MAX_WIN ? 'MAX' : JUDGES[flash.j].name // PERFECT 중 ±25ms 이내는 MAX
-        g.font = `900 36px ${FONT}`; g.lineJoin = 'round'; g.lineWidth = 7; g.strokeStyle = 'rgba(6,20,70,.85)'; g.strokeText(jn, CX, 430)
+        g.font = `900 36px ${FONT}`; g.lineJoin = 'round'; g.lineWidth = 7; g.strokeStyle = 'rgba(4,9,24,.85)'; g.strokeText(jn, CX, 430)
         if (flash.j === 0) { const gg = g.createLinearGradient(0, 400, 0, 436); gg.addColorStop(0, '#fff6c2'); gg.addColorStop(0.55, '#ffd04a'); gg.addColorStop(1, '#d98a00'); g.fillStyle = gg } else g.fillStyle = JUDGE_COLORS[flash.j] // PERFECT는 금색
         g.fillText(jn, CX, 430)
         if (settings.fastSlow && flash.j !== MISS && flash.j !== 0) {
@@ -410,13 +410,13 @@ export const Play = (sm: SceneManager): Scene => {
       }
       if (resumeAt) {
         const left = Math.ceil((resumeAt - performance.now()) / 1000)
-        g.fillStyle = 'rgba(8,30,90,.45)'; g.fillRect(0, 0, 1280, 720)
+        g.fillStyle = 'rgba(5,12,34,.45)'; g.fillRect(0, 0, 1280, 720)
         g.font = `900 140px ${FONT}`; g.fillStyle = '#fff'; g.textAlign = 'center'; glow(g, 'rgba(122,216,255,.8)', 30, () => g.fillText(String(Math.max(left, 1)), CX, 400))
         g.font = `700 18px ${FONT}`; g.fillStyle = ICE; g.fillText('곧 다시 시작합니다', CX, 450); g.textAlign = 'left'
       }
       if (paused) {
         g.fillStyle = 'rgba(4,16,48,.78)'; g.fillRect(0, 0, 1280, 720)
-        g.fillStyle = 'rgba(8,28,80,.9)'; g.fillRect(0, 196, 1280, 340) // 가운데 가로 띠 (디맥의 일시정지처럼)
+        g.fillStyle = 'rgba(6,12,30,.9)'; g.fillRect(0, 196, 1280, 340) // 가운데 가로 띠 (디맥의 일시정지처럼)
         g.fillStyle = accentFill(g, 0, 1280); g.fillRect(0, 196, 1280, 2); g.fillRect(0, 534, 1280, 2)
         g.font = `800 18px ${FONT}`; g.fillStyle = AMBER; g.fillText('P A U S E', 440, 240)
         PAUSE_ITEMS.forEach((p, i) => {

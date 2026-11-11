@@ -31,7 +31,7 @@ export const Keys = (sm: SceneManager): Scene => {
       keys.forEach((code, i) => {
         const x = x0 + i * (cw + gap), on = i === sel
         hit(x, 130, cw, cw, () => { sel = i })
-        g.fillStyle = on ? AMBER : 'rgba(8,24,70,.78)'; g.beginPath(); g.roundRect(x, 130, cw, cw, 14); g.fill()
+        g.fillStyle = on ? AMBER : 'rgba(6,11,28,.78)'; g.beginPath(); g.roundRect(x, 130, cw, cw, 14); g.fill()
         g.strokeStyle = on ? '#fff' : 'rgba(255,255,255,.4)'; g.lineWidth = 2; g.stroke()
         g.font = `800 ${keyLabel(code).length > 3 ? 17 : 26}px ${FONT}`; g.fillStyle = on ? '#3a2000' : '#fff'; g.textAlign = 'center'; g.fillText(keyLabel(code), x + cw / 2, 130 + cw / 2 + 9); g.textAlign = 'left'
       })

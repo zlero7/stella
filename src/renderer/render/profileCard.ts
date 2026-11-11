@@ -61,7 +61,7 @@ export function avatarCircle(g: CanvasRenderingContext2D, x: number, y: number, 
 export function profileCard(g: CanvasRenderingContext2D, x: number, y: number, p: Profile | undefined, big = false) {
   const w = big ? 420 : 300, h = big ? 132 : 64, [c1, c2] = PLATE_COLOR[p?.plate ?? 'default'] ?? PLATE_COLOR.default
   g.save()
-  slant(g, x, y, w, h, big ? 22 : 16); g.fillStyle = 'rgba(8,24,70,.84)'; g.fill()
+  slant(g, x, y, w, h, big ? 22 : 16); g.fillStyle = 'rgba(6,11,28,.84)'; g.fill()
   // 플레이트: 카드 왼쪽에서 번지는 색
   g.save(); slant(g, x, y, w, h, big ? 22 : 16); g.clip()
   const pl = g.createLinearGradient(x, 0, x + w, 0); pl.addColorStop(0, c1); pl.addColorStop(0.55, 'rgba(0,0,0,0)')

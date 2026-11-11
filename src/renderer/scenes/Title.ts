@@ -95,7 +95,7 @@ export const Title = (sm: SceneManager): Scene => {
         profileCard(g, 40, 24, prof.v)
         ITEMS.forEach(([name, sub], i) => {
           const k = ease('title' + i, i === sel), on = k > 0.5, h = 58, w = 440 + 40 * k, x = 770 - 40 * k + (1 - m) * 160, y = 360 - (ITEMS.length * 68 - 10) / 2 + i * 68
-          slant(g, x, y, w, h, 22); g.fillStyle = 'rgba(8,24,70,.74)'; g.fill()
+          slant(g, x, y, w, h, 22); g.fillStyle = 'rgba(6,11,28,.74)'; g.fill()
           g.strokeStyle = `rgba(255,255,255,${0.3 * (1 - k)})`; g.lineWidth = 1; g.stroke()
           if (k > 0.01) {
             g.save(); g.globalAlpha *= k

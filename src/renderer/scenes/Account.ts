@@ -175,7 +175,7 @@ export const Account = (sm: SceneManager): Scene => {
       g.globalAlpha = m
       rows().forEach((r, i) => {
         const on0 = i === focus, k = ease('acct' + i, on0), on = k > 0.5, w = 440 + 40 * k, x = 770 - 40 * k + (1 - m) * 160, y = top + i * PITCH
-        slant(g, x, y, w, H, 22); g.fillStyle = 'rgba(8,24,70,.74)'; g.fill()
+        slant(g, x, y, w, H, 22); g.fillStyle = 'rgba(6,11,28,.74)'; g.fill()
         g.strokeStyle = `rgba(255,255,255,${0.3 * (1 - k)})`; g.lineWidth = 1; g.stroke()
         if (k > 0.01) {
           g.save(); g.globalAlpha *= k
@@ -207,7 +207,7 @@ export const Account = (sm: SceneManager): Scene => {
         g.font = `800 ${msg ? 17 : 15}px ${FONT}`
         const lines = wrap(g, (msg && bad ? '⚠  ' : '') + text, bw - pad * 2 - 10), bh = 22 + lines.length * 24, bx = 770 + shake, by = top + n * PITCH + 4
         g.globalAlpha = m * (msg ? 0.4 + 0.6 * age : 1)
-        slant(g, bx, by, bw, bh, 14); g.fillStyle = msg ? (bad ? 'rgba(168,28,52,.94)' : 'rgba(8,24,70,.92)') : 'rgba(8,24,70,.78)'; g.fill()
+        slant(g, bx, by, bw, bh, 14); g.fillStyle = msg ? (bad ? 'rgba(168,28,52,.94)' : 'rgba(6,11,28,.92)') : 'rgba(6,11,28,.78)'; g.fill()
         g.lineWidth = msg ? 2 : 1; g.strokeStyle = msg ? (bad ? '#ffb3bd' : AMBER) : 'rgba(255,255,255,.3)'; g.stroke()
         g.textAlign = 'left'; g.fillStyle = msg ? '#fff' : ICE
         lines.forEach((ln, i) => g.fillText(ln, bx + pad + 10, by + 28 + i * 24))

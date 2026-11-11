@@ -87,8 +87,8 @@ function drawPreview(g: CanvasRenderingContext2D) {
   g.save(); g.beginPath(); g.roundRect(x, y, w, h, 14); g.clip()
   const bg = g.createLinearGradient(0, y, 0, y + h); bg.addColorStop(0, '#fbe3f0'); bg.addColorStop(1, '#bfe3ff') // 밝은 영상 장면을 흉내 낸다
   g.fillStyle = bg; g.fillRect(x, y, w, h)
-  g.fillStyle = `rgba(8,30,90,${1 - settings.bgBright / 100})`; g.fillRect(x, y, w, h)
-  g.fillStyle = `rgba(8,28,80,${settings.panelA / 100})`; g.fillRect(fieldX - 2, y, L * laneW + 4, h)
+  g.fillStyle = `rgba(5,12,34,${1 - settings.bgBright / 100})`; g.fillRect(x, y, w, h)
+  g.fillStyle = `rgba(6,12,30,${settings.panelA / 100})`; g.fillRect(fieldX - 2, y, L * laneW + 4, h)
   g.fillStyle = 'rgba(255,255,255,.7)'; g.fillRect(fieldX - 2, y, 1.5, h); g.fillRect(fieldX + L * laneW + 0.5, y, 1.5, h)
   const col = (NOTE_COLORS[settings.noteColor] ?? NOTE_COLORS[0])[1], speed = settings.scroll * 100 * s, phase = (performance.now() / 1000) % PV.loop
   PATTERN.forEach((lane0, k) => {

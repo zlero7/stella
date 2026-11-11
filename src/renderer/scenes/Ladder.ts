@@ -25,10 +25,10 @@ export const Ladder = (sm: SceneManager): Scene => {
     const w = 270, col = TIER_COLOR[p?.tier ?? 'UNRANKED'] ?? '#fff'
     g.textAlign = 'center'; g.font = `800 14px ${FONT}`; g.fillStyle = on ? AMBER : CYAN; g.fillText(head, x + w / 2, 156)
     gem(g, x + w / 2, 262, 72, p?.tierLabel ?? 'UNRANKED')
-    g.font = `900 26px ${FONT}`; g.lineJoin = 'round'; g.lineWidth = 5; g.strokeStyle = 'rgba(8,24,70,.85)'; g.strokeText(p?.tierLabel ?? 'UNRANKED', x + w / 2, 392) // 밝은 배경에서도 티어 글자가 읽히게 어두운 테두리
+    g.font = `900 26px ${FONT}`; g.lineJoin = 'round'; g.lineWidth = 5; g.strokeStyle = 'rgba(6,11,28,.85)'; g.strokeText(p?.tierLabel ?? 'UNRANKED', x + w / 2, 392) // 밝은 배경에서도 티어 글자가 읽히게 어두운 테두리
     g.fillStyle = col; g.fillText(p?.tierLabel ?? 'UNRANKED', x + w / 2, 392)
     g.font = `700 14px ${FONT}`; g.fillStyle = '#0b2a6b'; g.fillText(`${p?.lp ?? 0} LP`, x + w / 2, 416)
-    slant(g, x, 440, w, 64, 16); g.fillStyle = 'rgba(8,24,70,.84)'; g.fill(); g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 1.5; g.stroke()
+    slant(g, x, 440, w, 64, 16); g.fillStyle = 'rgba(6,11,28,.84)'; g.fill(); g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 1.5; g.stroke()
     const [c1, c2] = PLATE_COLOR.default; avatarCircle(g, x + 36, 472, 22, p?.nick, p?.avatar, c1, c2)
     g.fillStyle = '#fff'; g.font = `800 20px ${FONT}`; g.textAlign = 'left'; g.fillText(fit(g, p?.nick ?? '…', w - 150), x + 70, 478); g.textAlign = 'center'
     g.textAlign = 'right'; g.font = `800 15px ${FONT}`; g.fillStyle = AMBER; g.fillText(`Lv ${p?.level ?? 1}`, x + w - 24, 478)
@@ -83,7 +83,7 @@ export const Ladder = (sm: SceneManager): Scene => {
           const banned = l.banned.includes(i), picked = l.state !== 'ban' && i === l.pick, y = 176 + i * 92, k = ease('lad' + i, l.state === 'ban' && l.turn === 'you' && i === focus && !banned)
           const x = 395 - 18 * k, w = 490 + 36 * k
           if (l.state !== 'ban' && !picked) g.globalAlpha = 0.35
-          slant(g, x, y, w, 80, 20); g.fillStyle = 'rgba(8,24,70,.8)'; g.fill(); g.strokeStyle = picked ? AMBER : `rgba(255,255,255,${0.3 * (1 - k)})`; g.lineWidth = picked ? 3 : 1; g.stroke()
+          slant(g, x, y, w, 80, 20); g.fillStyle = 'rgba(6,11,28,.8)'; g.fill(); g.strokeStyle = picked ? AMBER : `rgba(255,255,255,${0.3 * (1 - k)})`; g.lineWidth = picked ? 3 : 1; g.stroke()
           if (k > 0.01) { g.save(); g.globalAlpha *= k; const og = g.createLinearGradient(x, 0, x + w, 0); og.addColorStop(0, '#ffb13b'); og.addColorStop(0.7, '#ff7a59'); og.addColorStop(1, '#ff5c8a'); glow(g, 'rgba(255,140,60,.6)', 16, () => { slant(g, x, y, w, 80, 20); g.fillStyle = og; g.fill() }); g.restore() }
           const sg = byDir.get(s.dir), im = sg && artOf(sg)?.img
           if (im) { g.save(); g.beginPath(); g.roundRect(x + 30, y + 8, 64, 64, 10); g.clip(); drawCover(g, im, im.width, im.height, x + 30, y + 8, 64, 64); g.restore() }

@@ -45,7 +45,7 @@ function bgOf(img: Img, blur: number) {
   const s = Math.max(1280 / img.width, 720 / img.height) * (blur ? 1.1 : 1) // 블러 가장자리 투명 방지
   if (blur) c.filter = `blur(${blur}px)`
   c.drawImage(img, (1280 - img.width * s) / 2, (720 - img.height * s) / 2, img.width * s, img.height * s)
-  c.filter = 'none'; c.fillStyle = 'rgba(10,40,110,.5)'; c.fillRect(0, 0, 1280, 720)
+  c.filter = 'none'; c.fillStyle = 'rgba(4,8,22,.62)'; c.fillRect(0, 0, 1280, 720)
   return bg
 }
 const makeArt = (img: Img): Art => ({ img, bg: bgOf(img, 0) })
@@ -134,16 +134,16 @@ function layer(solid: boolean) {
   const c = document.createElement('canvas'); c.width = 1280; c.height = 720
   const x = c.getContext('2d')!
   if (solid) {
-    const g1 = x.createLinearGradient(0, 0, 0, 720); g1.addColorStop(0, '#2467e8'); g1.addColorStop(0.5, '#4aa6ff'); g1.addColorStop(1, '#a9dcff')
+    const g1 = x.createLinearGradient(0, 0, 0, 720); g1.addColorStop(0, '#060d20'); g1.addColorStop(0.55, '#0d1b3e'); g1.addColorStop(1, '#17285a')
     x.fillStyle = g1; x.fillRect(0, 0, 1280, 720)
     const sun = x.createRadialGradient(1010, 130, 0, 1010, 130, 520)
-    sun.addColorStop(0, 'rgba(255,255,255,.55)'); sun.addColorStop(0.3, 'rgba(210,240,255,.22)'); sun.addColorStop(1, 'rgba(255,255,255,0)')
+    sun.addColorStop(0, 'rgba(110,140,255,.32)'); sun.addColorStop(0.3, 'rgba(90,110,220,.14)'); sun.addColorStop(1, 'rgba(90,110,220,0)')
     x.fillStyle = sun; x.fillRect(0, 0, 1280, 720)
     // 구름: 아래쪽에 부드럽게 겹친 흰 덩어리
     let r = 20260101; const rnd = () => ((r = (Math.imul(r, 1664525) + 1013904223) | 0) >>> 0) / 4294967296
     for (let i = 0; i < 16; i++) {
       const cx = rnd() * 1400 - 60, cy = 560 + rnd() * 220, cr = 110 + rnd() * 170
-      const cg = x.createRadialGradient(cx, cy, 0, cx, cy, cr); cg.addColorStop(0, 'rgba(255,255,255,.5)'); cg.addColorStop(1, 'rgba(255,255,255,0)')
+      const cg = x.createRadialGradient(cx, cy, 0, cx, cy, cr); cg.addColorStop(0, 'rgba(120,150,255,.13)'); cg.addColorStop(1, 'rgba(120,150,255,0)')
       x.fillStyle = cg; x.fillRect(cx - cr, cy - cr, cr * 2, cr * 2)
     }
     for (let i = 0; i < 70; i++) {
@@ -160,7 +160,7 @@ function layer(solid: boolean) {
   }
   x.restore()
   const v = x.createRadialGradient(640, 360, 380, 640, 360, 880)
-  v.addColorStop(0, 'rgba(8,30,90,0)'); v.addColorStop(1, 'rgba(8,30,90,.4)')
+  v.addColorStop(0, 'rgba(5,12,34,0)'); v.addColorStop(1, 'rgba(5,12,34,.4)')
   x.fillStyle = v; x.fillRect(0, 0, 1280, 720)
   return c
 }
@@ -194,7 +194,7 @@ export function starPath(g: CanvasRenderingContext2D, x: number, y: number, r: n
 export function panel(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, accent = 'rgba(255,255,255,.55)', s = 18, alpha = 0.78) {
   slant(g, x, y, w, h, s)
   const f = g.createLinearGradient(0, y, 0, y + h)
-  f.addColorStop(0, `rgba(40,100,200,${Math.min(alpha, 0.9)})`); f.addColorStop(1, `rgba(14,48,130,${Math.min(alpha + 0.08, 0.95)})`)
+  f.addColorStop(0, `rgba(24,36,72,${Math.min(alpha, 0.9)})`); f.addColorStop(1, `rgba(10,18,44,${Math.min(alpha + 0.08, 0.95)})`)
   g.fillStyle = f; g.fill()
   g.strokeStyle = accent; g.lineWidth = 1.5; g.stroke()
   g.fillStyle = 'rgba(255,255,255,.3)'; g.fillRect(x + s + 1, y + 1, w - s - 2, 1) // 윗변 빛
@@ -229,7 +229,7 @@ export function fit(g: CanvasRenderingContext2D, s: string, w: number) {
 // 디맥식 메뉴 줄: 선택한 줄은 주황 띠에 흰 막대, 나머지는 어두운 얇은 띠 (타이틀·일시정지 메뉴가 같이 쓴다)
 export function menuRow(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, on: boolean | number) {
   const k = +on // 0 = 어두운 줄, 1 = 주황 띠. 그 사이는 섞어서 서서히 바뀐다
-  g.fillStyle = 'rgba(8,24,70,.74)'; g.beginPath(); g.roundRect(x, y, w, h, 14); g.fill()
+  g.fillStyle = 'rgba(6,11,28,.74)'; g.beginPath(); g.roundRect(x, y, w, h, 14); g.fill()
   if (k < 1) { g.strokeStyle = `rgba(255,255,255,${0.22 * (1 - k)})`; g.lineWidth = 1; g.stroke() }
   if (k > 0.01) {
     g.save(); g.globalAlpha *= k
@@ -250,9 +250,9 @@ export function fitFont(g: CanvasRenderingContext2D, text: string, maxW: number,
 
 // 곡 정보 카드 모양의 둥근 카드: 어두운 남색 면 + 흰 테두리. head가 있으면 왼쪽 위에 작은 하늘색 머리글 (플레이·결과 화면이 같이 쓴다)
 export function card(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, head?: string, r = 20) {
-  g.fillStyle = 'rgba(8,24,70,.78)'; g.beginPath(); g.roundRect(x, y, w, h, r); g.fill()
-  g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 1.5; g.stroke()
-  if (head) { g.font = `700 13px ${FONT}`; g.fillStyle = CYAN; g.textAlign = 'left'; g.fillText(head, x + 20, y + 30) }
+  g.fillStyle = 'rgba(6,11,28,.78)'; g.beginPath(); g.roundRect(x, y, w, h, r); g.fill()
+  g.strokeStyle = 'rgba(255,255,255,.16)'; g.lineWidth = 1.5; g.stroke()
+  if (head) { g.font = `700 12px ${FONT}`; const hw = g.measureText(head).width + 28; slant(g, x + 14, y + 12, hw, 22, 8); g.fillStyle = 'rgba(120,128,150,.55)'; g.fill(); g.fillStyle = '#fff'; g.textAlign = 'left'; g.fillText(head, x + 28, y + 28) } // 디맥식 회색 사선 이름표
 }
 // 알약 모양 칩 (상태 표시·키 안내)
 export function pill(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, fill: string | CanvasGradient) {
@@ -321,7 +321,7 @@ export function marquee(g: CanvasRenderingContext2D, text: string, x: number, y:
 // ---- 디맥식 화면 공통 부품: 머리띠 · 옵션 줄 · 칸 막대 · 아이콘 ----
 // 화면 위의 머리띠: 어두운 띠 + 아래 무지개빛 선 + 별. 곡 선택 화면의 머리와 같은 모양
 export function header(g: CanvasRenderingContext2D, title: string, sub = '') {
-  g.fillStyle = 'rgba(8,24,70,.86)'; g.fillRect(0, 0, 1280, 66)
+  g.fillStyle = 'rgba(6,11,28,.86)'; g.fillRect(0, 0, 1280, 66)
   const lg = g.createLinearGradient(0, 0, 1280, 0); lg.addColorStop(0, '#7ad8ff'); lg.addColorStop(0.6, '#b9a4ff'); lg.addColorStop(1, '#ff9ad0')
   g.fillStyle = lg; g.fillRect(0, 64, 1280, 2)
   glow(g, AMBER, 12, () => { starPath(g, 70, 33, 11); g.fillStyle = '#fff6d6'; g.fill() })
@@ -330,7 +330,7 @@ export function header(g: CanvasRenderingContext2D, title: string, sub = '') {
 }
 // 비스듬한 옵션 줄. k: 0(어두운 띠) ~ 1(주황 띠: 왼쪽 흰 줄과 빛)
 export function optRow(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, k: number) {
-  slant(g, x, y, w, h, 14); g.fillStyle = 'rgba(8,24,70,.78)'; g.fill()
+  slant(g, x, y, w, h, 14); g.fillStyle = 'rgba(6,11,28,.78)'; g.fill()
   g.strokeStyle = `rgba(255,255,255,${0.28 * (1 - k)})`; g.lineWidth = 1; g.stroke()
   if (k < 0.01) return
   g.save(); g.globalAlpha *= k
@@ -354,4 +354,10 @@ export function icon(g: CanvasRenderingContext2D, kind: 'display' | 'game' | 'so
   else if (kind === 'sound') { g.moveTo(-10, -3); g.lineTo(-5, -3); g.lineTo(1, -8); g.lineTo(1, 8); g.lineTo(-5, 3); g.lineTo(-10, 3); g.closePath(); g.stroke(); g.beginPath(); g.arc(2, 0, 6, -0.9, 0.9); g.stroke(); g.beginPath(); g.arc(2, 0, 10, -0.9, 0.9); g.stroke() }
   else { g.roundRect(-12, -8, 24, 16, 3); g.stroke(); for (const [x, y] of [[-7, -3], [-2, -3], [3, -3], [8, -3], [-6, 2]]) g.fillRect(x - 1.5, y - 1.5, 3, 3); g.fillRect(-1, 2, 9, 3) }
   g.restore()
+}
+
+// 화면 아래 어두운 띠 (디맥처럼 키 안내가 이 위에 놓인다)
+export function footer(g: CanvasRenderingContext2D) {
+  const f = g.createLinearGradient(0, 670, 0, 720); f.addColorStop(0, 'rgba(4,8,20,.7)'); f.addColorStop(1, 'rgba(2,5,14,.92)')
+  g.fillStyle = f; g.fillRect(0, 670, 1280, 50); g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(0, 670, 1280, 1)
 }
