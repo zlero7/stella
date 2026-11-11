@@ -13,7 +13,8 @@ export const MAX_WIN = 0.025 // PERFECT 안에서도 이 안쪽(±25ms)이면 MA
 export const HIT_WIN = JUDGES[MISS - 1].win // 이보다 늦으면 놓친 것, 이보다 이르면 입력 무시
 
 // dt = 노트 시각 - 입력 시각 (초). 양수면 빠르게 누른 것(Fast)
-// 판정 강도: 1 보통, 0.5 하드, 0.25 맥스 (모든 판정 폭을 이 배수만큼 좁힌다. 키를 받아 주는 범위 HIT_WIN은 그대로라 노트가 안 눌리지는 않는다)
+// 판정 강도: 1 보통, 0.5 하드, 0.25 맥스 (모든 판정 폭과 MAX 폭을 이 배수만큼 좁힌다.
+// 키를 받아 주는 범위 HIT_WIN은 그대로지만, 좁아진 BAD 폭 밖의 입력은 "아직 멀었다"로 보고 무시한다. 노트는 그대로 남아 다시 눌러 맞출 수 있다)
 export const judgeMul = { v: 1 }
 export const judgeOf = (dt: number) => JUDGES.findIndex(j => Math.abs(dt) <= j.win * judgeMul.v)
 
@@ -48,6 +49,7 @@ export class ScoreKeeper {
   private sum = 0
   private lossAt = -1 // 마지막으로 체력이 깎인 노트 시각과 그 시각에 깎인 합
   private lossSum = 0
+  readonly mul = judgeMul.v // 이 판의 판정 강도 (MAX 개수를 세는 폭에도 쓴다)
   readonly total: number // 전체 판정 수 (롱노트는 시작·끝 각각)
   private num = 0 // 콤보 배율을 곱한 판정 점수의 합
   private n = 0 // 지금까지 판정한 수
@@ -85,7 +87,7 @@ export class ScoreKeeper {
     for (const dt of this.errs) h[Math.min(Math.max(Math.floor((-1000 * dt + rangeMs) / binMs), 0), n - 1)]++
     return h
   }
-  get maxCount() { return this.errs.filter(dt => Math.abs(dt) <= MAX_WIN).length }
+  get maxCount() { return this.errs.filter(dt => Math.abs(dt) <= MAX_WIN * this.mul).length }
   get avgMs() { return this.errN ? Math.round((1000 * this.errSum) / this.errN) : 0 }
 
   get score() { return this.den ? Math.round(1_000_000 * this.num / this.den) : 0 }

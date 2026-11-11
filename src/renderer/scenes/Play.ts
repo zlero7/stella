@@ -116,7 +116,7 @@ export const Play = (sm: SceneManager): Scene => {
     const dt = n.time - t // 양수 = 빠르게 누름(Fast)
     if (dt > HIT_WIN) return // 너무 이른 입력은 무시
     const j = judgeOf(dt)
-    if (j === MISS) return // 이미 지난 노트는 update()가 Miss 처리
+    if (j === MISS) return // 하드·맥스에서 좁아진 판정 폭 밖의 입력은 무시 (노트는 남는다). 이미 지난 노트는 update()가 Miss 처리
     judge(j, dt, lane, n.time); sk.press(dt); sfx.hit()
     n.state = n.duration ? 'hold' : 'done'
   }
@@ -377,7 +377,7 @@ export const Play = (sm: SceneManager): Scene => {
       const age = performance.now() - flash.at
       if (age < 500 && settings.hudJudge) {
         g.globalAlpha = 1 - age / 500
-        const jn = flash.j === 0 && Math.abs(flash.dt) <= MAX_WIN ? 'MAX' : JUDGES[flash.j].name // PERFECT 중 ±25ms 이내는 MAX
+        const jn = flash.j === 0 && Math.abs(flash.dt) <= MAX_WIN * sk.mul ? 'MAX' : JUDGES[flash.j].name // PERFECT 중 ±25ms 이내는 MAX
         g.font = `900 36px ${FONT}`; g.lineJoin = 'round'; g.lineWidth = 7; g.strokeStyle = 'rgba(4,9,24,.85)'; g.strokeText(jn, CX, 430)
         if (flash.j === 0) { const gg = g.createLinearGradient(0, 400, 0, 436); gg.addColorStop(0, '#fff6c2'); gg.addColorStop(0.55, '#ffd04a'); gg.addColorStop(1, '#d98a00'); g.fillStyle = gg } else g.fillStyle = JUDGE_COLORS[flash.j] // PERFECT는 금색
         g.fillText(jn, CX, 430)

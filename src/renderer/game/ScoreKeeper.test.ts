@@ -118,3 +118,13 @@ test('빠른 연타: 조금 늦게 눌러도 앞 노트부터 판정돼 뒤로 �
   // 앞 노트를 안 치고 뒤 노트 시각에 눌렀으면 (앞 노트는 115ms 늦음) 뒤 노트가 판정된다
   const ns2 = mk(); assert.equal(pickTarget(ns2, 0, 0, ns2[1].time), ns2[1])
 })
+
+test('맥스 판정에서는 MAX 폭도 같은 비율로 좁아져 PERFECT 수를 넘지 않는다', () => {
+  judgeMul.v = 0.25
+  const s = new ScoreKeeper(4)
+  for (const dt of [0.005, 0.01, 0.02, 0.04]) { s.press(dt); s.add(judgeOf(dt)) }
+  assert.deepEqual(s.counts.slice(0, 3), [2, 1, 0]) // PERFECT ±13.75ms: 0.005·0.01 / GREAT ±25ms: 0.02 (0.04는 NICE)
+  assert.equal(s.maxCount, 1) // MAX ±6.25ms: 0.005 하나 (보통 폭 25ms였다면 GREAT인 0.02까지 셌을 것이다)
+  assert.ok(s.maxCount <= s.counts[0])
+  judgeMul.v = 1
+})
