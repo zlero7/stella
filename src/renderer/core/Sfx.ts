@@ -2,8 +2,8 @@ import { gainOf, settings } from '../data/Storage'
 
 // 효과음: 파일 없이 짧은 소리를 즉석에서 만든다 (메뉴 이동·선택·뒤로, 플레이 타격음). 곡 시계(AudioClock)와는 별개의 컨텍스트
 let ctx: AudioContext | undefined
-const tone = (f0: number, f1: number, ms: number, vol: number, type: OscillatorType = 'sine') => {
-  if (!settings.sfx) return
+const tone = (f0: number, f1: number, ms: number, vol: number, type: OscillatorType = 'sine', menu = true) => {
+  if (menu && !settings.sfx) return // 메뉴 효과음만 이 설정을 따른다. 타격음은 '타격음' 항목이 따로 정한다
   try {
     ctx ??= new AudioContext()
     if (ctx.state === 'suspended') void ctx.resume()
@@ -21,7 +21,7 @@ export const sfx = {
   chime: () => tone(880, 1760, 320, 0.6, 'triangle'), // 신기록·배지가 뜰 때
   back: () => tone(700, 380, 110, 0.55, 'triangle'),
   // 타격음: 사각파 삑 소리는 매 노트마다 귀를 찔러서, 낮고 짧은 사인파 "톡"으로 (크기는 설정의 타격음: 약/보통)
-  hit: () => { if (settings.hit) tone(620, 300, 32, settings.hit === 2 ? 0.3 : 0.15) }
+  hit: () => { if (settings.hit) tone(620, 300, 32, settings.hit === 2 ? 0.3 : 0.15, 'sine', false) }
 }
 
 // 메뉴에서 누른 키에 맞는 소리 (플레이 화면은 제외하고 SceneManager가 부른다)

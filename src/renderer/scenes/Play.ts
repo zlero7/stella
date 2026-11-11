@@ -405,7 +405,7 @@ export const Play = (sm: SceneManager): Scene => {
       g.font = `600 13px ${FONT}`; g.fillStyle = ICE; g.fillText(mmss(cur), px + 20, py + 116)
       g.textAlign = 'right'; g.fillText(mmss(dur), px + 20 + iw, py + 116); g.textAlign = 'left'
       const hx = px
-      g.font = `16px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.85)'; g.fillText('Esc 일시정지   ↑↓ 속도', hx, 700)
+      g.font = `16px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.85)'; g.fillText(data.vs ? 'Esc 기권   ↑↓ 속도' : 'Esc 일시정지   ↑↓ 속도', hx, 700)
       if (performance.now() - speedAt < 1200) { // 속도를 바꾼 직후에만 잠깐 표시
         g.font = `800 22px ${FONT}`; g.fillStyle = AMBER; g.textAlign = 'center'
         g.fillText(`속도 ${settings.scroll.toFixed(1)}`, CX, 330); g.textAlign = 'left'

@@ -11,7 +11,7 @@ npm test                          # 시험 (앱 로직 + 서버 + 서버 API)
 VITE_RELAY=서버주소 npm run build   # 설치 파일: src-tauri/target/release/bundle/nsis/
 ```
 
-서버 주소는 소스에 없습니다. 배포용 빌드는 `VITE_RELAY=your.domain`(https 터널 주소)을 꼭 주세요. 앱 설정 화면에서 주소를 바꿀 수도 있습니다.
+서버 주소는 소스에 없습니다. 배포용 빌드는 `VITE_RELAY=your.domain`(https 터널 주소)을 꼭 주세요. 설정 화면에는 서버 주소 항목이 없고, 빌드 때 정한 주소를 씁니다.
 
 ## 서버
 

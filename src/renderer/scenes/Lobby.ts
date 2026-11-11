@@ -114,7 +114,7 @@ export const Lobby = (sm: SceneManager): Scene => {
         g.font = `900 40px ${FONT}`; g.fillStyle = AMBER; g.fillText('VS', cx, 290)
         g.font = `800 20px ${FONT}`; g.fillStyle = '#fff'
         g.fillText(vs.role === 'host' ? 'Enter 를 눌러 곡을 고르세요' : '방장이 곡을 고르는 중…', cx, 480)
-        g.font = `14px ${FONT}`; g.fillStyle = ICE; g.fillText(vs.role === 'host' ? '상대에게 없는 곡은 고를 수 없습니다 (같은 곡 파일이 있어야 합니다)' : '방장이 고르면 바로 시작합니다', cx, 510)
+        g.font = `14px ${FONT}`; g.fillStyle = ICE; g.fillText(vs.role === 'host' ? '상대에게 없는 곡이면 상대가 서버에서 받는 동안 기다립니다' : '방장이 고르면 바로 시작합니다', cx, 510)
         if (err) { g.fillStyle = AMBER; g.fillText(err, cx, 540) }
       }
       let kx = 48
