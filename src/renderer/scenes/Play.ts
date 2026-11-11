@@ -195,7 +195,7 @@ export const Play = (sm: SceneManager): Scene => {
     dur = buf?.duration ?? endTime
     chartOffset = chart?.offset ?? 0
     clock.offset = chartOffset + settings.offset / 1000
-    clock.volume = settings.volume
+    clock.volume = settings.volume * settings.musicVol // 곡 음량은 전체 볼륨에 곡 음량을 곱한다
     if (video) await waitFor(() => (video?.readyState ?? 4) >= 2, 4000) // 배경 영상의 첫 장면이 뜰 때까지 로딩 화면을 유지한다 (필드가 먼저 나오고 배경이 뒤늦게 켜지지 않게)
     if (my !== token) return
     if (data.vs) { // 둘 다 준비될 때까지 기다렸다가 같이 출발
@@ -211,7 +211,7 @@ export const Play = (sm: SceneManager): Scene => {
     enter(d) {
       if ((d as { resume?: boolean }).resume && ready) { // 일시정지에서 설정을 열었다가 돌아옴: 곡은 그대로 두고 바뀐 설정만 다시 적용한다
         FIELD_X = fieldX(settings.align); CX = FIELD_X + LANES * LANE_W / 2
-        laneGlow = undefined; clock.offset = chartOffset + settings.offset / 1000; clock.volume = settings.volume
+        laneGlow = undefined; clock.offset = chartOffset + settings.offset / 1000; clock.volume = settings.volume * settings.musicVol
         return
       }
       data = d as PlayData; song = data.song

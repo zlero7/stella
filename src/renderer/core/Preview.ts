@@ -37,5 +37,5 @@ export function tickPreview() {
   const m = cur
   if (!m || m.paused || !m.duration) return
   if (m.currentTime >= start + 20 || m.ended) m.currentTime = start
-  m.volume = Math.min(Math.max((m.currentTime - start) / 0.5, 0), 1) * gainOf(settings.volume) * 0.8
+  m.volume = Math.min(Math.max((m.currentTime - start) / 0.5, 0), 1) * gainOf(settings.volume * settings.musicVol) * 0.8
 }

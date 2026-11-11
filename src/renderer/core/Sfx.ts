@@ -9,7 +9,7 @@ const tone = (f0: number, f1: number, ms: number, vol: number, type: OscillatorT
     if (ctx.state === 'suspended') void ctx.resume()
     const t = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain()
     o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + ms / 1000)
-    g.gain.setValueAtTime(vol * gainOf(settings.volume), t); g.gain.exponentialRampToValueAtTime(0.0001, t + ms / 1000)
+    g.gain.setValueAtTime(vol * gainOf(settings.volume) * (menu ? settings.uiVol : 1), t); g.gain.exponentialRampToValueAtTime(0.0001, t + ms / 1000)
     o.connect(g).connect(ctx.destination); o.start(t); o.stop(t + ms / 1000 + 0.02)
   } catch { /* 소리를 못 내도 게임은 계속 */ }
 }

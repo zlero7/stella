@@ -52,8 +52,10 @@ const CATS: { name: string; items: Item[] }[] = [
   ] },
   { name: 'SOUND', items: [
     { label: '볼륨', value: () => `${Math.round(settings.volume * 100)}%`, frac: () => settings.volume, change: d => { settings.volume = clamp(Math.round((settings.volume + d * 0.1) * 10) / 10, 0, 1) } },
+    { label: '곡 음량', value: () => `${Math.round(settings.musicVol * 100)}%`, frac: () => settings.musicVol, change: d => { settings.musicVol = clamp(Math.round((settings.musicVol + d * 0.1) * 10) / 10, 0, 1) } },
     { label: '타격음', value: () => HITS[settings.hit] ?? HITS[1], change: d => { settings.hit = clamp(settings.hit + d, 0, 2) } },
-    { label: '효과음', value: () => (settings.sfx ? '켜짐' : '꺼짐'), change: () => { settings.sfx = settings.sfx ? 0 : 1 } }
+    { label: '효과음', value: () => (settings.sfx ? '켜짐' : '꺼짐'), change: () => { settings.sfx = settings.sfx ? 0 : 1 } },
+    { label: '효과음 음량', value: () => `${Math.round(settings.uiVol * 100)}%`, frac: () => settings.uiVol, change: d => { settings.uiVol = clamp(Math.round((settings.uiVol + d * 0.1) * 10) / 10, 0, 1) } }
   ] },
   { name: 'CONTROL', items: [ // Enter를 누르면 키 설정 화면으로
     { label: '4키 배치', go: 'keys', bind: 4, value: () => settings.keys.map(keyLabel).join('  ') },
@@ -91,7 +93,9 @@ const DESC: Record<string, string> = {
   '캐릭터 그림': '플레이 화면 아래 콘솔 양옆에 치비 캐릭터를 보일지 정합니다. 필드를 가운데에 둘 때 둘 다 보입니다.',
   '노트 스킨': '플레이 화면 전체의 꾸밈입니다: 기어 틀·기둥 무늬·필드 무늬·날개·램프·아래 콘솔, 노트 모양, 타격 이펙트까지 스킨마다 다릅니다. (디맥의 노트 스킨) 잠긴 스킨은 미리 볼 수 있지만 조건을 채우기 전에는 스틸로 나옵니다. 조건은 내 프로필 기록(레벨·플레이 수·풀 콤보·올 퍼펙트·대결 승수)으로 정해집니다.',
   '노트 색상': '바깥 레인 노트의 색을 스텔라이브 멤버의 대표 색 중에서 고릅니다. 노트 스킨이 스틸일 때만 바꿀 수 있고, 다른 스킨은 스킨마다 정해진 색을 씁니다.',
-  '볼륨': '곡 소리 크기입니다. 값이 작을수록 급격히 작아지니 귀가 아프면 낮추세요.'
+  '볼륨': '모든 소리(곡·타격음·메뉴 효과음)에 걸리는 전체 크기입니다. 값이 작을수록 급격히 작아지니 귀가 아프면 낮추세요.',
+  '곡 음량': '곡과 미리듣기 소리만 따로 키우거나 줄입니다. 타격음이 묻히면 곡 음량을 낮추세요.',
+  '효과음 음량': '메뉴를 움직이거나 고를 때, 결과 화면에서 나는 소리만 따로 조절합니다. 타격음은 "타격음" 항목이 정합니다.'
 }
 function wrapText(g: CanvasRenderingContext2D, text: string, maxW: number) {
   const lines: string[] = []
