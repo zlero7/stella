@@ -1,6 +1,7 @@
 import type { Scene, SceneManager } from '../core/SceneManager'
 import type { Chart, Song } from '../../shared/types'
 import { prof } from '../data/Profile'
+import { gearOf } from '../render/gear'
 import { profileCard } from '../render/profileCard'
 import { footer, slant, FONT, CYAN, AMBER, NOTE_COLORS, accentFill, artOf, drawBg, drawCover, ease, fit, glow, hit, marquee, overRect, pill, press, starPath, chip } from '../render/theme'
 import { chartFile, diffName, diffsOf, ensureSong, loadSongs, songUrl } from '../data/Songs'
@@ -222,7 +223,7 @@ export const SongSelect = (sm: SceneManager): Scene => {
       })
       // 옵션: 스크롤 속도 칸(눌러서 설정으로) · 노트 색 · 필드 위치
       g.font = `700 12px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.75)'; g.fillText('OPTIONS', PX + 10, 598)
-      ;([['SPEED', settings.scroll.toFixed(1), 'EFFECTOR', true], ['NOTE', NOTE_COLORS[settings.noteColor]?.[0] ?? NOTE_COLORS[0][0], '', false], ['FIELD', ['왼쪽', '가운데', '오른쪽'][settings.align] ?? '가운데', '', false]] as [string, string, string, boolean][]).forEach(([lab, val, sub, hot], k) => {
+      ;([['SPEED', settings.scroll.toFixed(1), 'EFFECTOR', true], ['NOTE', (() => { const gs = gearOf(settings.gearSkin, prof.v); return gs.id === 'steel' ? NOTE_COLORS[settings.noteColor]?.[0] ?? NOTE_COLORS[0][0] : gs.name })(), '', false], ['FIELD', ['왼쪽', '가운데', '오른쪽'][settings.align] ?? '가운데', '', false]] as [string, string, string, boolean][]).forEach(([lab, val, sub, hot], k) => {
         const x = PX + 8 + k * 112, y = 604, w = 104, h = 58, hv = ease('opt' + k, overRect(x, y, w, h))
         hit(x, y, w, h, () => leave('settings', { back: 'select', backData: vsMode ? { mode: 'versus' } : undefined, at: lab === 'SPEED' ? '스크롤 속도' : lab === 'NOTE' ? '노트 색상' : '필드 위치' }))
         if (hot) { const og = g.createLinearGradient(x, y, x, y + h); og.addColorStop(0, '#ff6a4d'); og.addColorStop(1, '#c0392b'); g.fillStyle = og } else g.fillStyle = `rgba(${14 + 30 * hv},${34 + 50 * hv},${90 + 90 * hv},.85)`

@@ -14,7 +14,9 @@ const applyScreen = () => window.api?.setScreen?.(settings.screen) // 화면 모
 const visibleMs = () => Math.round((590 / (settings.scroll * 100)) * 1000) // 노트가 나타나서 판정선에 닿기까지(ms). Play의 판정선 위치와 같은 590px 기준
 
 // 분류마다 항목을 묶는다 (왼쪽에서 분류, 오른쪽에서 항목). d = 방향키로 바꾼 방향(±1), 키 항목은 Enter로 다시 지정
-interface Item { label: string; value(): string; change?(d: number): void; bind?: number; frac?(): number; go?: string } // frac: 0~1 값이면 값 칸에 막대로 보여 준다 · bind: 키 설정 화면에서 열 키 수
+interface Item { label: string; off?(): boolean; value(): string; change?(d: number): void; bind?: number; frac?(): number; go?: string } // frac: 0~1 값이면 값 칸에 막대로 보여 준다 · bind: 키 설정 화면에서 열 키 수
+// 노트 색상은 플레이에서 실제로 쓰이는 스킨이 스틸일 때만 반영된다 (다른 스킨은 스킨 고유 색을 쓴다. 잠긴 스킨은 스틸로 대신 그려진다)
+const steelSkin = () => gearOf(settings.gearSkin, prof.v).id === 'steel'
 const CATS: { name: string; items: Item[] }[] = [
   { name: 'DISPLAY', items: [
     { label: '화면 모드', value: () => SCREENS[settings.screen] ?? SCREENS[2], change: d => { settings.screen = (settings.screen + d + 3) % 3; applyScreen() } },
@@ -25,7 +27,7 @@ const CATS: { name: string; items: Item[] }[] = [
     { label: '이펙트', value: () => FX[settings.fx] ?? FX[2], change: d => { settings.fx = clamp(settings.fx + d, 0, 2) } },
     { label: '캐릭터 그림', value: () => (settings.char ? '켜짐' : '꺼짐'), change: () => { settings.char = settings.char ? 0 : 1 } },
     { label: '노트 스킨', value: () => { const s = GEAR_SKINS[settings.gearSkin] ?? GEAR_SKINS[0]; return gearOf(settings.gearSkin, prof.v) === s ? s.name : `${s.name} · 잠김 (${s.need})` }, change: d => { settings.gearSkin = (settings.gearSkin + d + GEAR_SKINS.length) % GEAR_SKINS.length } },
-    { label: '노트 색상', value: () => NOTE_COLORS[settings.noteColor]?.[0] ?? NOTE_COLORS[0][0], change: d => { settings.noteColor = (settings.noteColor + d + NOTE_COLORS.length) % NOTE_COLORS.length } }
+    { label: '노트 색상', off: () => !steelSkin(), value: () => steelSkin() ? NOTE_COLORS[settings.noteColor]?.[0] ?? NOTE_COLORS[0][0] : '스틸 스킨에서만', change: d => { if (!steelSkin()) return; settings.noteColor = (settings.noteColor + d + NOTE_COLORS.length) % NOTE_COLORS.length } }
   ] },
   { name: 'GAME', items: [
     { label: '스크롤 속도', value: () => `${settings.scroll.toFixed(1)}  ·  ${visibleMs()}ms`, frac: () => (settings.scroll - 1) / 19, change: d => { settings.scroll = clamp(Math.round((settings.scroll + d * 0.5) * 10) / 10, 1, 20) } },
@@ -88,7 +90,7 @@ const DESC: Record<string, string> = {
   '이펙트': '판정 이펙트의 세기입니다. 끔 / 약 / 보통 중에서 고릅니다.',
   '캐릭터 그림': '플레이 화면 아래 콘솔 양옆에 치비 캐릭터를 보일지 정합니다. 필드를 가운데에 둘 때 둘 다 보입니다.',
   '노트 스킨': '플레이 화면 전체의 꾸밈입니다: 기어 틀·기둥 무늬·필드 무늬·날개·램프·아래 콘솔, 노트 모양, 타격 이펙트까지 스킨마다 다릅니다. (디맥의 노트 스킨) 잠긴 스킨은 미리 볼 수 있지만 조건을 채우기 전에는 스틸로 나옵니다. 조건은 내 프로필 기록(레벨·플레이 수·풀 콤보·올 퍼펙트·대결 승수)으로 정해집니다.',
-  '노트 색상': '바깥 레인 노트의 색을 스텔라이브 멤버의 대표 색 중에서 고릅니다.',
+  '노트 색상': '바깥 레인 노트의 색을 스텔라이브 멤버의 대표 색 중에서 고릅니다. 노트 스킨이 스틸일 때만 바꿀 수 있고, 다른 스킨은 스킨마다 정해진 색을 씁니다.',
   '볼륨': '곡 소리 크기입니다. 값이 작을수록 급격히 작아지니 귀가 아프면 낮추세요.'
 }
 function wrapText(g: CanvasRenderingContext2D, text: string, maxW: number) {
@@ -185,8 +187,8 @@ export const Settings = (sm: SceneManager): Scene => {
         } else if (it.go) {
           g.font = `800 16px ${FONT}`; g.fillStyle = hot; g.textAlign = 'center'; g.fillText(`${it.value()}  ▶`, mid, y + 31); g.textAlign = 'left'
         } else {
-          g.font = `800 18px ${FONT}`; g.fillStyle = hot; g.textAlign = 'center'; g.fillText(fit(g, it.value(), vw - 120), mid, y + 31)
-          if (it.change) { g.globalAlpha = on ? 1 : 0.35; chevron(g, vx + 28, y + RH / 2, -1, hot); chevron(g, vx + vw - 28, y + RH / 2, 1, hot); g.globalAlpha = 1 }
+          g.font = `800 18px ${FONT}`; g.fillStyle = it.off?.() ? 'rgba(255,255,255,.4)' : hot; g.textAlign = 'center'; g.fillText(fit(g, it.value(), vw - 120), mid, y + 31)
+          if (it.change && !it.off?.()) { g.globalAlpha = on ? 1 : 0.35; chevron(g, vx + 28, y + RH / 2, -1, hot); chevron(g, vx + vw - 28, y + RH / 2, 1, hot); g.globalAlpha = 1 }
           g.textAlign = 'left'
         }
         if (it.change) {
