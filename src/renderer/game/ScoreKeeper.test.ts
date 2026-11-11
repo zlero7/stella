@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { ScoreKeeper, judgeOf, pickTarget, comboMult, MISS, judgeMul } from './ScoreKeeper.ts'
+import { ScoreKeeper, judgeOf, pickTarget, comboMult, MISS, judgeMul, rankOf } from './ScoreKeeper.ts'
 
 test('판정 경계', () => {
   assert.equal(judgeOf(0.055), 0)
@@ -127,4 +127,8 @@ test('맥스 판정에서는 MAX 폭도 같은 비율로 좁아져 PERFECT 수�
   assert.equal(s.maxCount, 1) // MAX ±6.25ms: 0.005 하나 (보통 폭 25ms였다면 GREAT인 0.02까지 셌을 것이다)
   assert.ok(s.maxCount <= s.counts[0])
   judgeMul.v = 1
+})
+
+test('등급: 클리어한 최하는 D, F는 실패 전용', () => {
+  assert.equal(rankOf(69.9), 'D'); assert.equal(rankOf(70), 'C'); assert.equal(rankOf(99), 'S+')
 })

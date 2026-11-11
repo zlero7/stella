@@ -39,7 +39,7 @@ export const comboMult = (combo: number) => 1 + 0.5 * Math.min(combo, 400) / 400
 const CHORD_LOSS = 8 // 같은 시각에 놓친 동타가 한 번에 깎는 체력의 상한 (3중동타를 놓쳐도 -15가 아니라 -8)
 
 // 정확도(%) → 등급
-export const rankOf = (a: number) => (a >= 99 ? 'S+' : a >= 95 ? 'S' : a >= 90 ? 'A' : a >= 80 ? 'B' : a >= 70 ? 'C' : 'F')
+export const rankOf = (a: number) => (a >= 99 ? 'S+' : a >= 95 ? 'S' : a >= 90 ? 'A' : a >= 80 ? 'B' : a >= 70 ? 'C' : 'D') // 클리어한 가장 낮은 등급은 D, F는 체력이 다해 실패한 판 전용
 
 export class ScoreKeeper {
   counts = JUDGES.map(() => 0)
