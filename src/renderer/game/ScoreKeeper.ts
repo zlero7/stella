@@ -17,16 +17,19 @@ export const HIT_WIN = JUDGES[MISS - 1].win // 이보다 늦으면 놓친 것, �
 export const judgeMul = { v: 1 }
 export const judgeOf = (dt: number) => JUDGES.findIndex(j => Math.abs(dt) <= j.win * judgeMul.v)
 
-// 키를 눌렀을 때 판정할 노트: 그 레인에서 아직 안 친 노트 중 누른 시각에 가장 가까운 것.
-// (가장 이른 노트를 고르면, 앞 노트를 놓치고 뒤 노트를 제때 쳤을 때 앞 노트가 대신 판정돼 뒤 노트가 Miss가 된다)
+// 키를 눌렀을 때 판정할 노트: 그 레인에서 아직 안 친 가장 이른 노트. (빠른 연타에서 조금 늦게 눌렀을 때 뒤 노트가 더 가깝다고 뒤 노트를 고르면,
+// 앞 노트가 남아 Miss가 되고 이후 입력이 한 칸씩 밀려 계속 어긋난다.)
+// 단 앞 노트가 GREAT 폭보다 늦었고 뒤 노트가 더 가까우면 앞 노트는 건너뛴 것으로 보고 뒤 노트를 판정한다 (앞 노트를 놓치고 뒤 노트를 제때 친 경우)
 // ns는 시각순이고, from은 아직 끝나지 않은 첫 노트 위치
 export function pickTarget<N extends { lane: number; time: number; state: string }>(ns: N[], from: number, lane: number, t: number): N | undefined {
-  let best: N | undefined
+  let first: N | undefined, near: N | undefined
   for (let i = from; i < ns.length && ns[i].time - t <= HIT_WIN; i++) {
     const n = ns[i]
-    if (n.lane === lane && n.state === 'wait' && (!best || Math.abs(n.time - t) < Math.abs(best.time - t))) best = n
+    if (n.lane !== lane || n.state !== 'wait') continue
+    first ??= n
+    if (!near || Math.abs(n.time - t) < Math.abs(near.time - t)) near = n
   }
-  return best
+  return first && near && first !== near && t - first.time > JUDGES[1].win * judgeMul.v ? near : first
 }
 
 // 콤보 배율: 콤보가 쌓일수록 노트 하나의 점수가 커진다 (400콤보에서 1.5배로 멈춤). 끊기면 처음부터

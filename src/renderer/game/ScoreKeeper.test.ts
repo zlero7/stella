@@ -109,3 +109,12 @@ test('판정 강도: 하드는 판정 폭이 절반, 맥스는 4분의 1', () =>
   judgeMul.v = 1
   assert.equal(judgeOf(0.05), 0)
 })
+
+test('빠른 연타: 조금 늦게 눌러도 앞 노트부터 판정돼 뒤로 밀리지 않는다', () => {
+  const mk = () => [0, 0.12, 0.24, 0.36].map(time => ({ lane: 0, time: 1 + time, state: 'wait' }))
+  const ns = mk()
+  // 노트마다 70ms 늦게 누른다: 뒤 노트가 더 가까워도(50ms) 앞 노트가 먼저다
+  for (const [i, n] of ns.entries()) { const hit = pickTarget(ns, 0, 0, n.time + 0.07); assert.equal(hit, n, `${i}번째`); hit!.state = 'done' }
+  // 앞 노트를 안 치고 뒤 노트 시각에 눌렀으면 (앞 노트는 115ms 늦음) 뒤 노트가 판정된다
+  const ns2 = mk(); assert.equal(pickTarget(ns2, 0, 0, ns2[1].time), ns2[1])
+})
