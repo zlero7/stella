@@ -145,3 +145,16 @@ test('봇: 밴 → 곡 결정 → 준비 → 사람이 방장 → 점수가 흐�
   assert.equal(L.report(ua, mid, { score: 1000, failed: true }), true)
   const r = L.result(ua, mid); assert.equal(r.state, 'done'); assert.equal(r.result, 'LOSE')
 })
+
+test('치는 중에 나가도 판이 끝나기 전에 다시 래더를 할 수 있다', () => {
+  const { L } = setup()
+  const a = sock(), b = sock(), ua = user('a'), ub = user('b'); L.join(a, ua); L.join(b, ub)
+  const mid = last(a, 'l_match').mid, turn = [a, b].find(s => turnOf(s).turn === 'you')
+  const order = turn === a ? [a, b] : [b, a]
+  for (let i = 0; i < POOL - 1; i++) L.message(order[i % 2], { t: 'l_ban', idx: i })
+  L.message(a, { t: 'l_ready' }); L.message(b, { t: 'l_ready' }) // 연결되어 치는 중
+  L.close(a) // a가 나갔다 (b는 아직 치는 중이라 판은 끝나지 않았다)
+  const a2 = sock(); L.join(a2, ua)
+  assert.ok(last(a2, 'l_wait'), '이미 래더 중인 계정이라는 오류 없이 대기열에 들어간다')
+  assert.equal(last(a2, 'r_err'), undefined)
+})

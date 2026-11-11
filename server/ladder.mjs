@@ -28,7 +28,7 @@ const tx = (sock, o) => { try { sock.send(JSON.stringify(o)) } catch { /* 이미
 export function createLadder({ pool, len = () => 0, save, log = () => {}, now = Date.now, botWait = BOT_WAIT_MS, botDelay = 1500, botTick = 250, botMinLen = 20 }) {
   const queue = [] // {sock, user, since}
   const matches = new Map() // mid -> 판
-  const busy = id => queue.some(q => q.user.id === id) || [...matches.values()].some(m => m.phase !== 'done' && m.players.some(p => p.user.id === id))
+  const busy = id => queue.some(q => q.user.id === id) || [...matches.values()].some(m => m.phase !== 'done' && m.players.some(p => p.user.id === id && !p.gone)) // 나간 사람은 판이 끝나기 전이어도 다시 래더를 할 수 있다
 
   function start(a, b, bot = false) {
     const songs = shuffle(pool()).slice(0, POOL)
@@ -121,7 +121,7 @@ export function createLadder({ pool, len = () => 0, save, log = () => {}, now = 
     else if (ra || rb) { // 한쪽만 결과를 냈다: 상대는 나간 것. 끝까지 친 쪽이 이긴다 (실패했으면 무승부)
       const r = ra ?? rb, win = r.failed ? 0.5 : 1
       resA = ra ? win : 1 - win
-    } else { m.phase = 'done'; return } // 둘 다 안 냄: 없던 일
+    } else { m.phase = 'done'; for (const p of m.players) p.sock.stop?.(); return } // 둘 다 안 냄: 없던 일
     m.phase = 'done'; for (const p of m.players) p.sock.stop?.()
     const lpA = a.user.lp ?? 0, lpB = b.user.lp ?? 0
     const dA = applyLadder(a.user, lpB, resA), dB = applyLadder(b.user, lpA, 1 - resA)
@@ -164,6 +164,7 @@ export function createLadder({ pool, len = () => 0, save, log = () => {}, now = 
       for (const m of matches.values()) { // 판 중에 나감: 밴·준비 중이면 취소, 치는 중이면 나간 사람으로 표시
         const p = m.players.find(p => p.sock === sock); if (!p || m.phase === 'done') continue
         p.gone = true
+        if (m.bot && m.phase === 'play' && !p.rep) { finish(m); continue } // 봇 판에서 사람이 결과 없이 나가면 바로 접는다 (LP 변화 없음). 결과를 낸 뒤 나갔으면 봇이 끝까지 쳐서 결과를 낸다
         if (m.phase === 'ban' || m.phase === 'prep') cancel(m, '상대가 나가서 매치가 취소됐습니다')
         else if (settled(m)) finish(m)
       }
