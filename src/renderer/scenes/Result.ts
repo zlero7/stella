@@ -11,7 +11,8 @@ import { FONT, CYAN, ICE, AMBER, artOf, card, chip, drawBg, drawCover, fit, glow
 
 const ease = (x: number) => 1 - (1 - x) ** 3
 const back = (x: number) => 1 + 2.2 * (x - 1) ** 3 + 1.2 * (x - 1) ** 2 // 살짝 튕기며 멈춘다
-const INTRO = 2.6 // 연출이 끝나는 시각(초). 이 안에 Enter를 누르면 연출만 건너뛴다
+const O = 1.5 // 처음 STAGE CLEAR 배너가 지나가는 시간(초) — 디맥처럼 흐린 배경 위에 배너가 먼저 나온다
+const INTRO = O + 4 // 연출이 끝나는 시각(초). 이 안에 Enter를 누르면 연출만 건너뛴다
 
 const COLORS = [ICE, '#7dff9a', '#ffe27a', '#ffb066', '#ff8a8a', '#ff4d6d']
 
@@ -37,9 +38,34 @@ export const Result = (sm: SceneManager): Scene => {
     },
     render(g) {
       const { song, sk } = d, t = performance.now() / 1000, el = (performance.now() - at) / 1000
-      const prog = (a: number, b: number) => Math.min(Math.max((el - a) / (b - a), 0), 1) // 연출 시각 a~b초 사이의 진행도 0~1
-      const cnt = ease(prog(0.25, 1.6)) // 숫자 올라가는 속도 (처음엔 빠르게 끝으로 갈수록 느리게)
+      const prog = (a: number, b: number) => Math.min(Math.max((el - O - a) / (b - a), 0), 1) // 배너가 끝난 뒤 a~b초 사이의 진행도 0~1
+      const cnt = ease(prog(0.2, 2.0)) // 정확도 링·판정 숫자가 차오르는 속도 (처음엔 빠르게 끝으로 갈수록 느리게)
+      const sc = ease(prog(1.7, 3.0)) // 점수는 링이 거의 찬 뒤에 올라간다
+      const bl = 16 * (1 - ease(prog(-0.3, 2.4))) // 뒷그림이 흐렸다가 점점 또렷해진다
+      if (bl > 0.3) g.filter = `blur(${bl.toFixed(1)}px)`
       drawBg(g, song)
+      g.filter = 'none'
+      if (el < O - 0.1) { // STAGE CLEAR 배너: 왼쪽에서 들어와 가는 글씨로 바뀌고 반짝이 하나가 지나간다
+        const bp = (a: number, b: number) => Math.min(Math.max((el - a) / (b - a), 0), 1), fail = !!d.failed
+        const slide = ease(bp(0.1, 0.45)), solid = (1 - bp(0.75, 1.05)) * slide, thin = bp(0.8, 1.1) * (1 - bp(1.2, 1.45))
+        g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(0, 0, 1280, 720)
+        g.textAlign = 'center'; g.font = `300 66px ${FONT}`
+        if (solid > 0) {
+          g.save(); g.globalAlpha = solid; const bx = 340 - 520 * (1 - slide), gr = g.createLinearGradient(bx, 0, bx + 600, 0)
+          gr.addColorStop(0, fail ? '#9aa3b8' : '#ff9ec0'); gr.addColorStop(1, fail ? '#ff8a8a' : '#ffb25a')
+          g.fillStyle = gr; g.beginPath(); g.moveTo(bx + 34, 322); g.lineTo(bx + 600, 322); g.lineTo(bx + 566, 404); g.lineTo(bx, 404); g.closePath(); g.fill()
+          g.fillStyle = 'rgba(255,255,255,.92)'; g.fillText(fail ? 'STAGE FAILED' : 'STAGE CLEAR', bx + 300, 380); g.restore()
+        }
+        if (thin > 0) { g.globalAlpha = thin; g.fillStyle = fail ? '#ffb0b0' : '#ffc28a'; g.fillText(fail ? 'STAGE FAILED' : 'STAGE CLEAR', 640, 380); g.globalAlpha = 1 }
+        const gp = bp(0.35, 1.05)
+        if (gp > 0 && gp < 1) {
+          const k = Math.sin(Math.PI * gp), fx = 420 + 440 * gp, fy = 362
+          g.save(); g.strokeStyle = '#fff'; g.lineCap = 'round'; g.globalAlpha = k
+          for (const [a, l] of [[-0.4, 190], [1.15, 90]]) { g.lineWidth = 3.5 * k + 0.5; g.beginPath(); g.moveTo(fx - Math.cos(a) * l * k, fy - Math.sin(a) * l * k); g.lineTo(fx + Math.cos(a) * l * k, fy + Math.sin(a) * l * k); g.stroke() }
+          g.restore()
+        }
+        return
+      }
       g.textAlign = 'left'
       // 위쪽 카드: 곡 정보 (표지는 둥글게)
       card(g, 40, 22, 1200, 100)
@@ -78,33 +104,37 @@ export const Result = (sm: SceneManager): Scene => {
       const cx = 640
       card(g, 460, 140, 360, 262, 'RANK')
       // 등급 엠블럼: 처음 모양 그대로의 원 (카드 안에 들어가게 반지름만 100으로)
-      const cy = 262, R = 84, ep = prog(1.6, 2.1), land = el >= 2.1 // 등급이 커졌다가 쾅 내려앉는다
-      if (el >= 2.0 && !slammed) { slammed = true; sfx.slam() }
+      const cy = 262, R = 84, ep = prog(3.0, 3.5), land = el - O >= 3.5 // 등급이 커졌다가 쾅 내려앉는다
+      if (el - O >= 3.4 && !slammed) { slammed = true; sfx.slam() }
+      const aa = sk.accuracy * cnt / 100 // 링은 시계 방향으로 정확도만큼 차오른다
+      glow(g, land ? (d.failed ? 'rgba(255,90,110,.5)' : 'rgba(255,226,122,.6)') : 'rgba(0,0,0,0)', 34, () => { g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.fillStyle = 'rgba(8,28,80,.9)'; g.fill() })
+      if (aa > 0.001) {
+        const ring = g.createLinearGradient(cx - R, cy - R, cx + R, cy + R); ring.addColorStop(0, d.failed ? '#ff8a8a' : '#ffe27a'); ring.addColorStop(1, d.failed ? '#a33' : '#ff8a7a')
+        g.lineWidth = 8; g.lineCap = 'round'; g.strokeStyle = ring; g.beginPath(); g.arc(cx, cy, R - 2, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(aa, 0.9999)); g.stroke(); g.lineCap = 'butt'
+      }
+      if (ep < 1) { g.globalAlpha = 1 - ep; g.font = `800 30px ${FONT}`; g.textAlign = 'center'; g.fillStyle = '#fff'; g.fillText(`${(sk.accuracy * cnt).toFixed(2)}%`, cx, cy + 10); g.globalAlpha = 1 } // 링이 차는 동안은 가운데에 정확도
       if (ep > 0) {
       g.save(); const es = 1 + 1.6 * (1 - back(ep)); g.globalAlpha = Math.min(ep * 3, 1); g.translate(cx, cy); g.scale(es, es); g.translate(-cx, -cy)
-      const ring = g.createLinearGradient(cx - R, cy - R, cx + R, cy + R)
-      ring.addColorStop(0, d.failed ? '#ff8a8a' : '#ffe27a'); ring.addColorStop(0.5, '#fff'); ring.addColorStop(1, d.failed ? '#a33' : '#7ad8ff')
-      glow(g, d.failed ? 'rgba(255,90,110,.5)' : 'rgba(255,226,122,.6)', 34, () => { g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.fillStyle = 'rgba(8,28,80,.9)'; g.fill() })
-      g.lineWidth = 8; g.strokeStyle = ring; g.beginPath(); g.arc(cx, cy, R - 2, 0, Math.PI * 2); g.stroke()
       g.lineWidth = 2; g.strokeStyle = 'rgba(255,255,255,.55)'; g.beginPath(); g.arc(cx, cy, R - 16, 0, Math.PI * 2); g.stroke()
       g.font = `900 84px ${FONT}`; g.textAlign = 'center'
       const rg = g.createLinearGradient(0, cy - 48, 0, cy + 42); rg.addColorStop(0, '#fff'); rg.addColorStop(1, d.failed ? '#ffb0b0' : '#9aeaff')
       glow(g, 'rgba(120,210,255,.6)', 20, () => { g.fillStyle = rg; g.fillText(d.failed ? 'F' : sk.rank, cx, cy + 29) })
       g.restore()
       }
-      if (land) { const sp = prog(2.1, 2.8); if (sp < 1) { g.save(); g.globalAlpha = (1 - sp) * 0.8; g.strokeStyle = d.failed ? '#ff8a8a' : '#fff6d6'; g.lineWidth = 6 * (1 - sp) + 1; g.beginPath(); g.arc(cx, cy, R + 130 * ease(sp), 0, Math.PI * 2); g.stroke(); g.restore() } } // 충격파
+      if (land) { const fp = prog(3.5, 4.2); if (fp < 1) { const k = Math.sin(Math.PI * fp), fx = cx + 44, fy = cy - 34; g.save(); g.globalAlpha = k; g.strokeStyle = '#fff'; g.lineCap = 'round'; for (const [an, l] of [[-0.45, 150], [1.1, 90]]) { g.lineWidth = 3 * k + 0.5; g.beginPath(); g.moveTo(fx - Math.cos(an) * l * k, fy - Math.sin(an) * l * k); g.lineTo(fx + Math.cos(an) * l * k, fy + Math.sin(an) * l * k); g.stroke() } g.restore() } } // 등급이 내려앉을 때 반짝
+      if (land) { const sp = prog(3.5, 4.2); if (sp < 1) { g.save(); g.globalAlpha = (1 - sp) * 0.8; g.strokeStyle = d.failed ? '#ff8a8a' : '#fff6d6'; g.lineWidth = 6 * (1 - sp) + 1; g.beginPath(); g.arc(cx, cy, R + 130 * ease(sp), 0, Math.PI * 2); g.stroke(); g.restore() } } // 충격파
       if (!d.failed && land) for (const [dx, dy, r, ph] of [[70, -68, 15, 0], [-74, -46, 9, 1.4], [76, 30, 8, 2.6]] as const) glow(g, AMBER, 14, () => { starPath(g, cx + dx, cy + dy, r * (0.6 + 0.4 * Math.sin(t * 2.6 + ph))); g.fillStyle = '#fff6d6'; g.fill() })
       const tag = d.failed ? 'FAILED' : sk.badge // 올 퍼펙트·풀 콤보 칩 (색만이 아니라 글자로도)
-      if (tag && el >= 2.15) {
-        g.save(); const tp = back(prog(2.15, 2.5)); g.globalAlpha = Math.min(tp * 2, 1); g.translate(cx, 373); g.scale(tp, tp); g.translate(-cx, -373)
+      if (tag && el - O >= 3.55) {
+        g.save(); const tp = back(prog(3.55, 3.9)); g.globalAlpha = Math.min(tp * 2, 1); g.translate(cx, 373); g.scale(tp, tp); g.translate(-cx, -373)
         g.font = `800 16px ${FONT}`; const w = g.measureText(tag).width + 44
         pill(g, cx - w / 2, 358, w, 30, d.failed ? '#c0392b' : tag === 'ALL PERFECT' ? '#f2b705' : '#2f8cff')
         g.fillStyle = tag === 'ALL PERFECT' ? '#3a2a00' : '#fff'; g.fillText(tag, cx, 378)
         g.restore()
       }
       card(g, 460, 418, 360, 178, 'SCORE')
-      const chipA = ease(prog(2.2, 2.6)) // 칩은 점수가 다 올라간 뒤에 뜬다
-      if (isNew && el >= 2.2 && !chimed) { chimed = true; sfx.chime() }
+      const chipA = ease(prog(3.6, 4.0)) // 칩은 점수가 다 올라간 뒤에 뜬다
+      if (isNew && el - O >= 3.6 && !chimed) { chimed = true; sfx.chime() }
       g.globalAlpha = chipA
       if (gain) { // 경험치 칩 (레벨이 오르면 함께)
         g.font = `800 13px ${FONT}`; const t1 = lvUp > 0 ? `EXP +${gain}  ·  LEVEL UP  Lv ${prof.v?.level}` : `EXP +${gain}`, w = g.measureText(t1).width + 28
@@ -116,8 +146,8 @@ export const Result = (sm: SceneManager): Scene => {
         pill(g, 460 + 360 - 20 - w, 430, w, 26, '#ff9f1a'); g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText('NEW RECORD', 460 + 360 - 20 - w / 2, 448)
       }
       g.globalAlpha = 1
-      g.textAlign = 'center'; g.font = `900 70px ${FONT}`; g.fillStyle = '#fff'; g.fillText(String(Math.round(sk.score * cnt)).padStart(7, '0'), cx, 512)
-      meter(g, 480, 534, 320, (sk.accuracy / 100) * cnt)
+      g.textAlign = 'center'; g.font = `900 70px ${FONT}`; g.fillStyle = '#fff'; g.fillText(String(Math.round(sk.score * sc)).padStart(7, '0'), cx, 512)
+      meter(g, 480, 534, 320, (sk.accuracy / 100) * sc)
       g.font = `600 13px ${FONT}`; g.fillStyle = ICE; g.textAlign = 'left'; g.fillText('ACCURACY', 480, 566); g.textAlign = 'right'; g.fillText(`${(sk.accuracy * cnt).toFixed(2)}%`, 800, 566); g.textAlign = 'left'
 
       // 오른쪽 카드: 타이밍 오차 분포 (가운데가 정확히 맞춘 곳)
