@@ -58,6 +58,7 @@ export const Play = (sm: SceneManager): Scene => {
   const clock = new AudioClock()
   let data: PlayData, song: Song, ns: N[] = [], endTime = 1, dur = 1, sk = new ScoreKeeper(0)
   let fullNotes: Note[] = [], audioBuf: AudioBuffer | undefined, bestRec: Best | undefined // 리와인드용 전체 노트 · 음원 / 최고 기록(점수 차이 표시)
+  let giveUpAt = -1e9 // 대결 중 Esc를 처음 누른 시각: 2초 안에 한 번 더 눌러야 기권한다
   let practice = false, ready = false, finished = false, paused = false, pSel = 0, token = 0
   // 체력이 다하면 DIE_S초 동안 노트 속도와 소리가 점점 느려지다가 결과 화면으로 넘어간다. dying = 시작한 시각(ms), dyT0 = 그때의 곡 시각
   const DIE_S = 1.6
@@ -405,7 +406,8 @@ export const Play = (sm: SceneManager): Scene => {
       g.font = `600 13px ${FONT}`; g.fillStyle = ICE; g.fillText(mmss(cur), px + 20, py + 116)
       g.textAlign = 'right'; g.fillText(mmss(dur), px + 20 + iw, py + 116); g.textAlign = 'left'
       const hx = px
-      g.font = `16px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.85)'; g.fillText(data.vs ? 'Esc 기권   ↑↓ 속도' : 'Esc 일시정지   ↑↓ 속도', hx, 700)
+      g.font = `16px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.85)'; g.fillText(data.vs ? 'Esc 두 번 기권   ↑↓ 속도' : 'Esc 일시정지   ↑↓ 속도', hx, 700)
+      if (data.vs && performance.now() - giveUpAt < 2000) { g.font = `800 24px ${FONT}`; g.fillStyle = '#ff8a8a'; g.textAlign = 'center'; g.fillText('Esc를 한 번 더 누르면 기권합니다', CX, 330); g.textAlign = 'left' }
       if (performance.now() - speedAt < 1200) { // 속도를 바꾼 직후에만 잠깐 표시
         g.font = `800 22px ${FONT}`; g.fillStyle = AMBER; g.textAlign = 'center'
         g.fillText(`속도 ${settings.scroll.toFixed(1)}`, CX, 330); g.textAlign = 'left'
@@ -451,7 +453,7 @@ export const Play = (sm: SceneManager): Scene => {
         return
       }
       if (dying) return // 실패 연출 중에는 일시정지 불가
-      if (data.vs && e.key === 'Escape') { sk.hp = 0; return } // 대결 중에는 멈출 수 없다: Esc는 기권(실패 처리)
+      if (data.vs && e.key === 'Escape') { if (performance.now() - giveUpAt < 2000) sk.hp = 0; else giveUpAt = performance.now(); return } // 대결 중에는 멈출 수 없다: Esc를 두 번 누르면 기권(실패 처리)
       if (e.key === 'Escape') { paused = true; resumeAt = 0; pSel = 0; down.clear(); clock.pause(); return }
       if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { // 플레이 중 스크롤 속도 조절 (꾹 눌러도 한 번에 한 칸)
         if (e.repeat) return
