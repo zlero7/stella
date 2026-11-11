@@ -331,7 +331,7 @@ export const SongSelect = (sm: SceneManager): Scene => {
       else if (e.key === 'F6' && songs[idx]) { note = toggleFav(songs[idx].dir) ? '즐겨찾기에 넣었습니다 ★' : '즐겨찾기에서 뺐습니다'; noteAt = performance.now() + 1500; if (fmode === 1) applyCat() }
       else if (e.key === 'F7') { fmode = (fmode + 1) % FILTERS.length; applyCat(); note = `보기: ${FILTERS[fmode]} (${songs.length}곡)`; noteAt = performance.now() + 1800 }
       else if (e.key === 'F5' && !vsMode) { prac = (prac + 1) % PRACTICE.length; note = prac ? `연습: 곡의 ${PRACTICE[prac] * 100}%부터 (기록 안 됨)` : '연습 끔'; noteAt = performance.now() + 1500 }
-      else if (e.key === '1' || e.key === '2') { settings.scroll = Math.min(Math.max(Math.round((settings.scroll + (e.key === '2' ? 0.5 : -0.5)) * 10) / 10, 1), 20); saveSettings(); note = `스크롤 속도 ${settings.scroll.toFixed(1)}`; noteAt = performance.now() + 1500 } // 1 느리게 · 2 빠르게
+      else if (e.key === '1' || e.key === '2') { settings.scroll = Math.min(Math.max(Math.round((settings.scroll + (e.key === '2' ? 0.1 : -0.1)) * 10) / 10, 1), 20); saveSettings(); note = `스크롤 속도 ${settings.scroll.toFixed(1)}`; noteAt = performance.now() + 1500 } // 1 느리게 · 2 빠르게
       else if (e.key === 'F1') leave('settings', { back: 'select', backData: vsMode ? { mode: 'versus' } : undefined })
       else if (e.key === 'Escape') leave(vsMode ? 'vs' : 'title')
       else if (/^[a-z0-9]$/i.test(e.key) && !e.ctrlKey && !e.altKey && !e.metaKey && songs.length > 1) { // 글자·숫자 키: 그 글자로 시작하는 다음 곡으로 건너뛴다

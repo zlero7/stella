@@ -30,7 +30,7 @@ const CATS: { name: string; items: Item[] }[] = [
     { label: '노트 색상', off: () => !steelSkin(), value: () => steelSkin() ? NOTE_COLORS[settings.noteColor]?.[0] ?? NOTE_COLORS[0][0] : '스틸 스킨에서만', change: d => { if (!steelSkin()) return; settings.noteColor = (settings.noteColor + d + NOTE_COLORS.length) % NOTE_COLORS.length } }
   ] },
   { name: 'GAME', items: [
-    { label: '스크롤 속도', value: () => `${settings.scroll.toFixed(1)}  ·  ${visibleMs()}ms`, frac: () => (settings.scroll - 1) / 19, change: d => { settings.scroll = clamp(Math.round((settings.scroll + d * 0.5) * 10) / 10, 1, 20) } },
+    { label: '스크롤 속도', value: () => `${settings.scroll.toFixed(1)}  ·  ${visibleMs()}ms`, frac: () => (settings.scroll - 1) / 19, change: d => { settings.scroll = clamp(Math.round((settings.scroll + d * 0.1) * 10) / 10, 1, 20) } },
     { label: '필드 위치', value: () => ALIGNS[settings.align], change: d => { settings.align = clamp(settings.align + d, 0, 2) } },
     { label: 'FAST/SLOW 표시', value: () => (settings.fastSlow ? '켜짐' : '꺼짐'), change: () => { settings.fastSlow = settings.fastSlow ? 0 : 1 } },
     { label: '싱크 보정', go: 'calib', value: () => '메트로놈으로 측정' },

@@ -455,9 +455,8 @@ export const Play = (sm: SceneManager): Scene => {
       if (dying) return // 실패 연출 중에는 일시정지 불가
       if (data.vs && e.key === 'Escape') { if (performance.now() - giveUpAt < 2000) sk.hp = 0; else giveUpAt = performance.now(); return } // 대결 중에는 멈출 수 없다: Esc를 두 번 누르면 기권(실패 처리)
       if (e.key === 'Escape') { paused = true; resumeAt = 0; pSel = 0; down.clear(); clock.pause(); return }
-      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { // 플레이 중 스크롤 속도 조절 (꾹 눌러도 한 번에 한 칸)
-        if (e.repeat) return
-        settings.scroll = Math.min(Math.max(Math.round((settings.scroll + (e.key === 'ArrowUp' ? 0.5 : -0.5)) * 10) / 10, 1), 20)
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { // 플레이 중 스크롤 속도 조절: 한 번에 0.1, 꾹 누르면 이어서 바뀐다 (디맥과 같은 단위)
+        settings.scroll = Math.min(Math.max(Math.round((settings.scroll + (e.key === 'ArrowUp' ? 0.1 : -0.1)) * 10) / 10, 1), 20)
         saveSettings(); speedAt = performance.now(); return
       }
       const l = laneOf(e)

@@ -11,7 +11,7 @@ export interface Scene {
 }
 
 // 꾹 누르면 계속 입력되는 키: 방향키·PageUp/Down만 (Enter·Space·문자 키는 한 번만)
-const REPEAT_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown'])
+const REPEAT_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', '1', '2'])
 
 const REPEAT_MS = 110 // 꾹 누른 입력은 이 간격(약 초당 9번)으로만 받는다. Windows 기본 반복(초당 30번)은 곡 목록이 너무 빨리 지나간다
 
