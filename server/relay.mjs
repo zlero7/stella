@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url'
 import { WebSocketServer } from 'ws'
 import { applyPlay, canEquip, levelOf, nickKey, profileView } from './progress.mjs'
 import { createLadder } from './ladder.mjs'
+import { plausible } from './verify.mjs'
 
 const PORT = Number(process.env.PORT) || 9777
 const MAX_ROOMS = 200, WAIT_MS = 10 * 60 * 1000 // 짝이 안 맞는 방은 10분 뒤에 닫는다
@@ -211,6 +212,7 @@ const chartLen = (dir, key) => {
     lenCache.set(f, { mt, len }); return len
   } catch { return undefined }
 }
+const REQUIRE_COUNTS = false // true면 판정 개수가 없는 점수는 받지 않는다 (옛 앱 호환을 위해 아직 꺼 둔다)
 const plays = new Map() // 계정 id -> {board, at}: 지금 치고 있는 곡 (한 번 쓰면 지운다)
 function rankApi(req, res, dir, key) {
   if (chartLen(dir, key) === undefined) return json(res, 404, { error: '없는 곡' })
@@ -225,6 +227,8 @@ function rankApi(req, res, dir, key) {
     if (!m || typeof m !== 'object') return json(res, 400, { error: '형식' }) // 본문이 null이거나 너무 커서 비면 여기서 막는다 (예전엔 서버가 죽었다)
     const score = m.score, acc = m.acc, mc = m.mc
     if (!Number.isInteger(score) || score < 0 || score > 1_000_000 || !(acc >= 0 && acc <= 100) || !Number.isInteger(mc) || mc < 0 || mc > 99999) return json(res, 400, { error: '값' })
+    // 판정 개수(n)를 보낸 요청은 점수와 앞뒤가 맞는지 본다. 옛 앱은 n을 안 보내서 일단 받아 준다 (앱이 다 바뀌면 REQUIRE_COUNTS를 켠다)
+    if (m.n === undefined ? REQUIRE_COUNTS : !plausible({ score, acc, mc, badge: typeof m.badge === 'string' ? m.badge : '', n: m.n })) return json(res, 400, { error: '점수 검증 실패' })
     const p = plays.get(user.id)
     if (p?.board !== id || Date.now() - p.at < chartLen(dir, key) * 1000 * MIN_PLAY) return json(res, 409, { error: '곡을 시작한 기록이 없거나 너무 빨리 끝났습니다' })
     plays.delete(user.id)

@@ -1,7 +1,7 @@
 import type { Scene, SceneManager } from '../core/SceneManager'
 import type { Chart, Note, Song } from '../../shared/types'
 import { AudioClock } from '../core/AudioClock'
-import { HIT_WIN, JUDGES, MAX_WIN, MISS, ScoreKeeper, judgeOf, pickTarget } from '../game/ScoreKeeper'
+import { HIT_WIN, JUDGES, MAX_WIN, MISS, ScoreKeeper, judgeMul, judgeOf, pickTarget } from '../game/ScoreKeeper'
 import { buildChart } from '../game/AutoChart'
 import { cleanChart, posAt, speedTable } from '../game/chartCheck'
 import { chartFile, diffName } from '../data/Songs'
@@ -181,7 +181,10 @@ export const Play = (sm: SceneManager): Scene => {
     const from = data.from ?? (data.fromPct ? Math.floor((buf?.duration ?? 0) * data.fromPct) : undefined) // 연습: 곡의 몇 %부터
     practice = from !== undefined
     spd = speedTable(chart?.speeds)
-    fullNotes = cleanChart(chart?.notes ?? demoNotes(), LANES).notes.map(n => settings.mirror ? { ...n, lane: LANES - 1 - n.lane } : n) // 미러: 좌우 반전
+    const perm = Array.from({ length: LANES }, (_, i) => i) // 랜덤: 곡을 시작할 때 한 번 섞고, 리와인드해도 같은 배치
+    if (settings.random && !data.vs) for (let i = LANES - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[perm[i], perm[j]] = [perm[j], perm[i]] }
+    judgeMul.v = data.vs ? 1 : [1, 0.5, 0.25][settings.judgeMode] ?? 1 // 대결·래더는 모두 같은 판정으로
+    fullNotes = cleanChart(chart?.notes ?? demoNotes(), LANES).notes.map(n => settings.random && !data.vs ? { ...n, lane: perm[n.lane] } : settings.mirror ? { ...n, lane: LANES - 1 - n.lane } : n) // 랜덤 · 미러: 좌우 반전
     const notes = fullNotes.filter(n => from === undefined || n.time >= from + 0.5)
     bestRec = !data.vs && from === undefined ? getBest(song.dir, data.diff) : undefined // 점수 차이는 내 최고 기록과 비교
     ns = notes.map(n => ({ ...n, state: 'wait' as const })).sort((a, b) => a.time - b.time)
@@ -300,7 +303,11 @@ export const Play = (sm: SceneManager): Scene => {
         const len = n.duration ? (posOf(n.time + n.duration) - (holding ? curPos : posOf(n.time))) * speed : 0
         if (y - len > 740) continue
         if (len > 0) { g.fillStyle = isBlue(n.lane) ? `rgba(${rgbOf(gs.id === 'steel' ? noteColor() : gs.accent)},.55)` : 'rgba(255,255,255,.4)'; g.fillRect(x + 14 * sc, y - len, LANE_W - 36 * sc, len) }
+        const fr = holding || !settings.fade ? 1 : settings.fade === 1 ? Math.min(Math.max((y / JUDGE_Y - 0.4) / 0.2, 0), 1) : Math.min(Math.max(1 - (y / JUDGE_Y - 0.45) / 0.25, 0), 1) // 페이드: IN은 위쪽, OUT은 판정선 쪽을 가린다
+        if (fr <= 0) continue
+        g.globalAlpha = fr
         g.drawImage(noteSprite(isBlue(n.lane), g.getTransform().a * Math.max(sc, 1)), x - 10 * sc, y - 22, 92 * sc, 44)
+        g.globalAlpha = 1
       }
       drawConsoleBack(g, FIELD_X, fw, JUDGE_Y, diffCol, !!settings.char, gs)
       drawFx(g, t)
@@ -319,7 +326,7 @@ export const Play = (sm: SceneManager): Scene => {
       })
       drawConsoleFront(g, FIELD_X, fw, JUDGE_Y, { score: sk.score, scroll: settings.scroll, mult: sk.mult, hp: sk.hp, hpLow: sk.hp <= 25 }, gs)
       g.textAlign = 'center'; g.font = `900 22px ${FONT}`; g.fillStyle = sk.accuracy >= 100 ? '#ffe27a' : 'rgba(255,255,255,.85)' // 판정선 위: 지금까지의 정확도
-      if (sk.counts.some(n => n)) g.fillText(`${sk.accuracy >= 100 ? 'MAX ' : ''}${sk.accuracy.toFixed(sk.accuracy >= 100 ? 0 : 1)}%`, FIELD_X + fw / 2, JUDGE_Y - 36); g.textAlign = 'left'
+      if (settings.hudRate && sk.counts.some(n => n)) g.fillText(`${sk.accuracy >= 100 ? 'MAX ' : ''}${sk.accuracy.toFixed(sk.accuracy >= 100 ? 0 : 1)}%`, FIELD_X + fw / 2, JUDGE_Y - 36); g.textAlign = 'left'
       // 체력 게이지: 기어 양옆 틀 안의 세로 막대 두 줄. 가득 → 하늘색, 절반 아래 → 금색, 25% 아래 → 깜빡이는 빨강
       dispHp += (sk.hp - dispHp) * 0.2
       const hy = 90, hh = JUDGE_Y - hy, fillH = (hh * dispHp) / 100
@@ -338,7 +345,7 @@ export const Play = (sm: SceneManager): Scene => {
       meter(g, qx + 20, qy + 96, qi, sk.accuracy / 100) // 정확도 막대
       g.font = `600 13px ${FONT}`; g.fillStyle = ICE; g.fillText('ACCURACY', qx + 20, qy + 120)
       g.textAlign = 'right'; g.fillText(sk.counts.some(n => n) ? `${sk.accuracy.toFixed(2)}%` : '--.--%', qx + 20 + qi, qy + 120)
-      if (bestRec) { // 내 최고 기록과의 점수 차이: 같은 진행도(판정 수 기준)에서 최고 기록을 쳤을 때의 점수와 비교
+      if (bestRec && settings.hudGap) { // 내 최고 기록과의 점수 차이: 같은 진행도(판정 수 기준)에서 최고 기록을 쳤을 때의 점수와 비교
         const judged = sk.counts.reduce((a, b) => a + b, 0), pc = bestRec.pace
         g.font = `700 14px ${FONT}`; g.textAlign = 'left'; g.fillStyle = ICE; g.fillText(`BEST ${bestRec.score.toLocaleString()}`, qx + 20, qy + 152)
         if (pc?.length && sk.total > 0 && judged > 0) {
@@ -356,7 +363,8 @@ export const Play = (sm: SceneManager): Scene => {
         g.textAlign = 'left'
       }
       g.textAlign = 'center'
-      if (sk.combo > 1) {
+      g.save(); g.translate(0, settings.hudY) // HUD 높이: 콤보·판정 글자를 함께 옮긴다
+      if (sk.combo > 1 && settings.hudCombo) {
         // 콤보 숫자 색과 글자로 지금 올 퍼펙트(금색)·풀 콤보(하늘색)가 가능한지 알린다 (색만으로 전하지 않는다)
         const ap = sk.counts.slice(1).every(c => c === 0), fc = sk.counts[MISS] === 0
         const pop = 1 + 0.18 * Math.max(0, 1 - (performance.now() - flash.at) / 120) // 칠 때마다 살짝 커졌다 돌아온다
@@ -367,7 +375,7 @@ export const Play = (sm: SceneManager): Scene => {
         g.font = `900 17px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.95)'; g.fillText(ap ? 'ALL PERFECT' : fc ? 'FULL COMBO' : 'COMBO', CX, 278)
       }
       const age = performance.now() - flash.at
-      if (age < 500) {
+      if (age < 500 && settings.hudJudge) {
         g.globalAlpha = 1 - age / 500
         const jn = flash.j === 0 && Math.abs(flash.dt) <= MAX_WIN ? 'MAX' : JUDGES[flash.j].name // PERFECT 중 ±25ms 이내는 MAX
         g.font = `900 36px ${FONT}`; g.lineJoin = 'round'; g.lineWidth = 7; g.strokeStyle = 'rgba(4,9,24,.85)'; g.strokeText(jn, CX, 430)
@@ -379,6 +387,7 @@ export const Play = (sm: SceneManager): Scene => {
         }
         g.globalAlpha = 1
       }
+      g.restore()
       g.textAlign = 'left'
       // 곡 정보 카드: 필드와 안 겹치는 빈 쪽에 둔다 (가운데=왼쪽 끝, 왼쪽 필드=필드 오른쪽, 오른쪽 필드=점수 카드 옆)
       const px = [FIELD_X + fw + 40, 24, 380][settings.align] ?? 24, pw = settings.align === 1 ? 340 : 400, py = 24, iw = pw - 40

@@ -108,3 +108,40 @@ test('같은 계정이 두 번 대기열에 못 들어간다', () => {
   L.join(s1, u); L.join(s2, u)
   assert.equal(last(s2, 'r_err') !== undefined, true); assert.equal(L.queued(), 1)
 })
+
+const sleep = ms => new Promise(r => setTimeout(r, ms))
+const turnOf = s => [...s.got].reverse().find(x => x.t === 'l_match' || x.t === 'l_ban')
+
+test('봇: 오래 기다린 낮은 티어만 붙고, 높은 티어는 사람을 기다린다', () => {
+  let t = 1000
+  const L = createLadder({ pool: () => songs, save() {}, now: () => t, botDelay: 0 })
+  const low = sock(), high = sock(); L.join(low, user('low', 100)); L.join(high, user('high', 900))
+  t += 44_000; L.tick(); assert.equal(last(low, 'l_match'), undefined) // 아직 기다리는 중
+  t += 2_000; L.tick()
+  const m = last(low, 'l_match'); assert.ok(m); assert.equal(m.opp.nick, '스텔라 봇'); assert.equal(m.opp.lp, 100)
+  assert.equal(last(high, 'l_match'), undefined) // LP 900은 봇이 붙지 않는다
+})
+
+test('봇: 밴 → 곡 결정 → 준비 → 사람이 방장 → 점수가 흐르고 끝에 결과가 난다', async () => {
+  let t = 1000
+  const L = createLadder({ pool: () => songs, save() {}, now: () => t, botWait: 0, botDelay: 0, botTick: 5, botMinLen: 0.05 })
+  const a = sock(), ua = user('a', 100); L.join(a, ua); L.tick()
+  const mid = last(a, 'l_match').mid
+  for (let i = 0; i < 60 && !last(a, 'l_start'); i++) {
+    const tm = turnOf(a)
+    if (tm.turn === 'you') { const used = a.got.filter(x => x.t === 'l_ban').map(x => x.idx); L.message(a, { t: 'l_ban', idx: [0, 1, 2, 3, 4].find(k => !used.includes(k)) }) }
+    await sleep(5)
+  }
+  assert.ok(last(a, 'l_start'), '곡이 정해진다')
+  L.message(a, { t: 'l_ready' }); await sleep(20)
+  assert.equal(last(a, 'l_go')?.role, 'host') // 봇 판은 늘 사람이 방장
+  const bot = a.st.peer; assert.equal(typeof bot.send, 'function')
+  bot.send(JSON.stringify({ t: 'chart', chart: {} })) // 방장이 채보를 보내면 봇이 인사하고 준비를 알린다
+  assert.ok(last(a, 'hello')); assert.ok(last(a, 'ready'))
+  bot.send(JSON.stringify({ t: 'ready' })); t += 2000; await sleep(80) // 방장도 준비 → 봇이 치기 시작해 곧 끝낸다
+  const done = last(a, 'done'); assert.ok(done); assert.ok(done.s >= 880000 && done.s <= 970000); assert.equal(done.failed, false)
+  assert.ok(a.got.some(x => x.t === 'score' || x.t === 'done'))
+  t += 100_000 // 사람이 포기(실패)로 올리면 결과가 난다
+  assert.equal(L.report(ua, mid, { score: 1000, failed: true }), true)
+  const r = L.result(ua, mid); assert.equal(r.state, 'done'); assert.equal(r.result, 'LOSE')
+})

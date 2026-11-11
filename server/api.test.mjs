@@ -92,6 +92,7 @@ test('랭킹: 시작 기록이 있어야, 곡 길이의 80%가 지나야, 한 �
   assert.equal((await call('/play/start', { board }, tokA)).status, 200)
   assert.equal((await call(`/rank/${board}`, score, tokA)).status, 409) // 너무 빨리
   await sleep(450)
+  assert.equal((await call(`/rank/${board}`, { ...score, n: [1, 0, 0, 0, 0, 0] }, tokA)).status, 400) // 판정 개수와 점수가 안 맞으면 막는다 (시작 기록은 남는다)
   const ok = await call(`/rank/${board}`, score, tokA); assert.equal(ok.status, 200); assert.equal(ok.body[0].score, 900000)
   assert.equal((await call(`/rank/${board}`, score, tokA)).status, 409) // 기록은 한 번 쓰면 끝
   const me = await call('/profile/me', undefined, tokA); assert.equal(me.body.plays, 1)

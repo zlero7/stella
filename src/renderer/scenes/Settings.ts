@@ -31,10 +31,22 @@ const CATS: { name: string; items: Item[] }[] = [
     { label: '스크롤 속도', value: () => `${settings.scroll.toFixed(1)}  ·  ${visibleMs()}ms`, frac: () => (settings.scroll - 1) / 19, change: d => { settings.scroll = clamp(Math.round((settings.scroll + d * 0.5) * 10) / 10, 1, 20) } },
     { label: '필드 위치', value: () => ALIGNS[settings.align], change: d => { settings.align = clamp(settings.align + d, 0, 2) } },
     { label: 'FAST/SLOW 표시', value: () => (settings.fastSlow ? '켜짐' : '꺼짐'), change: () => { settings.fastSlow = settings.fastSlow ? 0 : 1 } },
-    { label: '미러', value: () => (settings.mirror ? '켜짐' : '꺼짐'), change: () => { settings.mirror = settings.mirror ? 0 : 1 } },
     { label: '싱크 보정', go: 'calib', value: () => '메트로놈으로 측정' },
     { label: '싱크 오프셋', value: () => `${settings.offset > 0 ? '+' : ''}${settings.offset} ms`, change: d => { settings.offset = clamp(settings.offset + d * 5, -300, 300) } },
     { label: '판정 오프셋', value: () => `${settings.judgeOffset > 0 ? '+' : ''}${settings.judgeOffset} ms`, change: d => { settings.judgeOffset = clamp(settings.judgeOffset + d * 5, -100, 100) } }
+  ] },
+  { name: 'OPTION', items: [ // 디맥의 이펙터처럼 노트 배치·보이는 방식·판정 폭을 바꾼다
+    { label: '미러', value: () => (settings.mirror ? '켜짐' : '꺼짐'), change: () => { settings.mirror = settings.mirror ? 0 : 1 } },
+    { label: '랜덤', value: () => (settings.random ? '켜짐' : '꺼짐'), change: () => { settings.random = settings.random ? 0 : 1 } },
+    { label: '페이드', value: () => ['꺼짐', 'FADE IN', 'FADE OUT'][settings.fade] ?? '꺼짐', change: d => { settings.fade = clamp(settings.fade + d, 0, 2) } },
+    { label: '판정 강도', value: () => ['보통', '하드', '맥스'][settings.judgeMode] ?? '보통', change: d => { settings.judgeMode = clamp(settings.judgeMode + d, 0, 2) } }
+  ] },
+  { name: 'HUD', items: [ // 플레이 중 화면에 뜨는 글자를 고르고 높이를 옮긴다
+    { label: '콤보 표시', value: () => (settings.hudCombo ? '켜짐' : '꺼짐'), change: () => { settings.hudCombo = settings.hudCombo ? 0 : 1 } },
+    { label: '판정 글자', value: () => (settings.hudJudge ? '켜짐' : '꺼짐'), change: () => { settings.hudJudge = settings.hudJudge ? 0 : 1 } },
+    { label: '정확도율 표시', value: () => (settings.hudRate ? '켜짐' : '꺼짐'), change: () => { settings.hudRate = settings.hudRate ? 0 : 1 } },
+    { label: '점수 차이 표시', value: () => (settings.hudGap ? '켜짐' : '꺼짐'), change: () => { settings.hudGap = settings.hudGap ? 0 : 1 } },
+    { label: 'HUD 높이', value: () => `${settings.hudY > 0 ? '+' : ''}${settings.hudY}`, frac: () => (settings.hudY + 100) / 200, change: d => { settings.hudY = clamp(settings.hudY + d * 10, -100, 100) } }
   ] },
   { name: 'SOUND', items: [
     { label: '볼륨', value: () => `${Math.round(settings.volume * 100)}%`, frac: () => settings.volume, change: d => { settings.volume = clamp(Math.round((settings.volume + d * 0.1) * 10) / 10, 0, 1) } },
@@ -54,6 +66,14 @@ const DESC: Record<string, string> = {
   '스크롤 속도': '노트가 내려오는 속도입니다. 오른쪽 미리보기의 노트 가시 시간이 짧을수록 빠릅니다. 플레이 중에도 위아래 키로 바꿀 수 있습니다.',
   '필드 위치': '플레이 화면에서 노트 필드를 왼쪽, 가운데, 오른쪽 중 어디에 둘지 정합니다.',
   'FAST/SLOW 표시': '판정할 때마다 빠르게(FAST) 또는 느리게(SLOW) 쳤는지 글자로 보여 줍니다.',
+  '랜덤': '곡을 시작할 때마다 레인 순서를 무작위로 섞습니다. 같은 곡도 매번 다른 손 순서가 됩니다. 랭킹 점수는 그대로 올라갑니다.',
+  '페이드': 'FADE IN은 화면 위쪽 노트를, FADE OUT은 판정선에 가까운 노트를 가립니다. 노트를 외워서 치는 연습에 좋습니다.',
+  '판정 강도': '하드는 판정 폭이 절반, 맥스는 4분의 1입니다. 더 어렵지만 같은 랭킹에 올라갑니다. 대결과 래더에서는 항상 보통입니다.',
+  '콤보 표시': '플레이 중 콤보 숫자를 보여 줍니다.',
+  '판정 글자': 'MAX·PERFECT 같은 판정 글자를 판정선 위에 보여 줍니다.',
+  '정확도율 표시': '판정선 위에 지금까지의 평균 정확도를 보여 줍니다.',
+  '점수 차이 표시': '내 최고 기록과의 점수 차이를 점수 카드 아래에 보여 줍니다.',
+  'HUD 높이': '콤보와 판정 글자의 높이를 옮깁니다. 위로 올리면 노트와 덜 겹칩니다.',
   '미러': '노트의 좌우를 뒤집습니다. 같은 채보도 다른 손 순서로 칠 수 있어 연습에 좋습니다. 랭킹 점수는 그대로 올라갑니다.',
   '싱크 보정': 'Enter를 누르면 메트로놈 소리에 맞춰 키를 눌러 판정 오프셋을 자동으로 맞춥니다. 유선 이어폰을 권장합니다.',
   '싱크 오프셋': '소리가 화면보다 늦게 들리면 +, 빠르게 들리면 − 로 맞춥니다. (5ms 단위)',
@@ -107,8 +127,8 @@ function drawPreview(g: CanvasRenderingContext2D) {
 // 디맥의 옵션 화면처럼: 위쪽 머리띠에 분류 탭, 항목은 비스듬한 띠 한 줄씩 (고른 줄은 주황), 값은 ◀ ▶ 사이나 칸이 나뉜 막대
 const FLAT = CATS.flatMap((c, ci) => c.items.map(item => ({ ci, item })))
 const firstOf = (ci: number) => FLAT.findIndex(f => f.ci === ci)
-const CAT_SUB = ['화면 · 플레이 배경', '스크롤 · 판정 · 싱크', '소리', '키 배치']
-const ICONS = ['display', 'game', 'sound', 'control'] as const
+const CAT_SUB = ['화면 · 플레이 배경', '스크롤 · 판정 · 싱크', '미러 · 랜덤 · 페이드 · 판정 강도', '플레이 중 글자 · 높이', '소리', '키 배치']
+const ICONS = ['display', 'game', 'game', 'display', 'sound', 'control'] as const
 
 export const Settings = (sm: SceneManager): Scene => {
   let sel = 0, back = 'title', backData: unknown, since = 0

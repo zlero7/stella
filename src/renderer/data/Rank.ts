@@ -27,9 +27,9 @@ export const fetchRank = (dir: string, diff: string, keys = settings.keyMode) =>
 export const submitRank = (dir: string, diff: string, sk: ScoreKeeper, keys = settings.keyMode) =>
   !account.token ? fetchRank(dir, diff, keys) : fetch(url(dir, diff, keys), {
     method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${account.token}` }, signal: AbortSignal.timeout(6000),
-    body: JSON.stringify({ score: sk.score, acc: sk.accuracy, mc: sk.maxCombo, badge: sk.badge })
+    body: JSON.stringify({ score: sk.score, acc: sk.accuracy, mc: sk.maxCombo, badge: sk.badge, n: sk.counts }) // n: 판정 개수 (서버가 점수와 앞뒤가 맞는지 본다)
   }).then(ok).then(b => { rankMsg = ''; return b }).catch((e: { status?: number }) => {
     if (e.status === 401) forget() // 토큰이 만료됐으면 로그아웃 상태로
-    rankMsg = e.status === 401 ? '로그인이 만료되어 점수를 올리지 못했습니다' : e.status === 409 ? '서버가 곡 시작을 기록하지 못해 이번 점수는 올라가지 않았습니다' : '서버에 닿지 못해 이번 점수는 올라가지 않았습니다'
+    rankMsg = e.status === 401 ? '로그인이 만료되어 점수를 올리지 못했습니다' : e.status === 409 ? '서버가 곡 시작을 기록하지 못해 이번 점수는 올라가지 않았습니다' : e.status === 400 ? '서버가 이번 점수의 판정 개수를 확인하지 못해 올라가지 않았습니다' : '서버에 닿지 못해 이번 점수는 올라가지 않았습니다'
     return undefined
   })

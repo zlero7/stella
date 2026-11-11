@@ -8,6 +8,9 @@ export const READY_MS = 5 * 60 * 1000 // 곡 받는 시간 (곡 하나가 30~100
 export const MIN_PLAY = 0.8 // 끝까지 친 결과는 곡 길이의 이만큼이 지나야 받는다 (치기 전에 만점을 올리는 걸 막는다)
 export const MATCH_MAX_MS = 12 * 60 * 1000 // 이 시간이 지나도록 결과가 안 오면 접는다
 export const POOL = 5, KEYS = 4
+export const BOT_WAIT_MS = 45000 // 이만큼 기다려도 상대가 없으면 봇과 붙는다 (접속자가 적어도 래더를 칠 수 있게)
+export const BOT_MAX_LP = 800 // 봇은 낮은 티어(LP가 이보다 낮은 사람)에게만 붙는다. 높은 티어는 늘 사람과 친다
+export const BOT_NICK = '스텔라 봇'
 
 export function findPair(queue, now) {
   for (let i = 0; i < queue.length; i++) for (let j = i + 1; j < queue.length; j++) {
@@ -21,16 +24,18 @@ const shuffle = a => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { cons
 const tx = (sock, o) => { try { sock.send(JSON.stringify(o)) } catch { /* 이미 끊김 */ } }
 
 // pool(): 래더에 쓸 수 있는 곡 [{dir, diff, title, artist}] · len(dir, diff): 곡을 끝까지 치는 데 걸리는 초 · save(): 계정 저장 · now(): 시각(시험용)
-export function createLadder({ pool, len = () => 0, save, log = () => {}, now = Date.now }) {
+// 시험용: botWait(대기 ms) · botDelay(봇이 밴·준비하기 전 ms) · botTick(점수를 보내는 간격 ms) · botMinLen(봇이 한 판을 치는 최소 초)
+export function createLadder({ pool, len = () => 0, save, log = () => {}, now = Date.now, botWait = BOT_WAIT_MS, botDelay = 1500, botTick = 250, botMinLen = 20 }) {
   const queue = [] // {sock, user, since}
   const matches = new Map() // mid -> 판
   const busy = id => queue.some(q => q.user.id === id) || [...matches.values()].some(m => m.phase !== 'done' && m.players.some(p => p.user.id === id))
 
-  function start(a, b) {
+  function start(a, b, bot = false) {
     const songs = shuffle(pool()).slice(0, POOL)
     if (songs.length < POOL) { for (const q of [a, b]) { tx(q.sock, { t: 'r_err', msg: '래더에 쓸 곡이 부족합니다' }); q.sock.st.ladder = undefined } return }
     const first = crypto.randomInt(2), mid = crypto.randomBytes(8).toString('hex')
     const m = { mid, at: now(), phase: 'ban', songs, banned: [], turn: first, first, timer: undefined, players: [a, b].map(q => ({ sock: q.sock, user: q.user, lp0: q.user.lp ?? 0, ready: false, gone: false, rep: undefined })), result: undefined }
+    if (bot) { m.bot = true; m.players[1].bot = true; b.sock.m = m } // 둘째 자리는 봇
     matches.set(mid, m)
     m.players.forEach((p, i) => {
       p.sock.st.ladder = m
@@ -59,17 +64,52 @@ export function createLadder({ pool, len = () => 0, save, log = () => {}, now = 
     m.players.forEach(p => tx(p.sock, { t: 'l_start', mid: m.mid, idx: m.pick, dir: s.dir, diff: s.diff, keys: KEYS }))
     m.timer = setTimeout(() => cancel(m, '곡을 받지 못해 매치가 취소됐습니다'), READY_MS); m.timer.unref?.()
   }
+  // 봇: 소켓처럼 보이는 객체. 밴·준비를 알아서 하고, 사람이 방장이 되어 보내는 채보·준비 신호에 맞춰 점수를 흘려 보낸다
+  function botSock(user) {
+    const timers = new Set(), s = { st: {}, m: undefined, send(raw) { let m; try { m = JSON.parse(String(raw)) } catch { return } react(m) }, close() { stop() }, terminate() { stop() }, stop }
+    const later = (ms, fn) => { const t = setTimeout(fn, ms); t.unref?.(); timers.add(t) }
+    const say = o => { try { s.st.peer?.send(JSON.stringify(o)) } catch { /* 상대가 끊김 */ } }
+    function stop() { for (const t of timers) { clearTimeout(t); clearInterval(t) } timers.clear() }
+    function botBan() {
+      const m = s.m; if (!m || m.phase !== 'ban' || m.turn !== 1) return
+      const free = m.songs.map((_, i) => i).filter(i => !m.banned.includes(i)); ban(m, 1, free[crypto.randomInt(free.length)])
+    }
+    function simulate() { // 한 판을 치는 척: 곡 길이에 걸쳐 점수가 올라가고, 끝에 결과를 낸다 (88~97점대)
+      const m = s.m, p = m.players[1], sg = m.songs[m.pick], total = Math.max(len(sg.dir, sg.diff), botMinLen), t0 = now()
+      const fin = Math.round(1e6 * (0.88 + 0.09 * Math.random())), acc = +Math.min(100, 70 + fin / 1e6 * 30).toFixed(2), mc = Math.round(total * 4 * (0.6 + 0.4 * Math.random()))
+      const iv = setInterval(() => {
+        const prog = Math.min((now() - t0) / 1000 / total, 1)
+        if (prog < 1) { say({ t: 'score', s: Math.round(fin * prog), c: Math.round(mc * prog), hp: 100, a: acc }); return }
+        clearInterval(iv); timers.delete(iv)
+        say({ t: 'done', s: fin, a: acc, mc, failed: false, rank: acc >= 99 ? 'S+' : acc >= 95 ? 'S' : acc >= 90 ? 'A' : 'B' })
+        if (m.phase === 'play') { p.rep = { score: fin, failed: false }; if (settled(m)) finish(m) }
+      }, botTick)
+      timers.add(iv); s.sim = true
+    }
+    function react(m) {
+      if (m.t === 'l_match' || m.t === 'l_ban') { if (m.turn === 'you') later(botDelay, botBan) }
+      else if (m.t === 'l_start') later(botDelay, () => self.message(s, { t: 'l_ready' }))
+      else if (m.t === 'chart') { say({ t: 'hello', nick: user.nick }); say({ t: 'ready' }) }
+      else if (m.t === 'ready' && !s.sim) simulate()
+    }
+    return s
+  }
+  function startBot(q) {
+    queue.splice(queue.indexOf(q), 1)
+    const user = { id: 'bot-' + crypto.randomBytes(4).toString('hex'), nick: BOT_NICK, lp: q.user.lp ?? 0, exp: 0 } // 봇의 LP는 상대와 같게: 이기면 오르고 지면 내린다
+    start(q, { sock: botSock(user), user, since: now() }, true)
+  }
   function cancel(m, msg) { // LP 변화 없이 접는다
     if (m.phase === 'done') return
     clearTimeout(m.timer); m.phase = 'done'
-    for (const p of m.players) { p.sock.st.ladder = undefined; if (!p.gone) tx(p.sock, { t: 'l_cancel', msg }) }
+    for (const p of m.players) { p.sock.stop?.(); p.sock.st.ladder = undefined; if (!p.gone) tx(p.sock, { t: 'l_cancel', msg }) }
   }
   function go(m) { // 둘 다 준비됐다: 두 연결을 이어 주면 그 뒤는 대결과 같다
     clearTimeout(m.timer); m.phase = 'play'; m.playAt = now()
     const [a, b] = m.players
     a.sock.st.peer = b.sock; b.sock.st.peer = a.sock
     for (const p of m.players) p.sock.st.ladder = undefined
-    m.players.forEach((p, i) => { tx(p.sock, { t: 'r_paired' }); tx(p.sock, { t: 'l_go', role: i === m.first ? 'host' : 'guest' }) })
+    m.players.forEach((p, i) => { tx(p.sock, { t: 'r_paired' }); tx(p.sock, { t: 'l_go', role: i === (m.bot ? 0 : m.first) ? 'host' : 'guest' }) })
   }
 
   function finish(m) {
@@ -82,7 +122,7 @@ export function createLadder({ pool, len = () => 0, save, log = () => {}, now = 
       const r = ra ?? rb, win = r.failed ? 0.5 : 1
       resA = ra ? win : 1 - win
     } else { m.phase = 'done'; return } // 둘 다 안 냄: 없던 일
-    m.phase = 'done'
+    m.phase = 'done'; for (const p of m.players) p.sock.stop?.()
     const lpA = a.user.lp ?? 0, lpB = b.user.lp ?? 0
     const dA = applyLadder(a.user, lpB, resA), dB = applyLadder(b.user, lpA, 1 - resA)
     m.result = [{ res: resA, d: dA }, { res: 1 - resA, d: dB }]
@@ -93,7 +133,7 @@ export function createLadder({ pool, len = () => 0, save, log = () => {}, now = 
     return (a.rep && b.rep) || (a.rep && b.gone) || (b.rep && a.gone) || (a.gone && b.gone)
   }
 
-  return {
+  const self = {
     queued: () => queue.length,
     join(sock, user) {
       if (sock.st.ladder || sock.st.peer || sock.st.code) return
@@ -104,6 +144,7 @@ export function createLadder({ pool, len = () => 0, save, log = () => {}, now = 
     },
     tick() {
       for (let p; (p = findPair(queue, now()));) { for (const q of p) queue.splice(queue.indexOf(q), 1); start(...p) }
+      for (const q of [...queue]) if (now() - q.since >= botWait && (q.user.lp ?? 0) < BOT_MAX_LP) startBot(q) // 오래 기다린 낮은 티어는 봇과
       for (const [mid, m] of matches) { // 멈춘 판과 오래된 기록 정리
         if (m.phase === 'play' && (settled(m) || now() - m.playAt > MATCH_MAX_MS)) finish(m)
         if (m.phase === 'done' && now() - m.at > MATCH_MAX_MS + 10 * 60 * 1000) matches.delete(mid)
@@ -147,4 +188,5 @@ export function createLadder({ pool, len = () => 0, save, log = () => {}, now = 
       return { state: 'done', result: res === 1 ? 'WIN' : res === 0 ? 'LOSE' : 'DRAW', delta: d, lp, tierLabel: tierOf(lp).label, opp: publicView(m.players[1 - i].user) }
     }
   }
+  return self
 }

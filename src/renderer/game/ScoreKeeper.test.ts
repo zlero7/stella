@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { ScoreKeeper, judgeOf, pickTarget, comboMult, MISS } from './ScoreKeeper.ts'
+import { ScoreKeeper, judgeOf, pickTarget, comboMult, MISS, judgeMul } from './ScoreKeeper.ts'
 
 test('판정 경계', () => {
   assert.equal(judgeOf(0.055), 0)
@@ -97,4 +97,15 @@ test('판정 수가 5%씩 쌓일 때마다 점수를 기록하고, ±25ms 이내
   assert.equal(s.pace[19], s.score)
   assert.ok(s.pace.every((v, i) => i === 0 || v >= s.pace[i - 1]))
   assert.equal(s.maxCount, 20)
+})
+
+test('판정 강도: 하드는 판정 폭이 절반, 맥스는 4분의 1', () => {
+  judgeMul.v = 0.5
+  assert.equal(judgeOf(0.05), 1) // 보통이면 PERFECT(±55ms)지만 하드에서는 GREAT
+  assert.equal(judgeOf(0.02), 0)
+  judgeMul.v = 0.25
+  assert.equal(judgeOf(0.02), 1)
+  assert.equal(judgeOf(0.19), 5) // 보통 BAD 자리는 맥스에서 MISS
+  judgeMul.v = 1
+  assert.equal(judgeOf(0.05), 0)
 })

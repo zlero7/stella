@@ -13,7 +13,9 @@ export const MAX_WIN = 0.025 // PERFECT 안에서도 이 안쪽(±25ms)이면 MA
 export const HIT_WIN = JUDGES[MISS - 1].win // 이보다 늦으면 놓친 것, 이보다 이르면 입력 무시
 
 // dt = 노트 시각 - 입력 시각 (초). 양수면 빠르게 누른 것(Fast)
-export const judgeOf = (dt: number) => JUDGES.findIndex(j => Math.abs(dt) <= j.win)
+// 판정 강도: 1 보통, 0.5 하드, 0.25 맥스 (모든 판정 폭을 이 배수만큼 좁힌다. 키를 받아 주는 범위 HIT_WIN은 그대로라 노트가 안 눌리지는 않는다)
+export const judgeMul = { v: 1 }
+export const judgeOf = (dt: number) => JUDGES.findIndex(j => Math.abs(dt) <= j.win * judgeMul.v)
 
 // 키를 눌렀을 때 판정할 노트: 그 레인에서 아직 안 친 노트 중 누른 시각에 가장 가까운 것.
 // (가장 이른 노트를 고르면, 앞 노트를 놓치고 뒤 노트를 제때 쳤을 때 앞 노트가 대신 판정돼 뒤 노트가 Miss가 된다)
