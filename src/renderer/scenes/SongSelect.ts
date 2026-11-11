@@ -3,10 +3,11 @@ import type { Chart, Song } from '../../shared/types'
 import { prof } from '../data/Profile'
 import { gearOf } from '../render/gear'
 import { profileCard } from '../render/profileCard'
+import { fetchRank, type RankRow } from '../data/Rank'
 import { footer, slant, FONT, CYAN, AMBER, NOTE_COLORS, accentFill, artOf, drawBg, drawCover, ease, fit, glow, hit, marquee, overRect, pill, press, starPath, chip } from '../render/theme'
 import { chartFile, diffName, diffsOf, ensureSong, loadSongs, songUrl } from '../data/Songs'
 import { needsRegen } from '../game/AutoChart'
-import { getRecords, isFav, saveSettings, settings, toggleFav } from '../data/Storage'
+import { account, getRecords, isFav, saveSettings, settings, toggleFav } from '../data/Storage'
 import { pickSong } from '../core/Versus'
 import { rankOf } from '../game/ScoreKeeper'
 import { preview, stopPreview, tickPreview } from '../core/Preview'
@@ -30,6 +31,7 @@ export const SongSelect = (sm: SceneManager): Scene => {
   let query = '', searching = false, sortMode = 0 // 검색어(제목·가수 포함) · F2로 입력 중인지 · F4 정렬: 0 서버 순서, 1 제목, 2 가수
   let inp: HTMLInputElement | undefined // 한글(IME)도 받으려고 화면 밖 입력칸을 쓴다. 캔버스에는 검색창만 그린다
   const SORTS = ['기본 순서', '제목순', '가수순', '내 점수순', '최근 플레이순']
+  let rankOpen = false, rankKey = '', rankRows: RankRow[] | undefined // F8: 고른 곡·난이도의 온라인 순위 (undefined = 받는 중)
   const FILTERS = ['전체 곡', '즐겨찾기만', '안 쳐 본 곡만']; let fmode = 0 // F6 즐겨찾기 넣고 빼기 · F7 목록 거르기
   const PRACTICE = [0, 0.25, 0.5, 0.75]; let prac = 0 // F5: 연습 시작 위치 (곡의 0·25·50·75%). 0이 아니면 점수·EXP는 기록되지 않는다
   const pending = new Set<string>() // 워커가 만드는 중인 곡+난이도+키 수
@@ -287,13 +289,33 @@ export const SongSelect = (sm: SceneManager): Scene => {
       // 아래 안내
       footer(g)
       {
-        const hints: [string, string][] = [['↑↓', '곡'], ['←→', '난이도'], ['Tab', '가수'], ['F2', '검색'], ['F4', '정렬'], ['1 2', '속도'], ['F3', '4/6키'], ['F5', '연습'], ['F6', '즐겨찾기'], ['F7', '필터'], ['Enter', '시작'], ['F1', '설정'], ['Esc', '뒤로']]
+        const hints: [string, string][] = [['↑↓', '곡'], ['←→', '난이도'], ['Tab', '가수'], ['F2', '검색'], ['F4', '정렬'], ['1 2', '속도'], ['F3', '4/6키'], ['F5', '연습'], ['F6', '즐겨찾기'], ['F7', '필터'], ['F8', '순위'], ['Enter', '시작'], ['F1', '설정'], ['Esc', '뒤로']]
         let hx = 24
         for (const [k, label] of hints) hx = chip(g, hx, 692, k, label, '#fff', k === '↑↓' || k === '←→' ? null : undefined)
       }
       { const st = [SORTS[sortMode], FILTERS[fmode], prac ? `연습 ${PRACTICE[prac] * 100}%부터` : ''].filter((x, i) => x && !(i === 0 && sortMode === 0) && !(i === 1 && fmode === 0)).join('  ·  '); if (st) { g.font = `700 12px ${FONT}`; g.fillStyle = AMBER; g.textAlign = 'right'; g.fillText(st, 1240, 77); g.textAlign = 'left' } } // 정렬·필터·연습 시작 위치가 기본이 아니면 항상 보인다
       g.font = `700 13px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.75)'; g.textAlign = 'right' // 곡 번호는 아래 오른쪽 구석 (위쪽 띠 오른쪽은 프로필 카드 자리)
       g.fillText(`${idx + 1} / ${n}`, 1240, 706); g.textAlign = 'left'
+      if (rankOpen && songs[idx]) { // F8 순위 창: 고른 곡·난이도가 바뀌면 다시 받는다
+        const s0 = songs[idx], d0 = diffs()[di] ?? 'hard', k0 = `${s0.dir}|${d0}|${settings.keyMode}`
+        if (k0 !== rankKey) { rankKey = k0; rankRows = undefined; void fetchRank(s0.dir, d0, settings.keyMode).then(r => { if (rankKey === k0) rankRows = r ?? [] }) }
+        const X = 330, Y = 96, W = 620, H = 560
+        g.fillStyle = 'rgba(0,0,0,.86)'; g.fillRect(X, Y, W, H); g.strokeStyle = 'rgba(255,255,255,.2)'; g.lineWidth = 1; g.strokeRect(X + 0.5, Y + 0.5, W - 1, H - 1)
+        slant(g, X + 24, Y + 18, 214, 34, 10); g.fillStyle = 'rgba(120,128,142,.6)'; g.fill(); g.textAlign = 'center'; g.font = `300 22px ${FONT}`; g.fillStyle = '#fff'; g.fillText('ONLINE RANKING', X + 24 + 107, Y + 42)
+        g.textAlign = 'left'; g.font = `700 14px ${FONT}`; g.fillStyle = 'rgba(230,240,255,.8)'; g.fillText(fit(g, `${s0.meta.title}  ·  ${settings.keyMode}K ${diffName(d0)}`, 340), X + 256, Y + 41)
+        g.textAlign = 'right'; g.font = `600 12px ${FONT}`; g.fillStyle = 'rgba(230,240,255,.6)'; g.fillText('F8 · Esc 닫기', X + W - 20, Y + 41)
+        if (!rankRows?.length) { g.textAlign = 'center'; g.font = `15px ${FONT}`; g.fillStyle = '#e6f6ff'; g.fillText(rankRows ? '아직 기록이 없습니다' : '순위를 불러오는 중…', X + W / 2, Y + 250) }
+        rankRows?.slice(0, 10).forEach((r, i) => {
+          const y = Y + 70 + i * 47, mine = !!account.token && r.nick === account.nick
+          g.fillStyle = mine ? 'rgba(255,159,26,.35)' : 'rgba(255,255,255,.07)'; g.fillRect(X + 20, y, W - 40, 42)
+          g.textAlign = 'center'; g.font = `800 16px ${FONT}`; g.fillStyle = i < 3 ? '#ffe27a' : '#fff'; g.fillText(String(i + 1), X + 48, y + 27)
+          g.textAlign = 'left'; g.font = `700 15px ${FONT}`; g.fillStyle = '#fff'; g.fillText(fit(g, r.nick, 170), X + 80, y + 19)
+          g.font = `600 11px ${FONT}`; g.fillStyle = 'rgba(230,240,255,.7)'; g.fillText(`${r.acc.toFixed(2)}%  ·  ${r.mc}콤보${r.lv ? `  ·  Lv ${r.lv}` : ''}`, X + 80, y + 35)
+          if (r.badge) { g.font = `800 12px ${FONT}`; g.fillStyle = r.badge === 'ALL PERFECT' ? '#f2b705' : '#7ad8ff'; g.fillText(r.badge === 'ALL PERFECT' ? 'ALL PERFECT' : 'FULL COMBO', X + 330, y + 27) }
+          g.textAlign = 'right'; g.font = `800 20px ${FONT}`; g.fillStyle = '#ffd84a'; g.fillText(String(r.score).padStart(7, '0'), X + W - 36, y + 29)
+        })
+        g.textAlign = 'left'
+      }
       if (note && performance.now() < noteAt) { g.font = `800 18px ${FONT}`; const w = g.measureText(note).width + 48; pill(g, 640 - w / 2, 84, w, 40, 'rgba(6,11,28,.92)'); g.fillStyle = AMBER; g.textAlign = 'center'; g.fillText(note, 640, 110); g.textAlign = 'left' }
     },
     wheel(dy) { // 휠로 곡 넘기기
@@ -315,6 +337,8 @@ export const SongSelect = (sm: SceneManager): Scene => {
       }
       if (e.key === 'F2') { e.preventDefault(); openSearch(true); return }
       if (e.key === 'F4') { sortMode = (sortMode + 1) % SORTS.length; applyCat(); note = `정렬: ${SORTS[sortMode]}`; noteAt = performance.now() + 1500; return }
+      if (e.key === 'F8') { e.preventDefault(); rankOpen = !rankOpen; rankKey = ''; return }
+      if (rankOpen && e.key === 'Escape') { rankOpen = false; return }
       if (e.key === 'Escape' && query) { query = ''; applyCat(); return } // 검색어가 있으면 Esc는 먼저 검색을 지운다
       if (e.key === 'ArrowDown') move(1)
       else if (e.key === 'ArrowUp') move(-1)
