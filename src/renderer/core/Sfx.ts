@@ -17,6 +17,8 @@ const tone = (f0: number, f1: number, ms: number, vol: number, type: OscillatorT
 export const sfx = {
   move: () => tone(900, 700, 55, 0.5),
   ok: () => tone(620, 1240, 130, 0.7, 'triangle'),
+  slam: () => tone(200, 50, 280, 0.9), // 결과 화면에서 등급이 내려앉는 소리
+  chime: () => tone(880, 1760, 320, 0.6, 'triangle'), // 신기록·배지가 뜰 때
   back: () => tone(700, 380, 110, 0.55, 'triangle'),
   // 타격음: 사각파 삑 소리는 매 노트마다 귀를 찔러서, 낮고 짧은 사인파 "톡"으로 (크기는 설정의 타격음: 약/보통)
   hit: () => { if (settings.hit) tone(620, 300, 32, settings.hit === 2 ? 0.3 : 0.15) }
