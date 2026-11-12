@@ -13,7 +13,8 @@ const TIPS = [
 // pct: 0~1 (모르면 undefined: 띠 아래 선이 흐르기만 한다). msg가 있으면 진행률 자리에 그 글자를 보여 준다
 export function drawLoading(g: CanvasRenderingContext2D, song: Song | undefined, pct?: number, msg?: string, sub?: string) {
   const art = artOf(song), t = performance.now() / 1000
-  if (art?.img) drawCover(g, art.img as CanvasImageSource, (art.img as { width: number }).width, (art.img as { height: number }).height, 0, 0, 1280, 720)
+  const im = art?.wide ?? art?.img // 큰 배경 그림이 있으면 그것을 (작은 표지를 화면 가득 늘리면 뭉개진다)
+  if (im) drawCover(g, im as CanvasImageSource, (im as { width: number }).width, (im as { height: number }).height, 0, 0, 1280, 720)
   else drawBg(g, song)
 
   const y = 300

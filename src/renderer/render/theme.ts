@@ -35,7 +35,7 @@ async function decodeCover(data: ArrayBuffer, file: string): Promise<Img> {
   await img.decode()
   return img
 }
-interface Art { img: Img; bg: HTMLCanvasElement }
+interface Art { img: Img; bg: HTMLCanvasElement; wide?: Img } // wide: 곡의 큰 배경 그림 원본 (로딩 화면용). 없으면 표지
 
 // 커버를 블러 처리한 배경 (한 번만 만들어 캐시)
 function bgOf(img: Img, blur: number) {
@@ -122,9 +122,9 @@ export function artOf(song?: Song): Art | undefined {
       (song.remote ? fetch(songUrl(song.dir, f)).then(r => r.arrayBuffer()) : window.api.readFile(song.dir, f)).then(d => decodeCover(d, f)).then(apply, () => {}) // 아직 못 받은 곡은 서버에서 바로
     const { cover, bg, video } = song.meta
     // 로고 이미지가 없는 영상 곡은 영상에서 뽑은 프레임을 로고(와 배경)로 쓴다
-    if (video && !cover) frameOf(song.dir, video).then(f => { art.img = f.sq; if (!bg) art.bg = bgOf(f.full, 0) }, () => {})
+    if (video && !cover) frameOf(song.dir, video).then(f => { art.img = f.sq; art.wide = f.full; if (!bg) art.bg = bgOf(f.full, 0) }, () => {})
     if (cover) load(cover, img => { art.img = img; if (!bg) art.bg = bgOf(img, 0) })
-    if (bg) load(bg, img => { art.bg = bgOf(img, 0) }) 
+    if (bg) load(bg, img => { art.wide = img; art.bg = bgOf(img, 0) }) 
   }
   return a
 }
