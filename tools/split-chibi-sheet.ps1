@@ -33,7 +33,7 @@ $ymid = [int](($rowGap[1] + $rowGap[2]) / 2)
 $bands = @(@($ya, $ymid), @(($ymid + 1), $yb))
 function Crop($x0, $x1, $y0, $y1, $name) {
   $bx = [Mask]::Box($buf, $stride, $x0, $x1, $y0, $y1); $xa = $bx[0]; $w = $bx[1] - $xa + 1; $ya2 = $bx[2]; $h = $bx[3] - $ya2 + 1
-  $th = 352; $tw = [int]($w * $th / $h)
+  $th = 512; $tw = [int]($w * $th / $h)
   $o = New-Object System.Drawing.Bitmap $tw, $th, ([System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
   $g = [System.Drawing.Graphics]::FromImage($o); $g.Clear([System.Drawing.Color]::Transparent); $g.InterpolationMode = 'HighQualityBicubic'; $g.PixelOffsetMode = 'HighQuality'
   $g.DrawImage($b, (New-Object System.Drawing.Rectangle 0, 0, $tw, $th), (New-Object System.Drawing.Rectangle $xa, $ya2, $w, $h), 'Pixel'); $g.Dispose()

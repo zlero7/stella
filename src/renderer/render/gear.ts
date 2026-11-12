@@ -177,7 +177,7 @@ export function drawConsoleBack(g: CanvasRenderingContext2D, x: number, fw: numb
 
 // 콘솔 양끝에 걸쳐 선 캐릭터 (edge: 콘솔 끝이 필드에서 떨어진 거리. 화면 밖으로 나가면 그리지 않는다)
 export function chibis(g: CanvasRenderingContext2D, x: number, fw: number, k0: GearSkin, edge = 64) {
-  const ch = 176, [CL, CR] = pairOf(k0.id)
+  const ch = 340, [CL, CR] = pairOf(k0.id) // 키 옆 캐릭터는 7등신 전신 일러스트라 치비보다 크게 그린다
   if (CL && ready(CL)) { const w = ch * CL.naturalWidth / CL.naturalHeight, lx = x - edge + 26 - w; if (lx >= -8) g.drawImage(CL, lx, 720 - ch, w, ch) }
   if (CR && ready(CR)) { const w = ch * CR.naturalWidth / CR.naturalHeight, rx = x + fw + edge - 26; if (rx + w <= 1288) g.drawImage(CR, rx, 720 - ch, w, ch) }
 }
