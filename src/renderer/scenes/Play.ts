@@ -376,15 +376,15 @@ export const Play = (sm: SceneManager): Scene => {
         g.font = `900 17px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.95)'; g.fillText(ap ? 'ALL PERFECT' : fc ? 'FULL COMBO' : 'COMBO', CX, 278)
       }
       const age = performance.now() - flash.at
-      if (age < 500 && settings.hudJudge) {
-        g.globalAlpha = 1 - age / 500
+      if (age < 380 && settings.hudJudge) { // 판정 글자: 노트를 보는 시선 가까이(판정선 위 50px)에 짧게 떴다 사라진다
+        g.globalAlpha = 1 - age / 380
         const jn = flash.j === 0 && Math.abs(flash.dt) <= MAX_WIN * sk.mul ? 'MAX' : JUDGES[flash.j].name // PERFECT 중 ±25ms 이내는 MAX
-        g.font = `900 36px ${FONT}`; g.lineJoin = 'round'; g.lineWidth = 7; g.strokeStyle = 'rgba(4,9,24,.85)'; g.strokeText(jn, CX, 430)
-        if (flash.j === 0) { const gg = g.createLinearGradient(0, 400, 0, 436); gg.addColorStop(0, '#fff6c2'); gg.addColorStop(0.55, '#ffd04a'); gg.addColorStop(1, '#d98a00'); g.fillStyle = gg } else g.fillStyle = JUDGE_COLORS[flash.j] // PERFECT는 금색
-        g.fillText(jn, CX, 430)
+        g.font = `900 36px ${FONT}`; g.lineJoin = 'round'; g.lineWidth = 5; g.strokeStyle = 'rgba(4,9,24,.85)'; g.strokeText(jn, CX, 470)
+        if (flash.j === 0) { const gg = g.createLinearGradient(0, 440, 0, 476); gg.addColorStop(0, '#fff6c2'); gg.addColorStop(0.55, '#ffd04a'); gg.addColorStop(1, '#d98a00'); g.fillStyle = gg } else g.fillStyle = JUDGE_COLORS[flash.j] // PERFECT는 금색
+        g.fillText(jn, CX, 470)
         if (settings.fastSlow && flash.j !== MISS && flash.j !== 0) {
           g.font = `700 18px ${FONT}`; g.fillStyle = flash.dt > 0 ? CYAN : AMBER
-          g.fillText(flash.dt > 0 ? 'FAST' : 'SLOW', CX, 458)
+          g.fillText(flash.dt > 0 ? 'FAST' : 'SLOW', CX, 498)
         }
         g.globalAlpha = 1
       }
@@ -406,7 +406,7 @@ export const Play = (sm: SceneManager): Scene => {
       g.font = `600 13px ${FONT}`; g.fillStyle = ICE; g.fillText(mmss(cur), px + 20, py + 116)
       g.textAlign = 'right'; g.fillText(mmss(dur), px + 20 + iw, py + 116); g.textAlign = 'left'
       const hx = px
-      g.font = `16px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.85)'; g.fillText(data.vs ? 'Esc 두 번 기권   ↑↓ 속도' : 'Esc 일시정지   F5 다시   ↑↓ 속도', hx, 700)
+      g.font = `16px ${FONT}`; g.fillStyle = `rgba(255,255,255,${t < 10 ? 0.85 : 0.35})`; g.fillText(data.vs ? 'Esc 두 번 기권   ↑↓ 속도' : 'Esc 일시정지   F5 다시   ↑↓ 속도', hx, 700)
       if (data.vs && performance.now() - giveUpAt < 2000) { g.font = `800 24px ${FONT}`; g.fillStyle = '#ff8a8a'; g.textAlign = 'center'; g.fillText('Esc를 한 번 더 누르면 기권합니다', CX, 330); g.textAlign = 'left' }
       if (performance.now() - speedAt < 1200) { // 속도를 바꾼 직후에만 잠깐 표시
         g.font = `800 22px ${FONT}`; g.fillStyle = AMBER; g.textAlign = 'center'
