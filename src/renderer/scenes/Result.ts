@@ -155,8 +155,12 @@ export const Result = (sm: SceneManager): Scene => {
       g.globalAlpha = 1
       // 아래 왼쪽: 이전 최고 기록과의 차이 · 오른쪽: 경험치
       g.globalAlpha = chipA; g.textAlign = 'left'
-      if (prev !== undefined) { g.font = `700 14px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.75)'; g.fillText(`BEST ${prev.toLocaleString()}`, 400, 638); if (isNew) { g.font = `900 26px ${FONT}`; g.fillStyle = '#ffc233'; g.fillText(`+${(sk.score - prev).toLocaleString()}`, 400, 668) } } // 가장 기쁜 숫자는 크게
-      if (isNew) { const w = 150; slant(g, 598 + 115, 478, w, 30, 9); g.fillStyle = '#ff9f1a'; g.fill(); g.font = `800 16px ${FONT}`; g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText('NEW RECORD', 713 + w / 2, 499) }
+      // 이전 최고 기록과의 차이: 플레이어 막대 바로 아래 가운데 (점수 옆 눈길이 가는 자리). 처음 치는 곡·난이도는 "첫 기록"
+      g.textAlign = 'center'
+      if (prev !== undefined) { g.font = `700 14px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.8)'; g.fillText(`BEST ${prev.toLocaleString()}`, 640, 636); if (isNew) { g.font = `900 24px ${FONT}`; g.fillStyle = '#ffc233'; g.fillText(`+${(sk.score - prev).toLocaleString()}`, 640, 662) } }
+      else if (isNew) { g.font = `900 22px ${FONT}`; g.fillStyle = '#ffc233'; g.fillText('첫 기록', 640, 656) }
+      g.textAlign = 'left'
+      if (isNew) { const w = 150; slant(g, 598 + 115, 466, w, 28, 9); g.fillStyle = '#ff9f1a'; g.fill(); g.font = `800 16px ${FONT}`; g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText('NEW RECORD', 713 + w / 2, 486) }
       if (isNew && el - O >= 3.6 && !chimed) { chimed = true; sfx.chime() }
       if (gain) { g.textAlign = 'left'; g.font = `800 14px ${FONT}`; g.fillStyle = '#c9a8ff'; g.fillText(lvUp > 0 ? `EXP +${gain}  ·  LEVEL UP  Lv ${prof.v?.level}` : `EXP +${gain}`, 800, 640) }
       g.globalAlpha = 1
