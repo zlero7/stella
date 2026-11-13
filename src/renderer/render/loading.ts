@@ -21,10 +21,10 @@ export function drawLoading(g: CanvasRenderingContext2D, song: Song | undefined,
   g.fillStyle = 'rgba(0,0,0,.58)'; g.fillRect(0, y, 1280, 112) // 곡명 띠
   g.fillStyle = 'rgba(0,0,0,.72)'; g.fillRect(0, y + 112, 1280, 52) // 가수 띠
   // 진행선: 곡명 띠 아래. 진행률을 모르면 빛이 흘러간다
-  g.fillStyle = 'rgba(255,255,255,.28)'; g.fillRect(0, y + 110, 1280, 3)
+  g.fillStyle = 'rgba(255,255,255,.28)'; g.fillRect(0, y + 109, 1280, 4)
   g.fillStyle = '#fff'
-  if (pct !== undefined) g.fillRect(0, y + 110, 1280 * pct, 3)
-  else { const x = ((t * 0.7) % 1.4 - 0.2) * 1280; g.fillRect(Math.max(x, 0), y + 110, Math.min(260, 1280 - x), 3) }
+  if (pct !== undefined) g.fillRect(0, y + 109, 1280 * pct, 4)
+  else { const x = ((t * 0.7) % 1.4 - 0.2) * 1280; g.fillRect(Math.max(x, 0), y + 109, Math.min(260, 1280 - x), 4) }
 
   g.textAlign = 'left'
   g.font = `300 56px ${FONT}`; g.fillStyle = '#fff'
@@ -35,7 +35,7 @@ export function drawLoading(g: CanvasRenderingContext2D, song: Song | undefined,
   g.textAlign = 'left'
   let x = 40
   const part = (label: string, value: string) => {
-    g.font = `600 15px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.6)'; g.fillText(label, x, y + 144); x += g.measureText(label).width + 10
+    g.font = `600 15px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.78)'; g.fillText(label, x, y + 144); x += g.measureText(label).width + 10
     g.font = `800 15px ${FONT}`; g.fillStyle = '#fff'; const v = fit(g, value, 420); g.fillText(v, x, y + 144); x += g.measureText(v).width + 40
   }
   if (song) {
@@ -48,7 +48,7 @@ export function drawLoading(g: CanvasRenderingContext2D, song: Song | undefined,
   // 아래 안내: 곡마다 같은 문구가 나온다
   g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(0, 680, 1280, 40)
   g.textAlign = 'center'; g.font = `500 15px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.88)'
-  const tip = TIPS[[...(song?.dir ?? '')].reduce((n, c) => n + c.charCodeAt(0), 0) % TIPS.length]
+  const tip = TIPS[([...(song?.dir ?? '')].reduce((n, c) => n + c.charCodeAt(0), 0) + Math.floor(t / 5)) % TIPS.length] // 5초마다 다음 안내로
   const w = g.measureText(tip).width
   g.fillText(tip, 640 + 14, 706)
   g.beginPath(); g.arc(640 - w / 2 - 6, 700, 8, 0, Math.PI * 2); g.fillStyle = 'rgba(255,255,255,.85)'; g.fill()

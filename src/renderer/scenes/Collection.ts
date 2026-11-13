@@ -1,7 +1,7 @@
 import type { Scene, SceneManager } from '../core/SceneManager'
 import { account } from '../data/Storage'
 import { PLATE_COLOR, TIER_COLOR, equip, prof, refreshProfile, type Item } from '../data/Profile'
-import { FONT, AMBER, CYAN, ICE, accentFill, card, chip, drawBg, ease, fit, glow, header, hit, meter, pill, press, slant } from '../render/theme'
+import { FONT, AMBER, CYAN, ICE, accentFill, card, chip, drawBg, ease, fit, glow, header, hit, meter, overRect, pill, press, slant } from '../render/theme'
 import { gem, profileCard } from '../render/profileCard'
 
 // 컬렉션: 디맥의 COLLECTION처럼 내 프로필을 보고 꾸민다. 탭 — DJ CLASS(등급·전적) · PLATE(카드 색) · TITLE(칭호). 해금은 서버가 정한다
@@ -33,7 +33,12 @@ export const Collection = (sm: SceneManager): Scene => {
       if (!p) { // 로그인 전
         g.font = `800 26px ${FONT}`; g.fillText(account.token ? '프로필을 불러오는 중…' : '로그인하면 프로필과 꾸미기를 쓸 수 있습니다', 640, 330)
         g.font = `15px ${FONT}`; g.fillStyle = ICE; g.fillText(account.token ? '서버에 연결하지 못하면 잠시 후 다시 들어와 주세요' : 'Enter 로그인하러 가기', 640, 372)
-        if (!account.token) hit(440, 290, 400, 110, () => press('Enter'))
+        if (!account.token) { // 큰 버튼: 눌러야 한다는 것이 보이게
+          const on = ease('colLogin', overRect(480, 400, 320, 56)), bx = 480, by = 400
+          slant(g, bx, by, 320, 56, 14); g.fillStyle = on > 0.5 ? '#ffd84a' : AMBER; g.fill()
+          g.font = `800 20px ${FONT}`; g.fillStyle = '#1a1200'; g.fillText('로그인하러 가기', 640, by + 35)
+          hit(bx, by, 320, 56, () => press('Enter'))
+        }
         chip(g, 48, 692, 'Esc', '뒤로'); return
       }
       // 탭 (비스듬한 꼬리표)

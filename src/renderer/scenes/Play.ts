@@ -429,7 +429,7 @@ export const Play = (sm: SceneManager): Scene => {
         g.fillStyle = 'rgba(4,16,48,.78)'; g.fillRect(0, 0, 1280, 720)
         g.fillStyle = 'rgba(6,12,30,.9)'; g.fillRect(0, 196, 1280, 340) // 가운데 가로 띠 (디맥의 일시정지처럼)
         g.fillStyle = accentFill(g, 0, 1280); g.fillRect(0, 196, 1280, 2); g.fillRect(0, 534, 1280, 2)
-        g.font = `800 18px ${FONT}`; g.fillStyle = AMBER; g.fillText('P A U S E', 440, 240)
+        g.font = `800 28px ${FONT}`; g.fillStyle = AMBER; g.fillText('P A U S E', 440, 238)
         PAUSE_ITEMS.forEach((p, i) => {
           const y = 250 + i * 56, on = i === pSel
           hit(440, y, 400, 52, () => { pSel = i; pressKey('Enter') }, () => { pSel = i }) // 올리면 고르고, 누르면 실행
