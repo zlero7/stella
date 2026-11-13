@@ -278,7 +278,7 @@ let dispatch: (key: string) => void = () => {}
 export const setDispatch = (fn: (key: string) => void) => { dispatch = fn }
 export const press = (key: string) => dispatch(key)
 // 키 안내 칩 [키] 설명: 누르면 그 키를 누른 것과 같다 (real: 실제 키 이름, null이면 클릭 없음). 다음 칩을 놓을 x를 돌려준다
-export function chip(g: CanvasRenderingContext2D, x: number, y: number, key: string, label: string, color = '#0b2a6b', real?: string | null, h = 20, fs = 13) {
+export function chip(g: CanvasRenderingContext2D, x: number, y: number, key: string, label: string, color = 'rgba(255,255,255,.92)', real?: string | null, h = 20, fs = 13) {
   g.textAlign = 'left'; g.font = `800 ${fs}px ${FONT}`
   const kw = g.measureText(key).width + 14, base = y + h / 2 + fs / 2 - 1
   g.font = `${fs}px ${FONT}`

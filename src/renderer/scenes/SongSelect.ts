@@ -175,8 +175,11 @@ export const SongSelect = (sm: SceneManager): Scene => {
       profileCard(g, 940, 2, prof.v); g.textAlign = 'left'
 
       if (!song) {
-        g.font = `24px ${FONT}`; g.fillStyle = '#9ab'; g.textAlign = 'center'
-        g.fillText('곡이 없습니다', 640, 380); g.textAlign = 'left'
+        g.textAlign = 'center'; g.font = `700 26px ${FONT}`; g.fillStyle = '#fff'
+        g.fillText(fmode || query ? '조건에 맞는 곡이 없습니다' : '곡이 없습니다', 640, 360)
+        g.font = `16px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.7)'
+        g.fillText(fmode || query ? 'F7로 보기를 바꾸거나 Esc로 검색을 지워 보세요' : '서버에 연결하지 못했거나 아직 올라온 곡이 없습니다. 인터넷 연결을 확인하고 다시 들어와 주세요', 640, 396)
+        g.textAlign = 'left'
         return
       }
       const cur = song.meta, ds = diffs(), n = songs.length

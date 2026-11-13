@@ -219,7 +219,7 @@ export const Settings = (sm: SceneManager): Scene => {
 
       // 아래 안내 (알약 키캡, 눌러도 된다)
       let hx = 48
-      for (const [k, label, real] of [['↑↓', '선택', null], ['←→', '변경', null], ['Tab', '분류', undefined], ['Enter', '선택', undefined], ['Esc', '닫기', undefined]] as [string, string, string | null | undefined][]) hx = chip(g, hx, 690, k, label, NAVY, real)
+      for (const [k, label, real] of [['↑↓', '선택', null], ['←→', '변경', null], ['Tab', '분류', undefined], ['Enter', '선택', undefined], ['Esc', '닫기', undefined]] as [string, string, string | null | undefined][]) hx = chip(g, hx, 690, k, label, '#fff', real)
     },
     keydown(e) {
       if (e.key === 'Escape') { sm.go(back, backData); return }

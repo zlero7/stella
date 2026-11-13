@@ -215,7 +215,7 @@ export const Account = (sm: SceneManager): Scene => {
       }
       g.globalAlpha = 1
 
-      g.textAlign = 'center'; g.font = `14px ${FONT}`; g.fillStyle = '#0b2a6b'
+      g.textAlign = 'center'; g.font = `14px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.75)'
       g.fillText(mode === 'profile' ? '↑ ↓  선택   ·   Enter  확인   ·   Esc  뒤로' : '↑ ↓ · Tab  칸 이동   ·   Enter  확인   ·   Esc  뒤로', 640, 696)
     },
     keydown(e) {

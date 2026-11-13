@@ -114,7 +114,10 @@ export const Title = (sm: SceneManager): Scene => {
         profileCard(g, 40, 24, prof.v)
         ITEMS.forEach(([name, sub], i) => {
           const d = near(i), ad = Math.abs(d); if (ad > 1.6) return
-          const x = 640 + d * 470, fsz = 128 - 64 * Math.min(ad, 1), al = Math.max(0, 1 - ad * 0.55)
+          // 글자 폭에 맞춰 크기를 정한다: 가운데 글자는 600px 안, 양옆 글자는 190px 안. COLLECTION처럼 긴 이름이 옆 글자·화살표와 겹치지 않게
+          g.font = `900 100px ${FONT}`; const wu = g.measureText(name).width / 100
+          const big = Math.min(128, 600 / wu), small = Math.min(36, 190 / wu)
+          const x = 640 + Math.sign(d) * Math.min(ad, 1) * 430 + Math.sign(d) * Math.max(ad - 1, 0) * 300, fsz = big + (small - big) * Math.min(ad, 1), al = Math.max(0, 1 - ad * 0.7)
           g.globalAlpha = m * al; g.textAlign = 'center'; g.font = `900 ${fsz.toFixed(0)}px ${FONT}`
           if (ad < 0.5) { g.fillStyle = col; g.fillText(name, x - 5, 360 + 3); g.fillStyle = 'rgba(255,255,255,.35)'; g.fillText(name, x + 5, 360 - 3) } // 어긋난 그림자 (디맥의 지직거리는 글자)
           g.fillStyle = '#fff'; glow(g, ad < 0.5 ? col : 'rgba(0,0,0,0)', 26, () => g.fillText(name, x, 360))
@@ -127,7 +130,7 @@ export const Title = (sm: SceneManager): Scene => {
         // 좌우 화살표 · 현재 위치 점
         if (m > 0.6) {
           for (const dir of [-1, 1] as const) {
-            const ax = dir < 0 ? 60 : 1220; hit(ax - 40, 290, 80, 80, () => press(dir < 0 ? 'ArrowLeft' : 'ArrowRight'))
+            const ax = dir < 0 ? 44 : 1236; hit(ax - 40, 290, 80, 80, () => press(dir < 0 ? 'ArrowLeft' : 'ArrowRight'))
             g.lineWidth = 6; g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = '#fff'
             g.beginPath(); g.moveTo(ax + 12 * dir * -1, 306); g.lineTo(ax + 12 * dir, 330); g.lineTo(ax + 12 * dir * -1, 354); g.stroke()
             g.lineWidth = 2; g.strokeStyle = col; g.beginPath(); g.moveTo(ax + 20 * dir * -1, 302); g.lineTo(ax + 20 * dir, 330); g.lineTo(ax + 20 * dir * -1, 358); g.stroke()

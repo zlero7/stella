@@ -102,7 +102,7 @@ export const Ladder = (sm: SceneManager): Scene => {
       }
 
       let kx = 48
-      if (state === 'ban' && vs.l?.turn === 'you') { kx = chip(g, kx, 692, '↑ ↓', '고르기', '#0b2a6b', null); kx = chip(g, kx, 692, 'Enter', '밴') }
+      if (state === 'ban' && vs.l?.turn === 'you') { kx = chip(g, kx, 692, '↑ ↓', '고르기', '#fff', null); kx = chip(g, kx, 692, 'Enter', '밴') }
       chip(g, kx, 692, 'Esc', state === 'queue' || state === 'err' || state === 'cancel' ? '나가기' : '포기')
     },
     keydown(e) {

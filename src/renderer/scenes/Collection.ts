@@ -97,7 +97,7 @@ export const Collection = (sm: SceneManager): Scene => {
       }
       g.textAlign = 'center'; g.font = `700 14px ${FONT}`; g.fillStyle = AMBER; g.fillText(msg, 865, 574)
       let kx = 48
-      kx = chip(g, kx, 692, 'Tab', '탭 넘기기'); if (tab > 0) { kx = chip(g, kx, 692, '← → ↑ ↓', '고르기', '#0b2a6b', null); kx = chip(g, kx, 692, 'Enter', '적용') }
+      kx = chip(g, kx, 692, 'Tab', '탭 넘기기'); if (tab > 0) { kx = chip(g, kx, 692, '← → ↑ ↓', '고르기', '#fff', null); kx = chip(g, kx, 692, 'Enter', '적용') }
       chip(g, kx, 692, 'Esc', '뒤로')
     },
     keydown(e) {

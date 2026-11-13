@@ -54,7 +54,7 @@ export const Keys = (sm: SceneManager): Scene => {
       })
 
       let hx = 48
-      for (const [k, label, real] of [['↑↓', '선택', null], ['Enter', '변경', undefined], ['Tab', '4K / 6K', undefined], ['Esc', '닫기', undefined]] as [string, string, string | null | undefined][]) hx = chip(g, hx, 690, k, label, NAVY, real)
+      for (const [k, label, real] of [['↑↓', '선택', null], ['Enter', '변경', undefined], ['Tab', '4K / 6K', undefined], ['Esc', '닫기', undefined]] as [string, string, string | null | undefined][]) hx = chip(g, hx, 690, k, label, '#fff', real)
     },
     keydown(e) {
       if (binding) {

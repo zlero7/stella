@@ -72,7 +72,7 @@ export const Calibrate = (sm: SceneManager): Scene => {
       }
       // 키 안내
       let kx = 48
-      for (const [k, label] of (done() ? [['Enter', '적용'], ['R', '다시'], ['Esc', '취소']] : [['R', '다시'], ['Esc', '취소']]) as [string, string][]) kx = chip(g, kx, 684, k, label, '#0b2a6b', k === 'R' ? 'r' : undefined)
+      for (const [k, label] of (done() ? [['Enter', '적용'], ['R', '다시'], ['Esc', '취소']] : [['R', '다시'], ['Esc', '취소']]) as [string, string][]) kx = chip(g, kx, 684, k, label, '#fff', k === 'R' ? 'r' : undefined)
     },
     keydown(e) {
       if (e.key === 'Escape') { leave(); return }
