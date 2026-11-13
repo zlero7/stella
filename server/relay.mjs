@@ -4,6 +4,7 @@
 import http from 'node:http'
 import crypto from 'node:crypto'
 import fs from 'node:fs'
+import { pipeline } from 'node:stream'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { WebSocketServer } from 'ws'
@@ -32,7 +33,7 @@ const TYPES = { mp4: 'video/mp4', mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'aud
 const CORS = { 'Access-Control-Allow-Origin': '*', 'X-Content-Type-Options': 'nosniff' } // 로그인은 쿠키가 아니라 Authorization 헤더로 하므로 *여도 다른 사이트가 세션을 쓸 수 없다
 const CHART = /^\dk-[\w-]+\.json$/, MEDIA = /^[\w-]+\.(\w+)$/
 const servable = n => n === 'meta.json' || CHART.test(n) || (MEDIA.exec(n) && [...AUDIO, ...IMG].includes(MEDIA.exec(n)[1].toLowerCase()))
-let indexCache = { at: 0, body: '' }
+let indexCache = { at: 0, body: '', etag: '' }
 function songIndex() {
   if (Date.now() - indexCache.at < 30000) return indexCache.body
   const out = []
@@ -41,7 +42,7 @@ function songIndex() {
     const dir = path.join(SONGS, d.name)
     let meta, names
     try { meta = JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8')); names = fs.readdirSync(dir) } catch { continue }
-    if (!meta || typeof meta !== 'object' || typeof meta.audio !== 'string') continue
+    if (!meta || typeof meta !== 'object' || typeof meta.audio !== 'string' || !names.includes(meta.audio)) continue // 음원이 없는 폴더는 목록에 올리지 않는다 (받다 만 곡)
     for (const k of ['cover', 'bg']) { const f = [meta[k], ...IMG.map(x => `${k}.${x}`)].find(f => f && names.includes(f)); if (f) meta[k] = f; else delete meta[k] }
     meta.charts = names.filter(n => CHART.test(n))
     // meta.json은 맨 끝: 앱은 meta.json이 있는 폴더를 "다 받은 곡"으로 본다
@@ -50,7 +51,8 @@ function songIndex() {
     // v: 곡 내용의 지문. 앱은 받아 둔 곡의 v가 서버와 다르면 그 곡을 다시 받는다 (채보를 고쳐도 유저에게 전해지게)
     out.push({ dir: d.name, meta, v: crypto.createHash('sha1').update(JSON.stringify(fl)).digest('hex').slice(0, 10), files: fl.map(({ name, size }) => ({ name, size })) })
   }
-  indexCache = { at: Date.now(), body: JSON.stringify(out) }
+  const body = JSON.stringify(out)
+  indexCache = { at: Date.now(), body, etag: '"' + crypto.createHash('sha1').update(body).digest('hex').slice(0, 16) + '"' }
   return indexCache.body
 }
 const CHUNK = 2 << 20
@@ -69,18 +71,32 @@ function sendSong(req, res, dir, file) {
   const part = a > 0 || b < st.size - 1
   if (media && req.method !== 'HEAD') { // 계정 하나가 곡 전체를 긁어 가 회선을 막지 못하게: 하루 DL_MAX 바이트까지
     if (overQuota(who.id)) return json(res, 429, { error: '오늘 받을 수 있는 곡 용량을 다 썼습니다. 내일 다시 해 주세요' })
-    addBytes(who.id, b - a + 1)
   }
   res.writeHead(part ? 206 : 200, { ...CORS, 'Content-Type': TYPES[file.split('.').pop().toLowerCase()] ?? 'application/octet-stream', 'Accept-Ranges': 'bytes', ...(media && { 'Cache-Control': 'private, no-store' }), 'Content-Length': b - a + 1, ...(part && { 'Content-Range': `bytes ${a}-${b}/${st.size}` }) })
-  if (req.method === 'HEAD') res.end(); else fs.createReadStream(p, { start: a, end: b }).on('error', () => res.destroy()).pipe(res)
+  if (req.method === 'HEAD') { res.end(); return }
+  // 실제로 보낸 만큼만 한도에 센다 (끊고 다시 받는 재시도가 매번 전체 크기로 깎이지 않게). 미리듣기 영상은 한도에 넣지 않는다. 받는 쪽이 끊으면 파일도 같이 닫는다
+  const rs = fs.createReadStream(p, { start: a, end: b }); let sent = 0
+  rs.on('data', c => { sent += c.length })
+  pipeline(rs, res, () => { if (media && file !== 'preview.mp4') addBytes(who.id, sent) })
 }
 
 // 계정: 비밀번호는 솔트를 쳐서 scrypt로만 저장한다 (원문은 저장도 로그도 안 한다). 로그인하면 임의 토큰(32바이트)을 주고, 서버에는 토큰의 sha256만 남긴다.
 // 비밀번호가 오가므로 터널(HTTPS)로만 공개한다는 전제다. 무차별 대입은 아이디+IP·IP별 실패 횟수로 막는다.
 // shortcut: 탈퇴·이메일 복구는 없다 (비밀번호를 잊으면 users.json에서 그 계정을 지워야 한다)
 const DATA = process.env.STELLA_DATA ? path.resolve(process.env.STELLA_DATA) : fileURLToPath(new URL('.', import.meta.url)) // 계정·랭킹 파일 폴더 (시험 서버는 STELLA_DATA로 따로 쓴다: 진짜 계정 파일을 건드리지 않게)
+const BACKUPS = process.env.STELLA_BACKUP ? path.resolve(process.env.STELLA_BACKUP) : path.join(DATA, 'backups') // 백업: 한 시간마다 계정·랭킹·프로필 이미지를 날짜 폴더에 복사한다
+// 파일이 있는데 못 읽으면(끊겨 잘렸거나 깨졌을 때) 빈 값으로 시작하지 않는다: 그러면 다음 저장과 백업이 진짜 데이터를 덮는다. .bak, 가장 최근 백업 순으로 되살리고, 다 안 되면 서버를 끈다
+function loadJson(file) {
+  if (!fs.existsSync(file)) return {}
+  const name = path.basename(file), tries = [file, file + '.bak']
+  try { for (const d of fs.readdirSync(BACKUPS).filter(d => /^d{4}-dd-dd$/.test(d)).sort().reverse()) tries.push(path.join(BACKUPS, d, name)) } catch { /* 백업 폴더가 아직 없다 */ }
+  for (const f of tries) {
+    try { const j = JSON.parse(fs.readFileSync(f, 'utf8')); if (j && typeof j === 'object') { if (f !== file) log(`${name}을(를) 읽지 못해 ${f}에서 되살렸습니다`); return j } } catch { /* 다음 후보 */ }
+  }
+  log(`${name}을(를) 읽을 수 없고 되살릴 백업도 없습니다. 데이터를 덮어쓰지 않으려고 서버를 끕니다`); process.exit(1)
+}
 const USERS = path.join(DATA, 'users.json'), TOKEN_TTL = 90 * 864e5, MAX_TOKENS = 5, MAX_USERS = 5000
-const users = Object.assign(Object.create(null), (() => { try { return JSON.parse(fs.readFileSync(USERS, 'utf8')) } catch { return {} } })()) // 아이디 -> {id, nick, salt, hash, tokens: [{h, at}], at}. 프로토타입 없는 객체: 아이디 "__proto__"가 통과하므로
+const users = Object.assign(Object.create(null), loadJson(USERS)) // 아이디 -> {id, nick, salt, hash, tokens: [{h, at}], at}. 프로토타입 없는 객체: 아이디 "__proto__"가 통과하므로
 const tokenIdx = new Map() // 토큰 해시 -> 아이디
 const reindex = () => { tokenIdx.clear(); for (const u of Object.values(users)) for (const t of u.tokens) tokenIdx.set(t.h, u.id) }
 reindex()
@@ -133,8 +149,7 @@ const FAIL_WIN = 15 * 60 * 1000
 const lockedOut = (id, ip) => spent(`fail|${id}|${ip}`, 8, FAIL_WIN) || spent('failip|' + ip, 30, FAIL_WIN)
 const noteFail = (id, ip) => { bump(`fail|${id}|${ip}`, FAIL_WIN); bump('failip|' + ip, FAIL_WIN) }
 const AVATARS = path.join(DATA, 'avatars'), AVATAR_MAX = 64 * 1024
-// 백업: 한 시간마다 계정·랭킹·프로필 이미지를 날짜 폴더에 복사한다 (그날 마지막 것이 남고, 7일치만 둔다). 다른 드라이브에 두려면 STELLA_BACKUP
-const BACKUPS = process.env.STELLA_BACKUP ? path.resolve(process.env.STELLA_BACKUP) : path.join(DATA, 'backups')
+// 백업 (그날 마지막 것이 남고, 7일치만 둔다). 다른 드라이브에 두려면 STELLA_BACKUP
 function backup() {
   try {
     const dir = path.join(BACKUPS, new Date().toISOString().slice(0, 10))
@@ -174,7 +189,7 @@ async function authApi(req, res, route) {
     if (!/^[a-z0-9_]{4,16}$/.test(id)) return json(res, 400, { error: '아이디는 영문 소문자·숫자·_ 4~16자입니다' })
     if (pw.length < 8 || pw.length > 64) return json(res, 400, { error: '비밀번호는 8~64자입니다' })
     if (pw.toLowerCase() === id) return json(res, 400, { error: '아이디와 같은 비밀번호는 쓸 수 없습니다' })
-    if (users[id]) return json(res, 409, { error: '이미 있는 아이디입니다' })
+    if (users[id]) { bump('reg|' + ip, WIN); return json(res, 409, { error: '이미 있는 아이디입니다' }) } // 없는 아이디 찾기도 횟수에 센다
     if (nickRejected(res, nick)) return
     if (Object.keys(users).length >= MAX_USERS) return json(res, 503, { error: '지금은 가입할 수 없습니다' })
     bump('reg|' + ip, WIN)
@@ -198,9 +213,15 @@ async function authApi(req, res, route) {
 // shortcut: 시작 기록은 가짜 점수를 "느리게" 할 뿐 막지는 못한다 (곡 길이만큼 기다린 뒤 만점을 올리는 건 가능), 필요해지면 판정 기록(리플레이)을 서버가 검증하게 바꾼다
 const RANKS = path.join(DATA, 'ranks.json'), TOP = 50, MIN_PLAY = 0.8
 let ranks = {}
-try { ranks = JSON.parse(fs.readFileSync(RANKS, 'utf8')) } catch { /* 처음엔 없다 */ }
+ranks = loadJson(RANKS)
 let saveTimer
-const saveRanks = () => { clearTimeout(saveTimer); saveTimer = setTimeout(() => fs.writeFile(RANKS, JSON.stringify(ranks), e => e && log('랭킹 저장 실패', e.message)), 2000) }
+const writeRanks = () => { fs.writeFileSync(RANKS + '.tmp', JSON.stringify(ranks)); fs.renameSync(RANKS + '.tmp', RANKS) } // 임시 파일을 거쳐서: 쓰다 끊겨도 기존 파일은 안 잘린다
+const saveRanks = () => { clearTimeout(saveTimer); saveTimer = setTimeout(() => { try { writeRanks() } catch (e) { log('랭킹 저장 실패', e.message) } }, 2000) }
+// 끌 때 밀린 저장을 바로 한다: 2초 모아 쓰기 때문에 재시작 직전의 경험치·LP·랭킹이 사라지던 것을 막는다
+let flushed = false
+const flush = () => { if (flushed) return; flushed = true; clearTimeout(usersTimer); clearTimeout(saveTimer); try { saveUsers(); writeRanks() } catch (e) { log('종료 저장 실패', e.message) } }
+process.on('exit', flush)
+for (const sig of ['SIGINT', 'SIGTERM', 'SIGBREAK']) process.on(sig, () => process.exit(0))
 const BADGES = ['ALL PERFECT', 'FULL COMBO']
 const BOARD = /^([\w-]{1,64})\/([46]k-(?:easy|normal|hard|stella))$/
 // 채보의 마지막 노트 시각(초) = 곡을 끝까지 치는 데 걸리는 최소 시간. 채보가 없으면 undefined
@@ -319,9 +340,13 @@ const server = http.createServer((req, res) => {
   if (auth) { authApi(req, res, auth[1]).catch(e => { log('인증 오류', e.message); if (!res.headersSent) res.writeHead(500, CORS); res.end() }); return }
   if (rank && (req.method === 'GET' || req.method === 'POST')) { rankApi(req, res, rank[1], rank[2]); return }
   if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405); res.end(); return }
-  if (url === '/version') json(res, 200, APP)
+  if (url === '/version') json(res, 200, { ...APP, verify: !!cleanChart }) // verify: 노트 총수 대조가 켜져 있는지 (꺼졌으면 점검)
   else if (url === '/songs/index.json') {
-    try { res.writeHead(200, { ...CORS, 'Content-Type': 'application/json; charset=utf-8' }); res.end(songIndex()) } catch (e) { log('목록 오류', e.message); res.destroy() }
+    try { // ETag: 곡이 안 바뀌었으면 240KB를 다시 보내지 않는다
+      const body = songIndex()
+      if (req.headers['if-none-match'] === indexCache.etag) { res.writeHead(304, { ...CORS, ETag: indexCache.etag }); res.end(); return }
+      res.writeHead(200, { ...CORS, 'Content-Type': 'application/json; charset=utf-8', ETag: indexCache.etag, 'Cache-Control': 'no-cache' }); res.end(body)
+    } catch (e) { log('목록 오류', e.message); res.destroy() }
   } else if (song) sendSong(req, res, song[1], song[2])
   else if (avatar) { // 프로필 이미지는 공개 (주소의 ?v=가 바뀌면 새 파일)
     fs.readFile(path.join(AVATARS, avatar[1] + '.jpg'), (e, b) => { if (e) { res.writeHead(404, CORS); res.end() } else { res.writeHead(200, { ...CORS, 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=31536000, immutable', 'Content-Length': b.length }); res.end(b) } })

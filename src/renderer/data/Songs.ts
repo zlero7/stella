@@ -76,39 +76,74 @@ export async function loadSongs(): Promise<Song[]> {
 }
 
 // 서버에서 곡 파일을 받아 곡 폴더에 둔다 (이미 있으면 바로 끝). progress는 0~1
-// 같은 곡을 동시에 받지 않는다 (래더에서 미리 받는 중에 곡이 정해지는 경우): 이미 받는 중이면 그 받기를 기다린다
-const inflight = new Map<string, Promise<void>>()
+// 같은 곡을 동시에 받지 않는다 (래더에서 미리 받는 중에 곡이 정해지는 경우): 이미 받는 중이면 그 받기에 붙는다.
+// 진행률은 붙은 모두에게 알리고, 받기는 붙은 모두가 취소했을 때만 멈춘다 (먼저 붙은 쪽의 취소·진행률을 뒤의 쪽이 물려받지 않게)
+interface Job { p: Promise<void>; subs: Set<(p: number) => void>; live: number; ctl: AbortController; last: number }
+const inflight = new Map<string, Job>()
 export async function ensureSong(s: Song, progress: (p: number) => void, signal?: AbortSignal) {
   if (!s.remote) return
-  let p = inflight.get(s.dir)
-  if (!p) { p = download(s, progress, signal).finally(() => inflight.delete(s.dir)); inflight.set(s.dir, p) }
-  await p
+  let j = inflight.get(s.dir)
+  if (!j) {
+    const job: Job = { p: undefined as unknown as Promise<void>, subs: new Set(), live: 0, ctl: new AbortController(), last: 0 }
+    job.p = download(s, p => { job.last = p; job.subs.forEach(f => f(p)) }, job.ctl.signal).finally(() => inflight.delete(s.dir))
+    inflight.set(s.dir, job); j = job
+  }
+  const job = j
+  job.subs.add(progress); job.live++; progress(job.last)
+  let off = false
+  const leave = () => { if (off) return; off = true; job.subs.delete(progress); if (--job.live <= 0) job.ctl.abort() }
+  signal?.addEventListener('abort', leave, { once: true })
+  try { if (signal?.aborted) leave(); await job.p } finally { off || (job.subs.delete(progress), job.live--) }
   s.remote = false
 }
+
+const STALL_MS = 20000, TRIES = 3
+const msgOf = (err: unknown) => err instanceof Error && /Failed to fetch|NetworkError|Load failed/i.test(err.message) ? '서버에 연결하지 못했습니다' : err instanceof Error ? err.message : '곡을 받지 못했습니다'
 // 파일을 4개씩 동시에 받는다 (터널을 거치면 요청마다 0.3~1초 걸려서, 작은 파일 열 개를 차례로 받으면 그것만으로 몇 초가 간다). meta.json은 맨 끝: 끊겨도 다음에 처음부터 다시 받는다
-async function download(s: Song, progress: (p: number) => void, signal?: AbortSignal) {
+// 한 파일은 20초 동안 한 바이트도 안 오면 끊고 다시 받는다(최대 3번). 다 받고 나서 크기가 서버 목록과 다르면 실패로 본다
+async function download(s: Song, progress: (p: number) => void, signal: AbortSignal) {
   const e = entries.find(x => x.dir === s.dir)
   if (!e) throw new Error('서버 목록에 없는 곡')
   const total = e.files.reduce((n, f) => n + f.size, 0) || 1
   let done = 0
   const stop = new AbortController() // 하나가 실패하면 나머지도 멈춘다
-  signal?.addEventListener('abort', () => stop.abort())
-  const get = async (f: { name: string }) => {
-    const r = await fetch(`${serverUrl()}/songs/${encodeURIComponent(s.dir)}/${encodeURIComponent(f.name)}`, { signal: stop.signal, headers: account.token ? { Authorization: `Bearer ${account.token}` } : {} })
-    if (r.status === 401 || r.status === 429) throw new Error(((await r.json().catch(() => ({}))) as { error?: string }).error ?? '곡을 받을 수 없습니다')
-    if (!r.ok || !r.body) throw new Error(`${f.name}: ${r.status}`)
-    const chunks: Uint8Array[] = [], rd = r.body.getReader()
-    for (let c = await rd.read(); !c.done; c = await rd.read()) { chunks.push(c.value); done += c.value.length; progress(Math.min(done / total, 1)) }
-    const data = new Uint8Array(chunks.reduce((n, c) => n + c.length, 0))
-    chunks.reduce((off, c) => (data.set(c, off), off + c.length), 0)
-    await window.api.putFile(s.dir, f.name, data)
+  signal.addEventListener('abort', () => stop.abort())
+  const once = async (f: { name: string; size: number }) => {
+    const ctl = new AbortController(), cut = () => ctl.abort()
+    stop.signal.addEventListener('abort', cut, { once: true })
+    let timer = setTimeout(cut, STALL_MS), got = 0
+    try {
+      const r = await fetch(`${serverUrl()}/songs/${encodeURIComponent(s.dir)}/${encodeURIComponent(f.name)}`, { signal: ctl.signal, headers: account.token ? { Authorization: `Bearer ${account.token}` } : {} })
+      if (r.status === 401 || r.status === 429) throw Object.assign(new Error(((await r.json().catch(() => ({}))) as { error?: string }).error ?? '곡을 받을 수 없습니다'), { fatal: true })
+      if (r.status === 404) throw Object.assign(new Error(`서버에 ${f.name} 파일이 없습니다`), { fatal: true })
+      if (!r.ok || !r.body) throw new Error(`${f.name}: ${r.status}`)
+      const chunks: Uint8Array[] = [], rd = r.body.getReader()
+      for (let c = await rd.read(); !c.done; c = await rd.read()) { clearTimeout(timer); timer = setTimeout(cut, STALL_MS); chunks.push(c.value); got += c.value.length; done += c.value.length; progress(Math.min(done / total, 1)) }
+      if (f.size && got !== f.size) throw new Error(`${f.name}: 크기가 다릅니다 (${got}/${f.size})`)
+      const data = new Uint8Array(got)
+      chunks.reduce((off, c) => (data.set(c, off), off + c.length), 0)
+      await window.api.putFile(s.dir, f.name, data)
+    } catch (err) {
+      done -= got // 다시 받으면 이 파일의 진행분은 처음부터
+      if (stop.signal.aborted) throw err
+      if (ctl.signal.aborted) throw new Error(`${f.name}: ${STALL_MS / 1000}초 동안 응답이 없습니다`)
+      throw err
+    } finally { clearTimeout(timer); stop.signal.removeEventListener('abort', cut) }
+  }
+  const get = async (f: { name: string; size: number }) => {
+    for (let n = 1; ; n++) {
+      try { return await once(f) } catch (err) {
+        if (stop.signal.aborted || n >= TRIES || (err as { fatal?: boolean }).fatal) throw err
+        await new Promise(r => setTimeout(r, 800 * n)) // 잠깐 쉬고 다시
+      }
+    }
   }
   const rest = e.files.filter(f => f.name !== 'meta.json'), meta = e.files.find(f => f.name === 'meta.json')
   let next = 0
   try {
     await Promise.all(Array.from({ length: Math.min(4, rest.length) }, async () => { while (next < rest.length) await get(rest[next++]) }))
     if (meta) await get(meta)
-  } catch (err) { stop.abort(); throw err }
+  } catch (err) { stop.abort(); throw new Error(msgOf(err)) }
   remoteDirs.delete(s.dir)
   if (e.v) writeVers({ ...readVers(), [s.dir]: e.v })
 }
