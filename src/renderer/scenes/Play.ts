@@ -327,7 +327,7 @@ export const Play = (sm: SceneManager): Scene => {
       })
       drawConsoleFront(g, FIELD_X, fw, JUDGE_Y, { score: sk.score, scroll: settings.scroll, mult: sk.mult, hp: sk.hp, hpLow: sk.hp <= 25 }, gs)
       g.textAlign = 'center'; g.font = `900 22px ${FONT}`; g.fillStyle = sk.accuracy >= 100 ? '#ffe27a' : 'rgba(255,255,255,.85)' // 판정선 위: 지금까지의 정확도
-      if (settings.hudRate && sk.counts.some(n => n)) g.fillText(`${sk.accuracy >= 100 ? 'MAX ' : ''}${sk.accuracy.toFixed(sk.accuracy >= 100 ? 0 : 1)}%`, FIELD_X + fw / 2, JUDGE_Y - 36); g.textAlign = 'left'
+      if (settings.hudRate && sk.counts.some(n => n)) g.fillText(`${sk.accuracy.toFixed(sk.accuracy >= 100 ? 0 : 1)}%`, FIELD_X + fw / 2, JUDGE_Y - 36); g.textAlign = 'left'
       // 체력 게이지: 기어 양옆 틀 안의 세로 막대 두 줄. 가득 → 하늘색, 절반 아래 → 금색, 25% 아래 → 깜빡이는 빨강
       dispHp += (sk.hp - dispHp) * 0.2
       const hy = 90, hh = JUDGE_Y - hy, fillH = (hh * dispHp) / 100
@@ -376,15 +376,15 @@ export const Play = (sm: SceneManager): Scene => {
         g.font = `900 17px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.95)'; g.fillText(ap ? 'ALL PERFECT' : fc ? 'FULL COMBO' : 'COMBO', CX, 278)
       }
       const age = performance.now() - flash.at
-      if (age < 380 && settings.hudJudge) { // 판정 글자: 노트를 보는 시선 가까이(판정선 위 50px)에 짧게 떴다 사라진다
+      if (age < 380 && settings.hudJudge) { // 판정 글자: 정확도(%) 글자(y484) 위에 겹치지 않게 그보다 60px 위에 짧게 떴다 사라진다
         g.globalAlpha = 1 - age / 380
         const jn = flash.j === 0 && Math.abs(flash.dt) <= MAX_WIN * sk.mul ? 'MAX' : JUDGES[flash.j].name // PERFECT 중 ±25ms 이내는 MAX
-        g.font = `900 36px ${FONT}`; g.lineJoin = 'round'; g.lineWidth = 5; g.strokeStyle = 'rgba(4,9,24,.85)'; g.strokeText(jn, CX, 470)
-        if (flash.j === 0) { const gg = g.createLinearGradient(0, 440, 0, 476); gg.addColorStop(0, '#fff6c2'); gg.addColorStop(0.55, '#ffd04a'); gg.addColorStop(1, '#d98a00'); g.fillStyle = gg } else g.fillStyle = JUDGE_COLORS[flash.j] // PERFECT는 금색
-        g.fillText(jn, CX, 470)
+        g.font = `900 36px ${FONT}`; g.lineJoin = 'round'; g.lineWidth = 5; g.strokeStyle = 'rgba(4,9,24,.85)'; g.strokeText(jn, CX, 424)
+        if (flash.j === 0) { const gg = g.createLinearGradient(0, 394, 0, 430); gg.addColorStop(0, '#fff6c2'); gg.addColorStop(0.55, '#ffd04a'); gg.addColorStop(1, '#d98a00'); g.fillStyle = gg } else g.fillStyle = JUDGE_COLORS[flash.j] // PERFECT는 금색
+        g.fillText(jn, CX, 424)
         if (settings.fastSlow && flash.j !== MISS && flash.j !== 0) {
           g.font = `700 18px ${FONT}`; g.fillStyle = flash.dt > 0 ? CYAN : AMBER
-          g.fillText(flash.dt > 0 ? 'FAST' : 'SLOW', CX, 498)
+          g.fillText(flash.dt > 0 ? 'FAST' : 'SLOW', CX, 450)
         }
         g.globalAlpha = 1
       }
