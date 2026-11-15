@@ -202,7 +202,7 @@ export const SongSelect = (sm: SceneManager): Scene => {
       g.font = `900 17px ${FONT}`; g.fillText('BUTTON', PX + 52, 108); g.font = `800 13px ${FONT}`; g.fillStyle = '#d6ecff'; g.fillText('TUNES', PX + 52, 125)
       g.font = `800 13px ${FONT}`; g.fillStyle = AMBER; g.textAlign = 'right'; g.fillText(vsMode ? 'VERSUS' : 'FREESTYLE', PX + PW - 14, 112); g.textAlign = 'left'
       // 곡 그림
-      const AY = 132, AH = 224, im = artOf(song)!.img
+      const AY = 132, AH = 224, art = artOf(song)!, im = art.wide ?? art.img // 큰 배경 그림이 있으면 그것을 (480px 표지를 가로로 늘려 뭉개지 않게)
       g.save(); g.beginPath(); g.rect(PX, AY, PW, AH); g.clip(); g.fillStyle = '#000'; g.fillRect(PX, AY, PW, AH); drawCover(g, im, im.width, im.height, PX, AY, PW, AH)
       const sh = g.createLinearGradient(0, AY + AH - 110, 0, AY + AH); sh.addColorStop(0, 'rgba(4,12,40,0)'); sh.addColorStop(1, 'rgba(4,12,40,.92)'); g.fillStyle = sh; g.fillRect(PX, AY + AH - 110, PW, 110)
       g.restore()
