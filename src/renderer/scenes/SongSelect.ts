@@ -244,14 +244,22 @@ export const SongSelect = (sm: SceneManager): Scene => {
         for (let k = 0; k < 10; k++) { starPath(g, PX + 86 + k * 24, sy, 9); g.fillStyle = k < filled ? `hsl(${335 - k * 14} 92% 62%)` : 'rgba(255,255,255,.16)'; g.fill() }
         g.font = `900 20px ${FONT}`; g.fillStyle = '#fff'; g.textAlign = 'right'; g.fillText(lv ? String(lv) : '-', PX + PW - 16, sy + 7); g.textAlign = 'left'
       }
-      // 기록: 점수 · 정확도 · 최대 콤보 (고른 난이도)
-      const top = getRecords(song.dir, ds[di])[0]
-      g.fillStyle = 'rgba(6,11,28,.7)'; g.fillRect(PX + 8, 486, PW - 16, 90); g.fillStyle = 'rgba(255,255,255,.2)'; g.fillRect(PX + 8, 486, PW - 16, 1)
-      ;[['SCORE', top ? String(top.score).padStart(7, '0') : '-'], ['RATE', top ? `${top.accuracy.toFixed(2)}%` : '-'], ['MAX COMBO', top ? String(top.maxCombo) : '-']].forEach(([lab, val], k) => {
-        const y = 510 + k * 28
-        g.font = `700 12px ${FONT}`; g.fillStyle = CYAN; g.fillText(lab, PX + 26, y); g.font = `800 20px ${FONT}`; g.fillStyle = top ? '#fff' : 'rgba(255,255,255,.4)'; g.textAlign = 'right'; g.fillText(val, PX + PW - 28, y + 3); g.textAlign = 'left'
-        g.fillStyle = 'rgba(255,255,255,.1)'; if (k < 2) g.fillRect(PX + 22, y + 11, PW - 44, 1)
-      })
+      // ── 기록 카드: 왼쪽에 정확도 링(안에 등급), 오른쪽에 점수를 크게, 아래에 정확도와 최대 콤보
+      const dcol = col0(ds[di]), top = getRecords(song.dir, ds[di])[0]
+      {
+        const RY = 470, RH = 112, rx = PX + 62, ry = RY + RH / 2, dim = 'rgba(255,255,255,.32)'
+        g.fillStyle = 'rgba(4,9,28,.8)'; g.fillRect(PX + 8, RY, PW - 16, RH); g.fillStyle = dcol; g.fillRect(PX + 8, RY, 4, RH)
+        g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(PX + 8, RY, PW - 16, 1)
+        g.lineCap = 'round'; g.lineWidth = 9; g.strokeStyle = 'rgba(255,255,255,.12)'; g.beginPath(); g.arc(rx, ry, 38, 0, Math.PI * 2); g.stroke()
+        if (top) { g.save(); g.strokeStyle = top.accuracy >= 99 ? '#ffd84a' : dcol; g.shadowColor = g.strokeStyle; g.shadowBlur = 10; g.beginPath(); g.arc(rx, ry, 38, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(top.accuracy / 100, 1)); g.stroke(); g.restore() }
+        g.lineCap = 'butt'; g.textAlign = 'center'; g.font = `900 ${top ? 30 : 24}px ${FONT}`; g.fillStyle = top ? '#fff' : dim; g.fillText(top ? rankOf(top.accuracy) : '-', rx, ry + (top ? 11 : 9)); g.textAlign = 'left'
+        const sx = PX + 128
+        g.font = `700 12px ${FONT}`; g.fillStyle = CYAN; g.fillText('SCORE', sx, RY + 28)
+        if (top?.badge) { g.font = `800 12px ${FONT}`; g.fillStyle = top.badge === 'ALL PERFECT' ? '#ffd84a' : '#9aeaff'; g.textAlign = 'right'; g.fillText(top.badge, PX + PW - 20, RY + 28); g.textAlign = 'left' }
+        g.font = `800 46px ${FONT}`; g.fillStyle = top ? '#fff' : dim; g.fillText(top ? String(top.score).padStart(7, '0') : '0000000', sx - 2, RY + 72)
+        g.font = `700 12px ${FONT}`; g.fillStyle = CYAN; g.fillText('RATE', sx, RY + 98); g.fillText('MAX COMBO', sx + 130, RY + 98)
+        g.font = `800 16px ${FONT}`; g.fillStyle = top ? '#fff' : dim; g.fillText(top ? `${top.accuracy.toFixed(2)}%` : '--.--%', sx + 46, RY + 99); g.fillText(top ? String(top.maxCombo) : '-', sx + 214, RY + 99)
+      }
       // 옵션: 스크롤 속도 칸(눌러서 설정으로) · 노트 색 · 필드 위치
       g.font = `700 12px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.75)'; g.fillText('OPTIONS', PX + 10, 598)
       ;([['SPEED', settings.scroll.toFixed(1), '스크롤', true], ['NOTE', (() => { const gs = gearOf(settings.gearSkin, prof.v); return gs.id === 'steel' ? NOTE_COLORS[settings.noteColor]?.[0] ?? NOTE_COLORS[0][0] : gs.name })(), '', false], ['FIELD', ['왼쪽', '가운데', '오른쪽'][settings.align] ?? '가운데', '', false]] as [string, string, string, boolean][]).forEach(([lab, val, sub, hot], k) => {
