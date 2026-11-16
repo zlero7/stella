@@ -74,7 +74,8 @@ export const TITLES = [
   { id: 'veteran', name: '베테랑', need: '레벨 50', ok: s => s.level >= 50 },
   { id: 'lord', name: '래더 마스터', need: '래더 MASTER', ok: s => s.lp >= MASTER_LP }
 ]
-const open = (list, u) => { const s = stat(u); return list.map(({ id, name, need, ok }) => ({ id, name, need, on: ok(s) })) }
+const OWNER = 'zlero' // 제작자 계정은 꾸미기를 전부 쓴다 (클라이언트 render/gear.ts와 같은 아이디)
+const open = (list, u) => { const s = stat(u); return list.map(({ id, name, need, ok }) => ({ id, name, need, on: u.id === OWNER || ok(s) })) }
 export const canEquip = (u, kind, id) => open(kind === 'plate' ? PLATES : TITLES, u).some(x => x.id === id && x.on)
 
 // 래더를 한 판도 안 했으면 티어 대신 UNRANKED (LP는 0에서 시작해 첫 판부터 오른다)

@@ -3,6 +3,7 @@ import { FONT, glow, lighten, starPath } from './theme'
 import type { Profile } from '../data/Profile'
 import { skinSprite } from '../game/noteSkins'
 import { ART, type PathFn } from './skinsArt'
+const OWNER_ID = 'zlero' // 제작자 계정은 꾸미기를 조건 없이 전부 쓴다
 
 const img = (src: string) => { const i = new Image(); i.src = src; return i }
 // 스킨마다 치비 한 쌍: assets/chibi/<스킨 id>-l.png, -r.png (없으면 steel의 것). 그림을 더하려면 tools/split-chibi.ps1
@@ -31,7 +32,7 @@ export const GEAR_SKINS: GearSkin[] = [
   sk('arcade', '레트로 아케이드', '레벨 25', p => p.level >= 25, '#0b0f08', '#2a3a1a', '#a7c23a', '#c8ff3a', '#ff9a1f', '#b8ff5a', '2,8,2', ['#e8601f', '#c9a21f', '#5fa82f'])
 ]
 // 지금 쓸 기어: 고른 번호가 아직 안 풀렸으면 스틸 (프로필이 없으면 스틸만 쓴다)
-export const gearOf = (i: number, p: Profile | undefined) => { const g = GEAR_SKINS[i] ?? GEAR_SKINS[0]; return p && g.ok(p) || g === GEAR_SKINS[0] ? g : GEAR_SKINS[0] }
+export const gearOf = (i: number, p: Profile | undefined) => { const g = GEAR_SKINS[i] ?? GEAR_SKINS[0]; return p && (p.id === OWNER_ID || g.ok(p)) || g === GEAR_SKINS[0] ? g : GEAR_SKINS[0] }
 // 스킨마다 다른 생김새: 기둥 무늬(rail)·필드 바탕 무늬(field)·날개 모양(wing)·콘솔 윗모서리를 깎는 정도(cut)
 type RailStyle = 'steel' | 'neon' | 'rope' | 'vine' | 'thorn' | 'wave' | 'circuit' | 'ice' | 'stripe' | 'flat' | 'pixel' | 'soft'
 type FieldStyle = 'none' | 'grid' | 'lattice' | 'petals' | 'leaves' | 'slashes' | 'waves' | 'hex' | 'snow' | 'rays' | 'pixels'
