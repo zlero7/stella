@@ -7,8 +7,8 @@ import { PLATE_COLOR, TIER_COLOR, prof, refreshProfile } from '../data/Profile'
 import { FONT, AMBER, CYAN, ICE, accentFill, artOf, chip, drawBg, drawCover, ease, fit, glow, header, hit, pill, press, slant } from '../render/theme'
 import { avatarCircle, gem } from '../render/profileCard'
 
-// 래더 매치: 대기열 → 상대 확정 → 곡 5개를 번갈아 밴 → 남은 한 곡으로 한 판 (결과는 서버가 판정해 LP가 바뀐다). 디맥 래더처럼 양옆에 두 사람, 가운데에 곡 카드
-const KEYS = 4
+// 래더 매치: 대기열 → 상대 확정 → 곡 5개 중 3개가 남을 때까지 번갈아 밴 → 남은 3곡을 차례로 쳐서 3판 2선승 (결과는 서버가 판정해 LP가 바뀐다). 디맥 래더처럼 양옆에 두 사람, 가운데에 곡 카드
+const KEYS = 4, KEEP = 3 // KEEP: 밴이 끝났을 때 남는 곡 수
 const mmss = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
 
 export const Ladder = (sm: SceneManager): Scene => {
@@ -72,7 +72,7 @@ export const Ladder = (sm: SceneManager): Scene => {
       } else if (l) {
         side(g, 70, 'YOU', me, l.turn === 'you'); side(g, 940, 'RIVAL', l.opp, l.turn === 'opp')
         // 가운데: 곡 카드 5장
-        const header = l.state === 'ban' ? (l.turn === 'you' ? '밴할 곡을 고르세요' : '상대가 고르는 중…') : l.state === 'prep' ? '오늘의 곡이 정해졌습니다' : '시작합니다'
+        const header = l.state === 'ban' ? (l.turn === 'you' ? '밴할 곡을 고르세요' : '상대가 고르는 중…') : l.state === 'prep' ? `${l.round}번째 곡 · 3판 2선승` : '시작합니다'
         g.textAlign = 'center'; g.font = `800 22px ${FONT}`; g.fillStyle = '#fff'; g.fillText(header, 640, 120)
         if (l.state === 'ban') {
           const left = Math.max(0, Math.ceil((l.deadline - now) / 1000))
@@ -80,9 +80,9 @@ export const Ladder = (sm: SceneManager): Scene => {
         }
         const fr = free()
         l.songs.forEach((s, i) => {
-          const banned = l.banned.includes(i), picked = l.state !== 'ban' && i === l.pick, y = 176 + i * 92, k = ease('lad' + i, l.state === 'ban' && l.turn === 'you' && i === focus && !banned)
+          const banned = l.banned.includes(i), picked = l.state !== 'ban' && i === l.pick, turnNo = l.order.indexOf(i) + 1, y = 176 + i * 92, k = ease('lad' + i, l.state === 'ban' && l.turn === 'you' && i === focus && !banned)
           const x = 395 - 18 * k, w = 490 + 36 * k
-          if (l.state !== 'ban' && !picked) g.globalAlpha = 0.35
+          if (l.state !== 'ban' && !picked) g.globalAlpha = banned ? 0.35 : 0.7 // 밴이 끝나면 남은 3곡은 보이고 지금 칠 곡만 강조
           slant(g, x, y, w, 80, 20); g.fillStyle = 'rgba(6,11,28,.8)'; g.fill(); g.strokeStyle = picked ? AMBER : `rgba(255,255,255,${0.3 * (1 - k)})`; g.lineWidth = picked ? 3 : 1; g.stroke()
           if (k > 0.01) { g.save(); g.globalAlpha *= k; const og = g.createLinearGradient(x, 0, x + w, 0); og.addColorStop(0, '#ffb13b'); og.addColorStop(0.7, '#ff7a59'); og.addColorStop(1, '#ff5c8a'); glow(g, 'rgba(255,140,60,.6)', 16, () => { slant(g, x, y, w, 80, 20); g.fillStyle = og; g.fill() }); g.restore() }
           const sg = byDir.get(s.dir), im = sg && artOf(sg)?.img
@@ -90,6 +90,7 @@ export const Ladder = (sm: SceneManager): Scene => {
           g.textAlign = 'left'; g.fillStyle = '#fff'; g.font = `800 19px ${FONT}`; g.fillText(fit(g, s.title, w - 190), x + 110, y + 34)
           g.font = `14px ${FONT}`; g.fillStyle = ICE; g.fillText(fit(g, s.artist, w - 190), x + 110, y + 58)
           g.textAlign = 'right'; g.font = `800 14px ${FONT}`; g.fillStyle = '#fff'; g.fillText(`${KEYS}K HARD`, x + w - 28, y + 46)
+          if (l.state !== 'ban' && turnNo > 0) { g.font = `900 13px ${FONT}`; g.fillStyle = picked ? AMBER : ICE; g.fillText(`${turnNo}번째 판`, x + w - 28, y + 24) }
           if (banned) { // 밴: 어둡게 덮고 BAN
             g.globalAlpha = 1; slant(g, x, y, w, 80, 20); g.fillStyle = 'rgba(10,10,30,.72)'; g.fill()
             g.save(); g.translate(x + w / 2, y + 40); g.rotate(-0.08); g.font = `900 34px ${FONT}`; g.textAlign = 'center'; g.fillStyle = '#ff5c6c'; g.fillText('BAN', 0, 12); g.restore()
@@ -98,7 +99,7 @@ export const Ladder = (sm: SceneManager): Scene => {
           if (l.state === 'ban' && l.turn === 'you' && !banned) hit(x, y, w, 80, () => { focus = i; press('Enter') }, () => { focus = i })
         })
         g.textAlign = 'center'; g.font = `600 14px ${FONT}`; g.fillStyle = ICE
-        g.fillText(l.state === 'prep' ? (l.starting ? '곡을 받는 중… 상대가 준비되면 시작합니다' : '') : l.state === 'ban' && fr.length > 1 ? `남은 곡 ${fr.length}개 → 하나가 남을 때까지 번갈아 밴합니다` : '', 640, 656)
+        g.fillText(l.state === 'prep' ? (l.starting ? '곡을 받는 중… 상대가 준비되면 시작합니다' : '') : l.state === 'ban' && fr.length > KEEP ? `남은 곡 ${fr.length}개 → ${KEEP}곡이 남을 때까지 번갈아 밴하고, 남은 곡을 차례로 쳐서 먼저 2승하면 이깁니다` : '', 640, 656)
       }
 
       let kx = 48

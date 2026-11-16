@@ -23,15 +23,17 @@ export const vs = {
   code: '', relayErr: '', // 중계 서버가 준 방 코드 · 서버가 알린 오류
   l: undefined as Ladder | undefined // 래더 진행 (대결이 아니면 없다)
 }
-// 래더: 서버가 짝을 지어 주고(l_match) 밴(l_ban)을 번갈아 한 뒤 곡이 정해지면(l_start) 곡을 받고 준비한다. l_go가 오면 대결과 같은 연결로 친다
+// 래더: 서버가 짝을 지어 주고(l_match) 곡 3개가 남을 때까지 밴(l_ban)을 번갈아 한 뒤, 남은 3곡을 차례로 3판 2선승으로 친다.
+// 판마다 곡이 정해지면(l_start) 곡을 받고 준비한다. l_go가 오면 대결과 같은 연결로 치고, 판이 끝나면 서버가 승패를 알린다(l_round)
 export interface LadderSong { dir: string; diff: string; title: string; artist: string }
 export interface LadderOpp { nick: string; level: number; tier: string; div: number; tierLabel: string; lp: number; titleName: string; avatar: string }
 export interface Ladder {
-  state: 'queue' | 'ban' | 'prep' | 'go' | 'cancel'
+  state: 'queue' | 'ban' | 'prep' | 'go' | 'between' | 'cancel'
   mid: string; opp?: LadderOpp; songs: LadderSong[]; banned: number[]; turn: 'you' | 'opp' | 'none'; deadline: number // deadline: 이 차례가 끝나는 시각(ms)
   pick: number; msg: string; starting: boolean
+  round: number; wins: [number, number]; roundRes: '' | 'WIN' | 'LOSE' | 'DRAW'; final: boolean; order: number[] // 지금 판 번호(1~3) · 내 승수 대 상대 승수 · 방금 판 결과 · 매치가 끝났나 · 칠 곡 3개의 번호
 }
-export const newLadder = (): Ladder => ({ state: 'queue', mid: '', songs: [], banned: [], turn: 'none', deadline: 0, pick: -1, msg: '', starting: false })
+export const newLadder = (): Ladder => ({ state: 'queue', mid: '', songs: [], banned: [], turn: 'none', deadline: 0, pick: -1, msg: '', starting: false, round: 1, wins: [0, 0], roundRes: '', final: false, order: [] })
 export const relayAddr = () => { const r = settings.relay?.trim(); return !r || r === '-' ? DEFAULT_RELAY : r }
 
 let sm: SceneManager
@@ -97,23 +99,26 @@ async function onMsg(m: Msg) {
     case 'l_wait': vs.l ??= newLadder(); break
     case 'l_match': {
       const l = vs.l ??= newLadder(), songs = Array.isArray(m.songs) ? (m.songs as LadderSong[]).slice(0, 5) : []
-      Object.assign(l, { state: 'ban', mid: String(m.mid ?? ''), opp: m.opp as LadderOpp, songs, banned: [], turn: m.turn === 'you' ? 'you' : 'opp', deadline: performance.now() + num(m.tleft, 15) * 1000 })
+      Object.assign(l, { state: 'ban', mid: String(m.mid ?? ''), opp: m.opp as LadderOpp, songs, banned: [], turn: m.turn === 'you' ? 'you' : 'opp', deadline: performance.now() + num(m.tleft, 15) * 1000, round: 1, wins: [0, 0], roundRes: '', final: false, order: [] })
       vs.peerNick = l.opp?.nick ?? ''
       break
     }
     case 'l_ban': if (vs.l) { vs.l.banned.push(num(m.idx, -1)); vs.l.turn = m.turn === 'you' ? 'you' : m.turn === 'opp' ? 'opp' : 'none'; vs.l.deadline = performance.now() + num(m.tleft) * 1000
-      const left = vs.l.songs.filter((_, i) => !vs.l!.banned.includes(i)) // 후보가 둘 남으면 미리 받아 둔다: 곡이 정해진 뒤에 받는 시간을 줄인다
-      if (left.length === 2) void loadSongs().then(all => left.forEach(x => { const s = all.find(y => y.dir === x.dir); if (s?.remote) void ensureSong(s, () => {}).catch(() => {}) }))
     } break
     case 'l_start': { // 곡이 정해졌다: 이 PC에 없으면 서버에서 받고 준비를 알린다
       const l = vs.l; if (!l) break
-      l.state = 'prep'; l.pick = num(m.idx, -1); l.starting = true
-      const song = (await loadSongs()).find(s => s.dir === m.dir)
+      resetRound(); l.state = 'prep'; l.pick = num(m.idx, -1); l.starting = true; l.roundRes = ''; l.final = false
+      l.round = num(m.round, 1); l.order = Array.isArray(m.order) ? (m.order as unknown[]).map(x => num(x, -1)) : []
+      if (Array.isArray(m.wins)) l.wins = [num(m.wins[0]), num(m.wins[1])]
+      const all = await loadSongs(), song = all.find(s => s.dir === m.dir)
       let ok = !!song && !!song.meta.audio
       if (ok) try { await ensureSong(song!, () => {}) } catch { ok = false }
+      // 남은 판의 곡도 미리 받아 둔다: 다음 판에서 기다리지 않게
+      if (ok) for (const i of l.order) { const x = l.songs[i], s = x && all.find(y => y.dir === x.dir); if (s?.remote) void ensureSong(s, () => {}).catch(() => {}) }
       if (!ok) { l.state = 'cancel'; l.msg = '곡을 받지 못했습니다'; break }
       send({ t: 'l_ready' }); break
     }
+    case 'l_round': if (vs.l) { const l = vs.l; l.round = num(m.round, l.round); if (Array.isArray(m.wins)) l.wins = [num(m.wins[0]), num(m.wins[1])]; l.roundRes = m.res === 'WIN' ? 'WIN' : m.res === 'LOSE' ? 'LOSE' : 'DRAW'; l.final = m.final === true; l.state = 'between' } break
     case 'l_cancel': if (vs.l) { vs.l.state = 'cancel'; vs.l.msg = String(m.msg ?? '매치가 취소됐습니다') } break
     case 'l_go': if (vs.l) { vs.role = m.role === 'host' ? 'host' : 'guest'; vs.l.state = 'go' } break
     case 'hello': vs.peerNick = String(m.nick ?? '').slice(0, 16) || 'PLAYER'; break
