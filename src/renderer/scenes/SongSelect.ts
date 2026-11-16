@@ -194,68 +194,72 @@ export const SongSelect = (sm: SceneManager): Scene => {
       const cur = song.meta, ds = diffs(), n = songs.length
 
       // 왼쪽 패널 (디맥의 곡 정보 카드): 모드 머리글 → 곡 그림(제목이 그림 위에) → 별 줄 → 난이도 패드 → 기록 → 옵션
-      const PX = 40, PW = 520
-      { // 패널 바탕: 고른 곡의 그림을 어둡게 깔아서 곡마다 분위기가 달라지고, 위에서 아래로 짙어진다
-        const bgi = artOf(song)!.bg
-        g.save(); g.beginPath(); g.rect(PX, 84, PW, 584); g.clip(); g.fillStyle = '#050b22'; g.fillRect(PX, 84, PW, 584)
-        g.globalAlpha = 0.85; drawCover(g, bgi, bgi.width, bgi.height, PX, 84, PW, 584); g.globalAlpha = 1
-        const pg0 = g.createLinearGradient(0, 84, 0, 668); pg0.addColorStop(0, 'rgba(6,16,50,.35)'); pg0.addColorStop(0.45, 'rgba(5,11,34,.72)'); pg0.addColorStop(1, 'rgba(4,8,26,.9)'); g.fillStyle = pg0; g.fillRect(PX, 84, PW, 584)
-        g.restore(); g.strokeStyle = 'rgba(255,255,255,.14)'; g.lineWidth = 1; g.strokeRect(PX + 0.5, 84.5, PW - 1, 583)
-      }
-      // 머리글: 기울어진 색 띠에 "4 BUTTON TUNES"
-      g.save(); g.beginPath(); g.moveTo(PX, 84); g.lineTo(PX + 330, 84); g.lineTo(PX + 304, 132); g.lineTo(PX, 132); g.closePath()
-      g.fillStyle = accentFill(g, PX, 330); g.fill(); g.restore()
-      g.font = `900 38px ${FONT}`; g.fillStyle = '#fff'; g.fillText(String(settings.keyMode), PX + 14, 123)
-      g.font = `900 17px ${FONT}`; g.fillText('BUTTON', PX + 52, 108); g.font = `800 13px ${FONT}`; g.fillStyle = '#d6ecff'; g.fillText('TUNES', PX + 52, 125)
-      g.font = `800 13px ${FONT}`; g.fillStyle = AMBER; g.textAlign = 'right'; g.fillText(vsMode ? 'VERSUS' : 'FREESTYLE', PX + PW - 14, 112); g.textAlign = 'left'
-      // 곡 그림
-      const AY = 132, AH = 224, art = artOf(song)!, im = art.wide ?? art.img // 큰 배경 그림이 있으면 그것을 (480px 표지를 가로로 늘려 뭉개지 않게)
-      g.save(); g.beginPath(); g.rect(PX, AY, PW, AH); g.clip(); g.fillStyle = '#000'; g.fillRect(PX, AY, PW, AH); drawCover(g, im, im.width, im.height, PX, AY, PW, AH)
-      const sh = g.createLinearGradient(0, AY + AH - 110, 0, AY + AH); sh.addColorStop(0, 'rgba(4,12,40,0)'); sh.addColorStop(0.55, 'rgba(4,12,40,.55)'); sh.addColorStop(1, 'rgba(4,12,40,.95)'); g.fillStyle = sh; g.fillRect(PX, AY + AH - 110, PW, 110)
+      const PX = 40, PW = 520, dcol = col0(ds[di]) // dcol: 고른 난이도의 색. 패널 전체의 포인트색이 된다
+      const art = artOf(song)!, im = art.wide ?? art.img // 큰 배경 그림이 있으면 그것을 (480px 표지를 가로로 늘려 뭉개지 않게)
+      // ── 바탕: 곡 그림을 어둡게 깐 유리판 + 가장자리 선
+      g.save(); g.beginPath(); g.rect(PX, 84, PW, 584); g.clip(); g.fillStyle = '#050b22'; g.fillRect(PX, 84, PW, 584)
+      g.globalAlpha = 0.8; drawCover(g, art.bg, art.bg.width, art.bg.height, PX, 84, PW, 584); g.globalAlpha = 1
+      const pg0 = g.createLinearGradient(0, 84, 0, 668); pg0.addColorStop(0, 'rgba(6,16,50,.2)'); pg0.addColorStop(0.5, 'rgba(5,11,34,.78)'); pg0.addColorStop(1, 'rgba(4,8,26,.94)'); g.fillStyle = pg0; g.fillRect(PX, 84, PW, 584)
+      g.restore(); g.strokeStyle = 'rgba(255,255,255,.14)'; g.lineWidth = 1; g.strokeRect(PX + 0.5, 84.5, PW - 1, 583)
+      // ── 재킷: 가득 채운 그림, 아래 가장자리는 오른쪽이 높은 사선. 지나가는 빛줄기와 반짝이는 별
+      const AT = 84, AB = 360 // 재킷 위·아래(왼쪽 기준)
+      const jacket = () => { g.beginPath(); g.moveTo(PX, AT); g.lineTo(PX + PW, AT); g.lineTo(PX + PW, AB - 34); g.lineTo(PX, AB); g.closePath() }
+      g.save(); jacket(); g.clip(); g.fillStyle = '#000'; g.fillRect(PX, AT, PW, AB - AT); drawCover(g, im, im.width, im.height, PX, AT, PW, AB - AT)
+      const sh = g.createLinearGradient(0, AT + 110, 0, AB); sh.addColorStop(0, 'rgba(4,10,34,0)'); sh.addColorStop(0.6, 'rgba(4,10,34,.62)'); sh.addColorStop(1, 'rgba(4,10,34,.96)'); g.fillStyle = sh; g.fillRect(PX, AT, PW, AB - AT)
+      const lx = PX - 160 + ((t * 120) % (PW + 320)); g.fillStyle = 'rgba(255,255,255,.1)'; g.beginPath(); g.moveTo(lx, AT); g.lineTo(lx + 70, AT); g.lineTo(lx + 10, AB); g.lineTo(lx - 60, AB); g.fill()
       g.restore()
-      glow(g, AMBER, 12, () => { starPath(g, PX + PW - 26, AY + 24, 11 * (0.6 + 0.4 * Math.sin(t * 2.6))); g.fillStyle = '#fff6d6'; g.fill() })
-      g.font = `800 32px ${FONT}`; g.fillStyle = '#fff'; g.shadowColor = 'rgba(0,0,0,.75)'; g.shadowBlur = 8; g.shadowOffsetY = 2; marquee(g, cur.title, PX + 16, AY + AH - 40, PW - 32, 32, selSince); g.shadowColor = 'transparent'; g.shadowBlur = 0; g.shadowOffsetY = 0
-      g.font = `600 17px ${FONT}`; g.fillStyle = '#d6ecff'; marquee(g, cur.artist, PX + 16, AY + AH - 14, PW - 32, 17, selSince)
-      g.fillStyle = accentFill(g, PX, PW); g.fillRect(PX, AY + AH, PW, 3)
-      // 별 줄: 고른 난이도의 레벨 (열 칸)
-      {
-        const lv = levels[ds[di]] ?? 0, filled = Math.min(10, Math.round(lv / 1.5)), sy = AY + AH + 26
-        g.font = `700 12px ${FONT}`; g.fillStyle = CYAN; g.fillText('LEVEL', PX + 16, sy + 4)
-        for (let k = 0; k < 10; k++) { starPath(g, PX + 86 + k * 24, sy, 9); g.fillStyle = k < filled ? '#ffd24a' : 'rgba(255,255,255,.2)'; g.fill() }
-        g.font = `900 20px ${FONT}`; g.fillStyle = '#fff'; g.textAlign = 'right'; g.fillText(lv ? String(lv) : '-', PX + PW - 16, sy + 7); g.textAlign = 'left'
-      }
-      // 난이도 패드: 레벨을 크게, 아래에 그 난이도의 등급과 램프
-      const DY = 398, DW = (PW - 3 * 8) / 4
+      g.save(); g.beginPath(); g.moveTo(PX, AB); g.lineTo(PX + PW, AB - 34); g.strokeStyle = dcol; g.lineWidth = 3; g.shadowColor = dcol; g.shadowBlur = 12; g.stroke(); g.restore() // 사선 가장자리를 난이도 색으로 빛낸다
+      // 왼쪽 위 이름표: "4 BUTTON TUNES", 오른쪽 위: 모드
+      g.save(); g.beginPath(); g.moveTo(PX, AT); g.lineTo(PX + 232, AT); g.lineTo(PX + 206, AT + 44); g.lineTo(PX, AT + 44); g.closePath(); g.fillStyle = accentFill(g, PX, 232); g.fill(); g.restore()
+      g.font = `900 32px ${FONT}`; g.fillStyle = '#fff'; g.fillText(String(settings.keyMode), PX + 14, AT + 35)
+      g.font = `900 15px ${FONT}`; g.fillText('BUTTON', PX + 48, AT + 20); g.font = `800 11px ${FONT}`; g.fillStyle = '#d6ecff'; g.fillText('TUNES', PX + 48, AT + 36)
+      { const tag = vsMode ? 'VERSUS' : 'FREESTYLE'; g.font = `800 12px ${FONT}`; const tw0 = g.measureText(tag).width + 24
+        slant(g, PX + PW - tw0 - 12, AT + 12, tw0, 26, 8); g.fillStyle = 'rgba(4,9,28,.72)'; g.fill(); g.strokeStyle = 'rgba(255,255,255,.25)'; g.lineWidth = 1; g.stroke()
+        g.fillStyle = AMBER; g.fillText(tag, PX + PW - tw0, AT + 30) }
+      glow(g, AMBER, 12, () => { starPath(g, PX + PW - 30, AT + 66, 11 * (0.6 + 0.4 * Math.sin(t * 2.6))); g.fillStyle = '#fff6d6'; g.fill() })
+      // 제목·가수: 재킷 왼쪽 아래, 제목 위에 짧은 난이도 색 선
+      g.fillStyle = dcol; g.fillRect(PX + 18, AB - 114, 46, 4)
+      g.font = `800 34px ${FONT}`; g.fillStyle = '#fff'; g.shadowColor = 'rgba(0,0,0,.8)'; g.shadowBlur = 10; g.shadowOffsetY = 2; marquee(g, cur.title, PX + 18, AB - 70, PW - 36, 34, selSince); g.shadowColor = 'transparent'; g.shadowBlur = 0; g.shadowOffsetY = 0
+      g.font = `600 17px ${FONT}`; g.fillStyle = '#d6ecff'; marquee(g, cur.artist, PX + 18, AB - 44, PW - 36, 17, selSince)
+      // ── 난이도 칸: 재킷 아래 가장자리를 가로질러 겹쳐 놓는다. 고른 칸은 위로 솟고 그 색으로 빛난다
+      const DY = 340, DW = (PW - 3 * 8) / 4
       ds.forEach((d, i) => {
-        const sel = i === di, w = DW, x = PX + i * (w + 8), y = sel ? DY - 4 : DY, h = sel ? 78 : 70, col = DIFF_COLOR[d] ?? CYAN
+        const sel = i === di, w = DW, x = PX + i * (w + 8), y = sel ? DY - 10 : DY, h = sel ? 96 : 84, col = col0(d)
         hit(x, y, w, h, () => { di = i })
-        g.save(); g.beginPath(); g.moveTo(x + 10, y); g.lineTo(x + w, y); g.lineTo(x + w - 10, y + h); g.lineTo(x, y + h); g.closePath()
-        const pg = g.createLinearGradient(0, y, 0, y + h); pg.addColorStop(0, col); pg.addColorStop(1, 'rgba(10,36,100,.92)')
-        g.fillStyle = sel ? pg : 'rgba(6,11,28,.82)'; if (sel) glow(g, col, 14, () => g.fill()); else g.fill()
-        g.strokeStyle = sel ? '#fff' : 'rgba(255,255,255,.3)'; g.lineWidth = sel ? 2.5 : 1.2; g.stroke(); g.restore()
-        g.fillStyle = col; g.fillRect(x + 10, y, w - 10, sel ? 5 : 3) // 위쪽 난이도 색 띠
-        g.font = `800 12px ${FONT}`; g.fillStyle = sel ? '#fff' : col; g.textAlign = 'left'; g.fillText(diffName(d), x + 16, y + 21)
-        g.font = `900 ${sel ? 36 : 28}px ${FONT}`; g.fillStyle = sel ? '#fff' : 'rgba(255,255,255,.88)'; g.textAlign = 'center'
-        g.fillText(levels[d] ? String(levels[d]) : pending.has(pk(song.dir, d)) ? '…' : '-', x + w / 2, y + (sel ? 56 : 51))
+        g.save(); g.beginPath(); g.moveTo(x + 12, y); g.lineTo(x + w, y); g.lineTo(x + w - 12, y + h); g.lineTo(x, y + h); g.closePath()
+        const pg = g.createLinearGradient(0, y, 0, y + h); pg.addColorStop(0, col); pg.addColorStop(0.55, 'rgba(12,30,90,.95)'); pg.addColorStop(1, 'rgba(6,14,44,.97)')
+        g.fillStyle = sel ? pg : 'rgba(5,10,28,.9)'; if (sel) glow(g, col, 18, () => g.fill()); else g.fill()
+        g.strokeStyle = sel ? '#fff' : 'rgba(255,255,255,.22)'; g.lineWidth = sel ? 2.5 : 1.2; g.stroke(); g.restore()
+        if (!sel) { g.fillStyle = col; g.fillRect(x + 12, y, w - 12, 3) }
+        g.font = `800 12px ${FONT}`; g.fillStyle = sel ? '#fff' : col; g.textAlign = 'left'; g.fillText(diffName(d), x + 18, y + 22)
+        g.font = `900 ${sel ? 40 : 30}px ${FONT}`; g.fillStyle = sel ? '#fff' : 'rgba(255,255,255,.88)'; g.textAlign = 'center'
+        g.fillText(levels[d] ? String(levels[d]) : pending.has(pk(song.dir, d)) ? '…' : '-', x + w / 2 + 4, y + (sel ? 64 : 58))
         const r = getRecords(song.dir, d)[0]
-        if (r) { drawLamp(g, r.badge, x + w / 2 - 22, y + h - 12, 0.65); g.font = `800 15px ${FONT}`; g.fillText(rankOf(r.accuracy), x + w / 2 + 14, y + h - 7) }
+        if (r) { drawLamp(g, r.badge, x + w / 2 - 20, y + h - 13, 0.62); g.font = `800 15px ${FONT}`; g.fillStyle = '#fff'; g.fillText(rankOf(r.accuracy), x + w / 2 + 14, y + h - 8) }
         g.textAlign = 'left'
       })
-      // 기록: 왼쪽에 점수를 크게, 오른쪽에 정확도(막대)와 최대 콤보 (고른 난이도)
+      // 별 줄: 고른 난이도의 레벨 (열 칸)
+      {
+        const lv = levels[ds[di]] ?? 0, filled = Math.min(10, Math.round(lv / 1.5)), sy = 450
+        g.font = `700 12px ${FONT}`; g.fillStyle = CYAN; g.fillText('LEVEL', PX + 16, sy + 4)
+        for (let k = 0; k < 10; k++) { starPath(g, PX + 86 + k * 24, sy, 9); g.fillStyle = k < filled ? '#ffd24a' : 'rgba(255,255,255,.18)'; g.fill() }
+        g.font = `900 20px ${FONT}`; g.fillStyle = '#fff'; g.textAlign = 'right'; g.fillText(lv ? String(lv) : '-', PX + PW - 16, sy + 7); g.textAlign = 'left'
+      }
+      // ── 기록 카드: 왼쪽에 정확도 링(안에 등급), 오른쪽에 점수를 크게, 아래에 정확도와 최대 콤보
       const top = getRecords(song.dir, ds[di])[0]
       {
-        const RY = 488, RH = 92, dim = 'rgba(255,255,255,.35)'
-        g.fillStyle = 'rgba(4,9,28,.78)'; g.fillRect(PX + 8, RY, PW - 16, RH); g.fillStyle = col0(ds[di]); g.fillRect(PX + 8, RY, 3, RH)
-        g.fillStyle = 'rgba(255,255,255,.14)'; g.fillRect(PX + 8, RY, PW - 16, 1); g.fillRect(PX + 282, RY + 12, 1, RH - 24)
-        g.font = `700 12px ${FONT}`; g.fillStyle = CYAN; g.fillText('SCORE', PX + 26, RY + 26)
-        g.font = `800 40px ${FONT}`; g.fillStyle = top ? '#fff' : dim; g.fillText(top ? String(top.score).padStart(7, '0') : '0000000', PX + 24, RY + 68)
-        if (top) { g.font = `900 20px ${FONT}`; g.fillStyle = '#ffd84a'; g.textAlign = 'right'; g.fillText(rankOf(top.accuracy), PX + 270, RY + 26); g.textAlign = 'left' }
-        g.font = `700 12px ${FONT}`; g.fillStyle = CYAN; g.fillText('RATE', PX + 302, RY + 26)
-        g.font = `800 20px ${FONT}`; g.fillStyle = top ? '#fff' : dim; g.textAlign = 'right'; g.fillText(top ? `${top.accuracy.toFixed(2)}%` : '--.--%', PX + PW - 24, RY + 28); g.textAlign = 'left'
-        g.fillStyle = 'rgba(255,255,255,.14)'; g.fillRect(PX + 302, RY + 38, PW - 24 - 302 + PX - PX, 4)
-        if (top) { g.fillStyle = '#ffd84a'; g.fillRect(PX + 302, RY + 38, (PW - 326) * Math.min(top.accuracy / 100, 1), 4) }
-        g.font = `700 12px ${FONT}`; g.fillStyle = CYAN; g.fillText('MAX COMBO', PX + 302, RY + 70)
-        g.font = `800 20px ${FONT}`; g.fillStyle = top ? '#fff' : dim; g.textAlign = 'right'; g.fillText(top ? String(top.maxCombo) : '-', PX + PW - 24, RY + 72); g.textAlign = 'left'
+        const RY = 470, RH = 112, rx = PX + 62, ry = RY + RH / 2, dim = 'rgba(255,255,255,.32)'
+        g.fillStyle = 'rgba(4,9,28,.8)'; g.fillRect(PX + 8, RY, PW - 16, RH); g.fillStyle = dcol; g.fillRect(PX + 8, RY, 4, RH)
+        g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(PX + 8, RY, PW - 16, 1)
+        g.lineCap = 'round'; g.lineWidth = 9; g.strokeStyle = 'rgba(255,255,255,.12)'; g.beginPath(); g.arc(rx, ry, 38, 0, Math.PI * 2); g.stroke()
+        if (top) { g.save(); g.strokeStyle = top.accuracy >= 99 ? '#ffd84a' : dcol; g.shadowColor = g.strokeStyle; g.shadowBlur = 10; g.beginPath(); g.arc(rx, ry, 38, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(top.accuracy / 100, 1)); g.stroke(); g.restore() }
+        g.lineCap = 'butt'; g.textAlign = 'center'; g.font = `900 ${top ? 30 : 24}px ${FONT}`; g.fillStyle = top ? '#fff' : dim; g.fillText(top ? rankOf(top.accuracy) : '-', rx, ry + (top ? 11 : 9)); g.textAlign = 'left'
+        const sx = PX + 128
+        g.font = `700 12px ${FONT}`; g.fillStyle = CYAN; g.fillText('SCORE', sx, RY + 28)
+        if (top?.badge) { g.font = `800 12px ${FONT}`; g.fillStyle = top.badge === 'ALL PERFECT' ? '#ffd84a' : '#9aeaff'; g.textAlign = 'right'; g.fillText(top.badge, PX + PW - 20, RY + 28); g.textAlign = 'left' }
+        g.font = `800 46px ${FONT}`; g.fillStyle = top ? '#fff' : dim; g.fillText(top ? String(top.score).padStart(7, '0') : '0000000', sx - 2, RY + 72)
+        g.font = `700 12px ${FONT}`; g.fillStyle = CYAN; g.fillText('RATE', sx, RY + 98); g.fillText('MAX COMBO', sx + 130, RY + 98)
+        g.font = `800 16px ${FONT}`; g.fillStyle = top ? '#fff' : dim; g.fillText(top ? `${top.accuracy.toFixed(2)}%` : '--.--%', sx + 46, RY + 99); g.fillText(top ? String(top.maxCombo) : '-', sx + 214, RY + 99)
       }
       // 옵션: 스크롤 속도 칸(눌러서 설정으로) · 노트 색 · 필드 위치
       g.font = `700 12px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.75)'; g.fillText('OPTIONS', PX + 10, 598)
