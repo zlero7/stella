@@ -197,7 +197,7 @@ export const SongSelect = (sm: SceneManager): Scene => {
       const PX = 40, PW = 520
       const art = artOf(song)!, im = art.wide ?? art.img // 큰 배경 그림이 있으면 그것을 (480px 표지를 가로로 늘려 뭉개지 않게)
       // 디맥 곡 선택 왼쪽 카드의 구성: 큰 숫자 머리글 → 곡 그림 위에 얇고 큰 제목·가수·BPM → 네모난 난이도 칸 → 색색의 레벨 별 → 기록 → 옵션
-      g.fillStyle = 'rgba(8,10,20,.8)'; g.fillRect(PX, 84, PW, 584); g.strokeStyle = 'rgba(255,255,255,.14)'; g.lineWidth = 1; g.strokeRect(PX + 0.5, 84.5, PW - 1, 583)
+      g.fillStyle = 'rgba(6,18,56,.62)'; g.fillRect(PX, 84, PW, 584); g.strokeStyle = 'rgba(255,255,255,.14)'; g.lineWidth = 1; g.strokeRect(PX + 0.5, 84.5, PW - 1, 583)
       // 머리글: 곡 그림을 어둡게 깐 띠에 큰 "4" + BUTTON TUNES
       const HT = 84, HH = 56
       g.save(); g.beginPath(); g.rect(PX, HT, PW, HH); g.clip(); g.fillStyle = '#0b0f20'; g.fillRect(PX, HT, PW, HH)
