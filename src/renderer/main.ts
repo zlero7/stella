@@ -8,6 +8,7 @@ import { SongSelect } from './scenes/SongSelect'
 import { Play } from './scenes/Play'
 import { Result } from './scenes/Result'
 import { Settings } from './scenes/Settings'
+import { saveSettings, settings } from './data/Storage'
 import { Calibrate } from './scenes/Calibrate'
 import { Lobby } from './scenes/Lobby'
 import { VsResult } from './scenes/VsResult'
@@ -51,6 +52,8 @@ const pos = (e: MouseEvent) => {
 }
 
 addEventListener('keydown', e => {
+  if (e.altKey && e.key === 'F4') { window.api?.quit(); return } // Alt+F4: 아래에서 F4를 막기 전에 닫는다 (장면의 F4 기능도 건드리지 않는다)
+  if (e.key === 'F11') { e.preventDefault(); if (!e.repeat) { settings.screen = settings.screen === 2 ? 0 : 2; saveSettings(); window.api?.setScreen(settings.screen) } return } // F11: 전체화면 ↔ 창모드
   if (/^F([1-9]|10)$/.test(e.key)) e.preventDefault() // WebView2가 F3(검색)·F5(새로고침) 같은 키를 가로채지 않게
   sm.keydown(e)
 })
