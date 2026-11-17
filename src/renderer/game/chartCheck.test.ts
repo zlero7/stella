@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { cleanChart } from './chartCheck.ts'
+import { cleanChart, judgeCount, ticksOf } from './chartCheck.ts'
 
 test('멀쩡한 채보는 그대로', () => {
   const r = cleanChart([{ time: 1, lane: 0 }, { time: 1, lane: 3 }, { time: 2, lane: 0, duration: 0.5 }])
@@ -38,4 +38,11 @@ test('하이라이트 구간: 겹치면 합치고 시작순으로 정렬한다',
   const { mergeSpans } = await import('./chartCheck.ts')
   assert.deepEqual(mergeSpans([[50, 60], [10, 20], [18, 30], [30, 35]]), [[10, 35], [50, 60]])
   assert.deepEqual(mergeSpans([]), [])
+})
+
+test('롱노트 틱: 0.2초마다 한 번, 끝 직전 0.05초는 제외, 판정 수는 시작+끝+틱', () => {
+  assert.equal(ticksOf(0.2), 0)
+  assert.equal(ticksOf(1), 4)
+  assert.equal(judgeCount({ time: 0, lane: 0 }), 1)
+  assert.equal(judgeCount({ time: 0, lane: 0, duration: 1 }), 6)
 })

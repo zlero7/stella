@@ -12,8 +12,8 @@ import { applyPlay, canEquip, levelOf, nickKey, profileView } from './progress.m
 import { createLadder } from './ladder.mjs'
 import { plausible } from './verify.mjs'
 // 앱이 판정 개수를 셀 때 쓰는 채보 정리(cleanChart)를 서버도 같이 써서 노트 총수를 구한다. 불러오지 못하면 총수 대조만 건너뛴다
-let cleanChart
-try { ({ cleanChart } = await import('../src/renderer/game/chartCheck.ts')) } catch (e) { console.error('채보 정리 모듈을 못 불러와 노트 총수 대조를 건너뜁니다:', e.message) }
+let cleanChart, judgeCount
+try { ({ cleanChart, judgeCount } = await import('../src/renderer/game/chartCheck.ts')) } catch (e) { console.error('채보 정리 모듈을 못 불러와 노트 총수 대조를 건너뜁니다:', e.message) }
 
 const PORT = Number(process.env.PORT) || 9777
 const MAX_ROOMS = 200, WAIT_MS = 10 * 60 * 1000 // 짝이 안 맞는 방은 10분 뒤에 닫는다
@@ -233,12 +233,12 @@ const chartLen = (dir, key) => {
     const mt = fs.statSync(f).mtimeMs, c = lenCache.get(f)
     if (c?.mt === mt) return c.len
     const notes = JSON.parse(fs.readFileSync(f, 'utf8')).notes, len = notes.at(-1)?.time ?? 0
-    const lanes = +/^(\d)k-/.exec(key)?.[1] || 4, total = cleanChart ? cleanChart(notes, lanes).notes.reduce((n, x) => n + (x.duration ? 2 : 1), 0) : undefined // 롱노트는 시작·끝 두 번
+    const lanes = +/^(\d)k-/.exec(key)?.[1] || 4, cl = cleanChart?.(notes, lanes).notes, total = cl && [cl.reduce((n, x) => n + judgeCount(x), 0), cl.reduce((n, x) => n + (x.duration ? 2 : 1), 0)] // [지금 앱: 롱노트 시작·끝·틱, 옛 앱: 시작·끝 두 번]
     lenCache.set(f, { mt, len, total }); return len
   } catch { return undefined }
 }
 const REQUIRE_COUNTS = false // true면 판정 개수가 없는 점수는 받지 않는다 (옛 앱 호환을 위해 아직 꺼 둔다)
-const chartTotal = (dir, key) => { chartLen(dir, key); return lenCache.get(path.join(SONGS, dir, key + '.json'))?.total } // 앱이 세는 판정 총수 (롱노트 2)
+const chartTotal = (dir, key) => { chartLen(dir, key); return lenCache.get(path.join(SONGS, dir, key + '.json'))?.total } // 앱이 세는 판정 총수 [지금, 옛 앱]
 const plays = new Map() // 계정 id -> {board, at}: 지금 치고 있는 곡 (한 번 쓰면 지운다)
 function rankApi(req, res, dir, key) {
   if (chartLen(dir, key) === undefined) return json(res, 404, { error: '없는 곡' })
@@ -359,7 +359,8 @@ wss.on('connection', sock => {
   sock.st = st
   sock.on('pong', () => { st.alive = true })
   sock.on('error', () => sock.terminate())
-  sock.on('close', () => {
+  sock.on('close', (code) => {
+    if (st.peer || st.ladder) log('연결 끊김', st.ladder ? '래더' : '친선', `코드 ${code}`) // 대전 중 끊김 원인 추적용 (1006=비정상: 네트워크·터널, 1001=창 닫음)
     ladder.close(sock)
     clearTimeout(st.timer)
     if (st.code && rooms.get(st.code) === sock) rooms.delete(st.code)

@@ -59,10 +59,11 @@ export class ScoreKeeper {
   constructor(total: number) { this.total = total; for (let c = 1; c <= total; c++) this.den += comboMult(c) }
 
   // at = 그 노트의 시각(초). 같은 시각에 여러 개가 깎이면 합계를 CHORD_LOSS로 제한한다
-  add(j: number, at = -1) {
+  // tick: 롱노트를 잡고 있는 동안의 판정 — 체력은 변하지 않는다
+  add(j: number, at = -1, tick = false) {
     this.counts[j]++
     this.sum += JUDGES[j].weight
-    let d: number = JUDGES[j].hp
+    let d: number = tick ? 0 : JUDGES[j].hp
     if (d < 0 && at >= 0) {
       if (Math.abs(at - this.lossAt) < 0.02) d = -Math.min(-d, Math.max(CHORD_LOSS - this.lossSum, 0)), this.lossSum -= d
       else this.lossAt = at, this.lossSum = -d

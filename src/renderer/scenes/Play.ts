@@ -3,7 +3,7 @@ import type { Chart, Note, Song } from '../../shared/types'
 import { AudioClock } from '../core/AudioClock'
 import { HIT_WIN, JUDGES, MAX_WIN, MISS, ScoreKeeper, judgeMul, judgeOf, pickTarget } from '../game/ScoreKeeper'
 import { buildChart } from '../game/AutoChart'
-import { cleanChart, posAt, speedTable } from '../game/chartCheck'
+import { HOLD_TICK, cleanChart, judgeCount, posAt, speedTable, ticksOf } from '../game/chartCheck'
 import { chartFile, diffName } from '../data/Songs'
 import { getBest, keyLabel, saveSettings, settings, type Best } from '../data/Storage'
 import { sfx } from '../core/Sfx'
@@ -29,7 +29,7 @@ const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).
 const isBlue =(lane: number) => lane === 0 || lane === LANES - 1
 
 // wait: 아직 안 침 / hold: 롱노트 누르는 중 / done: 처리 끝
-interface N extends Note { state: 'wait' | 'hold' | 'done' }
+interface N extends Note { state: 'wait' | 'hold' | 'done'; tk?: number } // tk: 이미 나온 홀드 틱 수
 // vs: 대결 중 (키 수는 방장이 정한 keys, 채보도 방장이 보낸 것)
 export interface PlayData { song: Song; diff: string; from?: number; fromPct?: number; vs?: boolean; keys?: number; ladder?: boolean }
 
@@ -122,10 +122,18 @@ export const Play = (sm: SceneManager): Scene => {
     n.state = n.duration ? 'hold' : 'done'
   }
 
+  // 잡고 있는 롱노트의 틱 중 지금까지 와야 할 것을 PERFECT로 올린다
+  function dueTicks(n: N, t: number) {
+    const due = Math.min(ticksOf(n.duration), Math.floor((t - n.time) / HOLD_TICK))
+    while ((n.tk ?? 0) < due) { n.tk = (n.tk ?? 0) + 1; sk.add(0, -1, true) }
+  }
+
   function release(lane: number, t: number) {
     const n = ns.find(n => n.lane === lane && n.state === 'hold')
     if (!n) return
     const dt = n.time + n.duration! - t
+    dueTicks(n, t)
+    for (let k = n.tk ?? 0; dt > HIT_WIN && k < ticksOf(n.duration); k++) sk.add(MISS, -1, true) // 일찍 떼면 남은 틱은 Miss (체력은 안 깎는다)
     judge(dt > HIT_WIN ? MISS : judgeOf(dt), dt, lane, n.time + n.duration!) // 일찍 떼면 끝 판정 Miss
     n.state = 'done'
   }
@@ -135,7 +143,7 @@ export const Play = (sm: SceneManager): Scene => {
     const t0 = Math.max(0, clock.songTime - 10), rest = fullNotes.filter(n => n.time >= t0 + 0.5)
     if (!rest.length || data.vs) return
     ns = rest.map(n => ({ ...n, state: 'wait' as const })).sort((a, b) => a.time - b.time); head = 0
-    sk = new ScoreKeeper(ns.reduce((s, n) => s + (n.duration ? 2 : 1), 0)); practice = true; bestRec = undefined
+    sk = new ScoreKeeper(ns.reduce((s, n) => s + judgeCount(n), 0)); practice = true; bestRec = undefined
     fx.length = 0; down.clear(); dispHp = 100; flash.at = -1e9; dying = 0
     if (audioBuf) clock.play(audioBuf, 2, t0); else clock.start(2, t0); paused = false; resumeAt = 0
   }
@@ -190,7 +198,7 @@ export const Play = (sm: SceneManager): Scene => {
     bestRec = !data.vs && from === undefined ? getBest(song.dir, data.diff) : undefined // 점수 차이는 내 최고 기록과 비교
     ns = notes.map(n => ({ ...n, state: 'wait' as const })).sort((a, b) => a.time - b.time)
     head = 0
-    sk = new ScoreKeeper(ns.reduce((s, n) => s + (n.duration ? 2 : 1), 0))
+    sk = new ScoreKeeper(ns.reduce((s, n) => s + judgeCount(n), 0))
     endTime = Math.max(...ns.map(n => n.time + (n.duration ?? 0)), (from ?? 0) + 1) + 2
     dur = buf?.duration ?? endTime
     chartOffset = chart?.offset ?? 0
@@ -248,10 +256,11 @@ export const Play = (sm: SceneManager): Scene => {
         const n = ns[i]
         if (n.time - t > 1) break // 아직 1초 넘게 남은 노트부터는 판정할 게 없다
         if (n.state === 'wait' && t - n.time > HIT_WIN) {
-          judge(MISS, 0, -1, n.time); if (n.duration) judge(MISS, 0, -1, n.time + n.duration) // 롱노트는 시작을 놓치면 끝도 Miss
+          judge(MISS, 0, -1, n.time); if (n.duration) { for (let k = 0; k < ticksOf(n.duration); k++) sk.add(MISS, -1, true); judge(MISS, 0, -1, n.time + n.duration) } // 롱노트는 시작을 놓치면 틱·끝도 Miss
           n.state = 'done'
-        } else if (n.state === 'hold' && t >= n.time + n.duration!) {
-          judge(0, 0, n.lane, n.time + n.duration!); n.state = 'done' // 끝까지 유지하면 떼지 않아도 끝 판정 Perfect
+        } else if (n.state === 'hold') {
+          dueTicks(n, t)
+          if (t >= n.time + n.duration!) { judge(0, 0, n.lane, n.time + n.duration!); n.state = 'done' } // 끝까지 유지하면 떼지 않아도 끝 판정 Perfect
         }
       }
       if (sk.failed) { dying = performance.now(); dyT0 = t; down.clear(); clock.slowStop(DIE_S); return }
@@ -445,8 +454,8 @@ export const Play = (sm: SceneManager): Scene => {
         else if (e.key === 'ArrowUp') pSel = (pSel + PAUSE_ITEMS.length - 1) % PAUSE_ITEMS.length
         else if (e.key === 'Escape' || (e.key === 'Enter' && pSel === 0)) { paused = false; resumeAt = performance.now() + 3000 } // 곡은 멈춘 채 3초 센 뒤 재개
         else if (e.key === 'Enter') {
-          if (pSel === 1) rewind()
-          else if (pSel === 2) { clock.resume(); sm.go('play', data) }
+          if (pSel === 1) rewind()
+          else if (pSel === 2) { clock.resume(); sm.go('play', data) }
           else if (pSel === 3) sm.go('settings', { back: 'play', backData: { ...data, resume: true } }) // 곡은 멈춘 채로 설정을 연다
           else quit()
         }

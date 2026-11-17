@@ -27,3 +27,10 @@ test('판정 개수와 점수·정확도·콤보·배지가 어긋나면 막는�
   assert.equal(plausible(ok, 400), false) // 채보는 400개인데 300개만 쳤다고 올린 만점: 노트 수와 많이 다르다
   assert.equal(plausible(ok, 100), false)
 })
+
+test('총수는 [지금, 옛 앱] 둘 중 하나와 맞으면 된다 (롱노트 틱 도입 전 앱도 받는다)', () => {
+  const ok = { score: 1_000_000, acc: 100, mc: 300, badge: 'ALL PERFECT', n: [300, 0, 0, 0, 0, 0] }
+  assert.equal(plausible(ok, [420, 300]), true)
+  assert.equal(plausible({ ...ok, n: [420, 0, 0, 0, 0, 0], mc: 420 }, [420, 300]), true)
+  assert.equal(plausible(ok, [600, 450]), false)
+})

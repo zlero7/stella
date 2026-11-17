@@ -8,7 +8,7 @@ const COMBO_MAX = 1.5 // 점수의 콤보 배율 상한 (앱의 comboMult와 같
 export function plausible({ score, acc, mc, badge, n }, total) {
   if (!Array.isArray(n) || n.length !== 6 || !n.every(x => Number.isInteger(x) && x >= 0 && x <= 99999)) return false
   const sum = n.reduce((a, b) => a + b, 0)
-  if (sum === 0 || (total && Math.abs(sum - total) > Math.max(2, total * 0.01)) || mc > sum) return false
+  if (sum === 0 || (total && ![total].flat().some(t => Math.abs(sum - t) <= Math.max(2, t * 0.01))) || mc > sum) return false
   const frac = n.reduce((s, c, i) => s + c * W[i], 0) / sum // 가중치 평균 0~1
   if (Math.abs(acc - 100 * frac) > 0.05) return false
   // 점수 = 100만 × (배율 곱한 가중치 합 / 배율 합), 배율은 1~1.5라서 이 범위를 벗어날 수 없다

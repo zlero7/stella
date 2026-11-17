@@ -30,6 +30,12 @@ export function cleanChart(notes: Note[], lanes = 4): { notes: Note[]; fixed: st
   return { notes: res, fixed }
 }
 
+// 롱노트를 누르고 있는 동안 HOLD_TICK초마다 PERFECT 한 번 (콤보·점수가 쌓인다). 끝 판정 직전 0.05초는 제외
+export const HOLD_TICK = 0.2
+export const ticksOf = (duration = 0) => Math.max(0, Math.floor((duration - 0.05) / HOLD_TICK))
+// 노트 하나가 만드는 판정 수: 시작 1 + (롱노트면 끝 1 + 틱)
+export const judgeCount = (n: Note) => 1 + (n.duration ? 1 + ticksOf(n.duration) : 0)
+
 // 변속 표: 노트의 화면 위치는 "속도를 시간에 대해 쌓은 거리"로 정한다 (판정은 시간 그대로라 변속해도 안 흔들린다). 배율은 0.25~4로 제한
 export type SpeedTable = { t: number; pos: number; m: number }[]
 export function speedTable(speeds: { time: number; mult: number }[] = []): SpeedTable {
