@@ -12,6 +12,7 @@ let seen = false // 처음 켰을 때만 "PRESS ANY KEY" 화면을 거친다 (�
 
 export const Title = (sm: SceneManager): Scene => {
   let sel = 0, menu = false, since = 0, cp = 0, last = 0 // cp: 화면에 보이는 위치 (고른 칸으로 부드럽게 따라간다)
+  let updMsg = '' // 업데이트 진행·실패 안내 (비었으면 기본 안내)
   const open = (v: boolean) => { menu = seen = v; since = performance.now() }
   return {
     enter() { menu = seen; since = performance.now() - 1000; void refreshProfile() },
@@ -78,7 +79,7 @@ export const Title = (sm: SceneManager): Scene => {
       g.globalAlpha = 1
 
       const up = updateInfo.value // 새 버전이 있으면 아래에 안내 (앱에는 자동 업데이트가 없다)
-      if (up) { g.textAlign = 'center'; g.font = `700 15px ${FONT}`; g.fillStyle = AMBER; g.fillText(`새 버전 v${up.latest}이 나왔습니다 — ${up.url.replace('https://', '')} 에서 받아 설치하세요 (현재 v${APP_VERSION})`, 640, 690); g.textAlign = 'left' }
+      if (up) { g.textAlign = 'center'; g.font = `700 15px ${FONT}`; g.fillStyle = AMBER; g.fillText(updMsg || (window.api ? `새 버전 v${up.latest}이 나왔습니다 — U 키를 누르면 지금 업데이트합니다 (현재 v${APP_VERSION})` : `새 버전 v${up.latest}이 나왔습니다 — ${up.url.replace('https://', '')} (현재 v${APP_VERSION})`), 640, 690); g.textAlign = 'left' }
       // 시작 화면: 깜빡이는 PRESS ANY KEY
       if (m < 1) {
         g.globalAlpha = 1 - m
@@ -147,6 +148,11 @@ export const Title = (sm: SceneManager): Scene => {
       g.textAlign = 'left'
     },
     keydown(e) {
+      if ((e.key === 'u' || e.key === 'U') && updateInfo.value && window.api && !updMsg) { // 새 버전: 받아서 덮어 깔고 다시 시작 (곡은 그대로)
+        updMsg = '새 버전을 받는 중… 끝나면 자동으로 다시 시작됩니다'
+        window.api.update(updateInfo.value.latest).catch(err => { updMsg = `업데이트 실패 (${String(err.message).slice(0, 60)}) — ${updateInfo.value?.url.replace('https://', '')} 에서 직접 받으세요` })
+        return
+      }
       if (!menu) { if (!ign(e.key) && e.key !== 'Escape') { open(true); sel = 0 } return }
       const n = ITEMS.length
       if (e.key === 'ArrowRight' || e.key === 'ArrowDown') sel = (sel + 1) % n

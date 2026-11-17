@@ -244,13 +244,37 @@ fn serve(req: &tauri::http::Request<Vec<u8>>) -> tauri::http::Response<Vec<u8>> 
     r.body(buf).unwrap()
 }
 
+// 새 버전 설치 파일을 GitHub 릴리스에서 받아 현재 설치 위에 덮어 깐다 (/UPDATE: 지우고 깔지 않으므로 곡·기록이 남는다, /P 진행 창만, /R 끝나면 다시 실행)
+// 주소는 버전 숫자만 받아 이 저장소 릴리스로 고정한다 (서버가 준 임의 주소를 실행하지 않는다)
+#[tauri::command]
+async fn update_install(app: tauri::AppHandle, version: String) -> Result<(), String> {
+    let ok = !version.is_empty() && version.split('.').count() == 3 && version.split('.').all(|p| !p.is_empty() && p.len() <= 4 && p.bytes().all(|b| b.is_ascii_digit()));
+    if !ok { return Err("버전 형식이 잘못됐습니다".into()); }
+    let url = format!("https://github.com/zlero7/stella/releases/download/v{v}/STELLA_{v}_x64-setup.exe", v = version);
+    let file = std::env::temp_dir().join(format!("STELLA_{}_x64-setup.exe", version));
+    let f = file.clone();
+    tauri::async_runtime::spawn_blocking(move || -> Result<(), String> {
+        let mut c = std::process::Command::new("curl.exe");
+        c.args(["-L", "--fail", "-sS", "--max-time", "900", "-o"]).arg(&f).arg(&url);
+        #[cfg(windows)]
+        { use std::os::windows::process::CommandExt; c.creation_flags(0x0800_0000); } // 콘솔 창 없이
+        let out = c.output().map_err(|e| format!("받기 실패: {e}"))?;
+        if !out.status.success() { return Err(format!("받기 실패: {}", String::from_utf8_lossy(&out.stderr).trim())); }
+        if fs::metadata(&f).map(|m| m.len()).unwrap_or(0) < 1_000_000 { return Err("받은 파일이 너무 작습니다".into()); }
+        std::process::Command::new(&f).args(["/P", "/UPDATE", "/R"]).spawn().map_err(|e| format!("설치 실행 실패: {e}"))?;
+        Ok(())
+    }).await.map_err(|e| e.to_string())??;
+    app.exit(0); // 설치 파일이 이 앱의 파일을 바꿔야 하니 끈다 (설치가 끝나면 /R로 다시 켜진다)
+    Ok(())
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .register_asynchronous_uri_scheme_protocol("song", |_ctx, req, responder| {
             std::thread::spawn(move || responder.respond(serve(&req)));
         })
-        .invoke_handler(tauri::generate_handler![songs_scan, songs_read, songs_write, songs_put, state_save, quit, set_screen_mode, net_host, net_join, net_send, net_close, net_ips])
+        .invoke_handler(tauri::generate_handler![songs_scan, songs_read, songs_write, songs_put, state_save, quit, update_install, set_screen_mode, net_host, net_join, net_send, net_close, net_ips])
         .setup(|app| {
             let dir = app.path().app_data_dir()?;
             fs::create_dir_all(&dir)?;

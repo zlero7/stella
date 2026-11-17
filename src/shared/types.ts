@@ -37,4 +37,5 @@ export interface Api {
   saveState(key: string, value: string): void
   setScreen(mode: number): void // 화면 모드: 0 창모드, 1 전체화면 창모드, 2 전체화면
   quit(): void // 앱 종료 (window.close()로는 닫히지 않는다)
+  update(version: string): Promise<void> // 새 버전 설치 파일을 받아 현재 설치 위에 덮어 깔고(곡·기록 유지) 다시 시작한다. 성공하면 앱이 꺼진다
 }

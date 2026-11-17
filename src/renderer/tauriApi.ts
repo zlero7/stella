@@ -15,6 +15,7 @@ if ('__TAURI_INTERNALS__' in window) {
     putFile: (dir, file, data) => call('songs_put', data, { headers: { dir: encodeURIComponent(dir), file: encodeURIComponent(file) } }),
     state: window.__STATE__ ?? {},
     saveState: (key, value) => { call('state_save', { key, value }).catch(() => {}) },
+    update: version => call('update_install', { version }),
     quit: () => { call('quit').catch(() => {}) },
     setScreen: mode => { call('set_screen_mode', { mode }).catch(() => {}) },
     net: {
