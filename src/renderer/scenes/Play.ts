@@ -440,16 +440,19 @@ export const Play = (sm: SceneManager): Scene => {
         g.font = `700 18px ${FONT}`; g.fillStyle = ICE; g.fillText('곧 다시 시작합니다', CX, 450); g.textAlign = 'left'
       }
       if (paused) {
-        g.fillStyle = 'rgba(4,16,48,.78)'; g.fillRect(0, 0, 1280, 720)
-        g.fillStyle = 'rgba(6,12,30,.9)'; g.fillRect(0, 196, 1280, 340) // 가운데 가로 띠 (디맥의 일시정지처럼)
-        g.fillStyle = accentFill(g, 0, 1280); g.fillRect(0, 196, 1280, 2); g.fillRect(0, 534, 1280, 2)
-        g.font = `800 28px ${FONT}`; g.fillStyle = AMBER; g.fillText('P A U S E', 440, 238)
+        // 디맥 일시정지: 어둡게 가린 화면 위에 얇은 큰 PAUSE 글자, 아래에 납작한 메뉴 막대 (고른 것은 노랑→분홍 막대에 검은 굵은 글자)
+        g.fillStyle = 'rgba(2,4,12,.72)'; g.fillRect(0, 0, 1280, 720)
+        g.font = `300 110px ${FONT}`; g.textAlign = 'center'
+        const pg = g.createLinearGradient(0, 130, 0, 250); pg.addColorStop(0, '#ff9a3c'); pg.addColorStop(1, '#ffd45e'); g.fillStyle = pg
+        g.fillText('PAUSE', CX, 230)
         PAUSE_ITEMS.forEach((p, i) => {
-          const y = 250 + i * 56, on = i === pSel
+          const y = 270 + i * 60, on = i === pSel, k = ease('pause' + i, on)
           hit(440, y, 400, 52, () => { pSel = i; pressKey('Enter') }, () => { pSel = i }) // 올리면 고르고, 누르면 실행
-          menuRow(g, 440, y, 400, 52, ease('pause' + i, on))
-          g.font = `800 22px ${FONT}`; g.fillStyle = '#fff'; g.fillText(p, 480, y + 34)
+          g.fillStyle = 'rgba(8,12,28,.8)'; g.fillRect(440, y, 400, 52)
+          if (k > 0.01) { const og = g.createLinearGradient(440, 0, 840, 0); og.addColorStop(0, '#ffd23a'); og.addColorStop(1, '#ff8fa6'); g.save(); g.globalAlpha = k; g.fillStyle = og; g.fillRect(440, y, 400, 52); g.restore() }
+          g.font = `800 22px ${FONT}`; g.fillStyle = k > 0.5 ? '#12131a' : '#fff'; g.fillText(p, CX, y + 34)
         })
+        g.textAlign = 'left'
       }
     },
     keydown(e) {

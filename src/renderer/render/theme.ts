@@ -221,12 +221,12 @@ export function fit(g: CanvasRenderingContext2D, s: string, w: number) {
 // 디맥식 메뉴 줄: 선택한 줄은 주황 띠에 흰 막대, 나머지는 어두운 얇은 띠 (타이틀·일시정지 메뉴가 같이 쓴다)
 export function menuRow(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, on: boolean | number) {
   const k = +on // 0 = 어두운 줄, 1 = 주황 띠. 그 사이는 섞어서 서서히 바뀐다
-  g.fillStyle = 'rgba(3,8,20,.78)'; g.beginPath(); g.roundRect(x, y, w, h, 14); g.fill()
+  g.fillStyle = 'rgba(3,8,20,.78)'; g.beginPath(); g.rect(x, y, w, h); g.fill()
   if (k < 1) { g.strokeStyle = `rgba(255,255,255,${0.22 * (1 - k)})`; g.lineWidth = 1; g.stroke() }
   if (k > 0.01) {
     g.save(); g.globalAlpha *= k
     const og = g.createLinearGradient(x, 0, x + w, 0); og.addColorStop(0, '#ffb13b'); og.addColorStop(0.7, '#ff7a59'); og.addColorStop(1, '#ff5c8a')
-    g.fillStyle = og; glow(g, '#ff9f1a', 18, () => { g.beginPath(); g.roundRect(x, y, w, h, 14); g.fill() })
+    g.fillStyle = og; glow(g, '#ff9f1a', 18, () => { g.beginPath(); g.rect(x, y, w, h); g.fill() })
     g.restore()
   }
 }
@@ -322,12 +322,13 @@ export function header(g: CanvasRenderingContext2D, title: string, sub = '') {
 }
 // 비스듬한 옵션 줄. k: 0(어두운 띠) ~ 1(주황 띠: 왼쪽 흰 줄과 빛)
 export function optRow(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, k: number) {
-  slant(g, x, y, w, h, 14); g.fillStyle = 'rgba(3,8,20,.8)'; g.fill()
+  g.beginPath(); g.rect(x, y, w, h); g.fillStyle = 'rgba(3,8,20,.8)'; g.fill()
   g.strokeStyle = `rgba(255,255,255,${0.28 * (1 - k)})`; g.lineWidth = 1; g.stroke()
   if (k < 0.01) return
   g.save(); g.globalAlpha *= k
   const og = g.createLinearGradient(x, 0, x + w, 0); og.addColorStop(0, '#ffb13b'); og.addColorStop(0.7, '#ff7a59'); og.addColorStop(1, '#ff5c8a')
-  glow(g, 'rgba(255,140,60,.6)', 14, () => { slant(g, x, y, w, h, 14); g.fillStyle = og; g.fill() })
+  glow(g, 'rgba(255,140,60,.5)', 12, () => { g.beginPath(); g.rect(x, y, w, h); g.fillStyle = og; g.fill() })
+  g.fillStyle = '#fff'; g.fillRect(x, y, 5, h)
   g.restore()
 }
 // 칸이 나뉜 값 막대 (디맥의 속도 막대처럼). 고른 줄에서는 흰색, 아니면 금색
