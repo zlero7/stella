@@ -275,7 +275,7 @@ export const Play = (sm: SceneManager): Scene => {
         return
       }
       const t = dying ? dieTime(performance.now()) : clock.songTime, speed = settings.scroll * BASE_PX
-      g.fillStyle = '#0a1a50'; g.fillRect(0, 0, 1280, 720) // 바닥을 먼저 칠한다: 배경 영상이 아직 첫 장면을 못 그렸을 때 앞 화면(로딩)이 비쳐 보이지 않게
+      g.fillStyle = '#02050d'; g.fillRect(0, 0, 1280, 720) // 바닥을 먼저 칠한다: 배경 영상이 아직 첫 장면을 못 그렸을 때 앞 화면(로딩)이 비쳐 보이지 않게
       if (!settings.bg) drawBg(g) // 배경 끄기: 곡 영상·표지 없이 하늘 배경만
       else if (video && video.readyState >= 2 && video.videoWidth) blurred(g, video, video.videoWidth, video.videoHeight, !lowQ)
       else { const a = artOf(song); if (a) blurred(g, a.bg, 1280, 720, !lowQ); else drawBg(g) }
@@ -285,7 +285,7 @@ export const Play = (sm: SceneManager): Scene => {
         laneGlow = { o: g.createLinearGradient(0, JUDGE_Y - beamLen(), 0, JUDGE_Y), i: g.createLinearGradient(0, JUDGE_Y - beamLen(), 0, JUDGE_Y) }
         laneGlow.o.addColorStop(0, `rgba(${rgbOf(noteColor())},0)`); laneGlow.o.addColorStop(1, `rgba(${rgbOf(noteColor())},.55)`)
         laneGlow.i.addColorStop(0, 'rgba(255,255,255,0)'); laneGlow.i.addColorStop(1, 'rgba(255,255,255,.4)')
-        fieldGr = g.createLinearGradient(0, 0, 0, 720); const pa = settings.panelA / 100; fieldGr.addColorStop(0, `rgba(10,32,90,${pa * 0.8})`); fieldGr.addColorStop(0.7, `rgba(6,12,30,${pa})`); fieldGr.addColorStop(1, `rgba(6,11,28,${Math.min(pa + 0.08, 1)})`)
+        fieldGr = g.createLinearGradient(0, 0, 0, 720); const pa = settings.panelA / 100; fieldGr.addColorStop(0, `rgba(6,16,38,${pa * 0.8})`); fieldGr.addColorStop(0.7, `rgba(6,12,30,${pa})`); fieldGr.addColorStop(1, `rgba(6,11,28,${Math.min(pa + 0.08, 1)})`)
         edgeGr = g.createLinearGradient(0, 0, 0, 720); edgeGr.addColorStop(0, 'rgba(255,255,255,.1)'); edgeGr.addColorStop(0.7, 'rgba(255,255,255,.85)'); edgeGr.addColorStop(1, 'rgba(170,220,255,.95)')
        
       }
