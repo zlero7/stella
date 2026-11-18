@@ -131,7 +131,7 @@ export function artOf(song?: Song): Art | undefined {
 
 // 모든 화면 공통 배경 층: 하늘 그라데이션 + 햇살 + 구름 + 반짝이는 별 + 가장자리 어둡힘. 한 번만 그려 두고 매 프레임 drawImage 한 번으로 쓴다
 // 화면(모드)마다 다른 바탕색 (디맥은 모드마다 바탕색이 다르다): 위·아래 두 색
-export const TONES: [string, string][] = [['#5a6ab6', '#c08aa6'], ['#c4663f', '#a83a52'], ['#2f8fa6', '#3a52b0'], ['#2b2519', '#86621f'], ['#6e58b8', '#3a8aa6'], ['#5f6b86', '#8a93ac']]
+export const TONES: [string, string][] = [['#5a6ab6', '#c08aa6'], ['#c4663f', '#a83a52'], ['#2f8fa6', '#3a52b0'], ['#2b2519', '#86621f'], ['#6e58b8', '#3a8aa6'], ['#3b322c', '#7a6552']]
 function layer(solid: boolean, tone = 0) {
   const c = document.createElement('canvas'); c.width = 1280; c.height = 720
   const x = c.getContext('2d')!
@@ -321,15 +321,13 @@ export function header(g: CanvasRenderingContext2D, title: string, sub = '') {
   if (sub) { const tw = g.measureText(title).width; g.font = `600 13px ${FONT}`; g.fillStyle = 'rgba(235,240,255,.8)'; g.fillText(sub, 86 + tw + 28, 44) }
 }
 // 비스듬한 옵션 줄. k: 0(어두운 띠) ~ 1(주황 띠: 왼쪽 흰 줄과 빛)
-export function optRow(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, k: number) {
-  g.beginPath(); g.rect(x, y, w, h); g.fillStyle = 'rgba(3,8,20,.8)'; g.fill()
-  g.strokeStyle = `rgba(255,255,255,${0.28 * (1 - k)})`; g.lineWidth = 1; g.stroke()
+export function optRow(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, k: number, split?: number) {
+  // 디맥 옵션 줄: 왼쪽은 어두운 갈색 라벨 막대, 오른쪽은 밝은 갈색 값 막대. 고른 줄은 노란 테두리 상자
+  const sp = split ?? Math.min(w * 0.38, 260)
+  g.fillStyle = `rgba(${52 + 30 * k},${44 + 24 * k},${40 + 18 * k},.82)`; g.fillRect(x, y, sp, h)
+  g.fillStyle = `rgba(${112 + 30 * k},${96 + 26 * k},${84 + 20 * k},.8)`; g.fillRect(x + sp, y, w - sp, h)
   if (k < 0.01) return
-  g.save(); g.globalAlpha *= k
-  const og = g.createLinearGradient(x, 0, x + w, 0); og.addColorStop(0, '#ffb13b'); og.addColorStop(0.7, '#ff7a59'); og.addColorStop(1, '#ff5c8a')
-  glow(g, 'rgba(255,140,60,.5)', 12, () => { g.beginPath(); g.rect(x, y, w, h); g.fillStyle = og; g.fill() })
-  g.fillStyle = '#fff'; g.fillRect(x, y, 5, h)
-  g.restore()
+  g.save(); g.globalAlpha *= k; g.strokeStyle = '#ffb400'; g.lineWidth = 3; g.strokeRect(x + 1.5, y + 1.5, w - 3, h - 3); g.restore()
 }
 // 칸이 나뉜 값 막대 (디맥의 속도 막대처럼). 고른 줄에서는 흰색, 아니면 금색
 export function segBar(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, f: number, on: boolean, n = 20) {

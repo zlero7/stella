@@ -174,8 +174,7 @@ export const Settings = (sm: SceneManager): Scene => {
         const it = FLAT[fi].item, on = fi === sel, y = 134 + r * (RH + GAP), vx = X + LW + 14, vw = W - LW - 14
         hit(X, y, W, RH, () => { sel = fi; if (on && it.go) press('Enter') }, () => { sel = fi })
         const k = ease('opt' + fi, on)
-        optRow(g, X + 10 * k, y, W - 10 * k, RH, k)
-        g.fillStyle = `rgba(255,255,255,${0.2 * (1 - k)})`; g.fillRect(X + LW + 4, y + 8, 1, RH - 16) // 이름 | 값 구분선
+        optRow(g, X + 10 * k, y, W - 10 * k, RH, k, LW + 4 - 10 * k)
         g.font = `${on ? 800 : 600} 18px ${FONT}`; g.fillStyle = '#fff'; g.textAlign = 'left'; g.fillText(it.label, X + 30 + 10 * k, y + 31)
         const mid = vx + vw / 2, hot = on ? '#fff' : ICE
         if (it.frac) { // 막대형: 값 글자는 오른쪽 위, 막대는 칸이 나뉜 모양
