@@ -10,6 +10,22 @@ const COLORS = ['#ff9f1a', '#ff5c8a', '#4f9bff', '#b9a4ff', '#2ee6c8', '#9aa6b8'
 const ign = (k: string) => /^(Shift|Control|Alt|Meta|CapsLock|NumLock|F\d+)$/.test(k) // 이 키로는 시작 화면을 넘기지 않는다
 let seen = false // 처음 켰을 때만 "PRESS ANY KEY" 화면을 거친다 (설정 등에서 돌아오면 바로 메뉴)
 
+// 모드별 바탕 색(위, 아래)과 로고 색
+const PALETTE: [string, string, string][] = [['#aab4e0', '#f2a0ac', '#0b0b12'], ['#f8d49a', '#ee7a68', '#0b0b12'], ['#92dcea', '#6a8ee8', '#0b0b12'], ['#2b2519', '#86621f', '#f6e3b0'], ['#c3b0ff', '#80d2e2', '#0b0b12'], ['#a3afc2', '#dde3ee', '#0b0b12'], ['#5a5f70', '#232734', '#f2f4fa']]
+// 모드별 검정 기하 로고: 가운데 (0,0) 기준 폭 약 300, 높이 약 220
+function glyph(g: CanvasRenderingContext2D, i: number) {
+  const poly = (...p: number[]) => { g.beginPath(); g.moveTo(p[0], p[1]); for (let k = 2; k < p.length; k += 2) g.lineTo(p[k], p[k + 1]); g.closePath(); g.fill() }
+  if (i === 0) { // 키 네 개가 있는 기어 (FREE STYLE)
+    poly(-150, 100, -100, -100, 150, -100, 150, -50, -60, -50, -80, 0, 150, 0, 150, 40, -96, 40, -110, 100)
+    g.fillStyle = '#fff'; for (const x of [-60, 20]) { g.beginPath(); g.arc(x, 55, 36, 0, 7); g.fill(); g.lineWidth = 5; g.strokeStyle = 'rgba(0,0,0,.3)'; g.stroke() }
+  } else if (i === 1) { for (let k = 0; k < 5; k++) g.fillRect(-150 + k * 64, 100 - (k + 1) * 42, 52, (k + 1) * 42) } // 계단 (래더)
+  else if (i === 2) { poly(-150, -100, -90, -100, 0, 60, 90, -100, 150, -100, 30, 110, -30, 110); g.globalAlpha *= 0.55; poly(-30, -100, 30, -100, 0, -40) } // V
+  else if (i === 3) { for (const [dx, dy, r] of [[0, 0, 90], [-100, 20, 40], [100, 20, 40]]) { g.beginPath(); g.moveTo(dx, dy - r); g.lineTo(dx + r * 0.55, dy); g.lineTo(dx, dy + r); g.lineTo(dx - r * 0.55, dy); g.closePath(); g.fill() } }
+  else if (i === 4) { g.beginPath(); g.arc(0, -40, 56, 0, 7); g.fill(); poly(-110, 100, -80, 20, 80, 20, 110, 100) }
+  else if (i === 5) { g.beginPath(); for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; poly(Math.cos(a - 0.2) * 70, Math.sin(a - 0.2) * 70, Math.cos(a - 0.15) * 110, Math.sin(a - 0.15) * 110, Math.cos(a + 0.15) * 110, Math.sin(a + 0.15) * 110, Math.cos(a + 0.2) * 70, Math.sin(a + 0.2) * 70) } g.beginPath(); g.arc(0, 0, 80, 0, 7); g.arc(0, 0, 34, 0, 7, true); g.fill('evenodd') }
+  else { poly(-90, -100, 20, -100, 20, 100, -90, 100); poly(40, -10, 40, -50, 130, 0, 40, 50, 40, 10, -20, 10, -20, -10) }
+}
+
 export const Title = (sm: SceneManager): Scene => {
   let shown = -1, shownAt = 0, sel = 0, menu = false, since = 0, cp = 0, last = 0 // cp: 화면에 보이는 위치 (고른 칸으로 부드럽게 따라간다)
   let updMsg = '' // 업데이트 진행·실패 안내 (비었으면 기본 안내)
@@ -100,48 +116,28 @@ export const Title = (sm: SceneManager): Scene => {
         cp += dd * Math.min(dt * 11, 1); cp = (cp + n) % n
         const near = (v: number) => { let d = ((v - cp) % n + n) % n; if (d > n / 2) d -= n; return d } // 가운데에서 몇 칸 떨어졌나 (부호 있음)
         const col = COLORS[sel % COLORS.length]
-        g.globalAlpha = m
-        // 모드 색 바탕: 큰 빛무리 · 사선 띠 · 천천히 도는 고리
-        const wash = g.createRadialGradient(640, 330, 20, 640, 330, 640); wash.addColorStop(0, col + '66'); wash.addColorStop(1, col + '00')
-        g.fillStyle = wash; g.fillRect(0, 0, 1280, 720)
-        g.save(); g.translate(640, 330)
-        for (const [r, sp, a0] of [[250, 0.12, 0.35], [330, -0.08, 0.22], [420, 0.05, 0.14]] as const) {
-          g.save(); g.rotate(t * sp); g.strokeStyle = col; g.globalAlpha = m * a0; g.lineWidth = 2; g.setLineDash([60, 40, 8, 40]); g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2); g.stroke(); g.restore()
-        }
-        g.restore()
-        g.globalAlpha = m * 0.16; g.fillStyle = col
-        slant(g, -80, 250, 1500, 70, 40); g.fill(); slant(g, -80, 400, 1500, 24, 40); g.fill()
-        g.globalAlpha = m
+        // 디맥 메인 메뉴: 모드마다 파스텔 그라데이션 전체 화면 + 사선 무늬, 가운데에 커다란 검정 기하 로고와 얇은 영문 제목. 좌우로 밀어 넘긴다
+        const pal = (i: number) => PALETTE[((Math.round(i) % n) + n) % n]
+        const i0 = Math.floor(cp), fr = cp - i0, mixc = (u: string, v: string) => [1, 3, 5].map(q => Math.round(parseInt(u.slice(q, q + 2), 16) * (1 - fr) + parseInt(v.slice(q, q + 2), 16) * fr))
+        const [pa, pb] = [pal(i0), pal(i0 + 1)], top = mixc(pa[0], pb[0]), bot = mixc(pa[1], pb[1])
+        const bgg = g.createLinearGradient(0, 0, 0, 720); bgg.addColorStop(0, `rgb(${top})`); bgg.addColorStop(1, `rgb(${bot})`)
+        g.globalAlpha = m; g.fillStyle = bgg; g.fillRect(0, 0, 1280, 720)
+        g.strokeStyle = 'rgba(255,255,255,.12)'; g.lineWidth = 1 // 가는 사선 무늬
+        g.beginPath(); for (let k = -720; k < 1280; k += 5) { g.moveTo(k, 720); g.lineTo(k + 720, 0) } g.stroke()
         profileCard(g, 40, 24, prof.v)
-        // 디맥 메인 메뉴: 오른쪽 위에 모드 이름을 네모 글자 타일로, 그 아래 No. 번호 상자, 아래 줄에 모든 모드 타일
-        if (shown !== sel) { shown = sel; shownAt = now }
-        const pop = Math.min(1, (now - shownAt) / 260), ep = 1 - (1 - pop) ** 3
-        const [name, sub] = ITEMS[sel], desc = name === 'ACCOUNT' ? (account.token ? `${account.nick}  ·  내 계정` : '로그인 / 회원가입') : sub
-        g.textAlign = 'center'
-        const cw = Math.min(60, 640 / name.length), chars = [...name]
-        chars.forEach((ch, k) => {
-          const x = 1236 - (chars.length - k) * (cw + 6) + (1 - ep) * 40 * (1 + k * 0.15), y = 70, on = k % 2 === 0
-          g.globalAlpha = m * ep
-          g.fillStyle = on ? '#fff' : col; glow(g, col, 14, () => g.fillRect(x, y, cw, cw * 1.15))
-          g.fillStyle = on ? '#07101e' : '#fff'; g.font = `900 ${Math.round(cw * 0.78)}px ${FONT}`; g.fillText(ch, x + cw / 2, y + cw * 0.9)
+        ITEMS.forEach(([name, sub], i) => {
+          const d = near(i), ad = Math.abs(d); if (ad > 1.2) return
+          const ink = pal(i)[2], x = 640 + d * 760
+          g.globalAlpha = m * Math.max(0, 1 - ad * 0.9)
+          g.save(); g.translate(x, 300); g.fillStyle = ink; g.strokeStyle = ink; glyph(g, i); g.restore()
+          g.textAlign = 'center'; g.fillStyle = ink; g.font = `300 44px ${FONT}`
+          const label = name === 'START' ? 'FREE STYLE' : name === 'COLLECTION' ? '*Collection' : name, sp = [...label].join(String.fromCharCode(8202).repeat(3))
+          g.fillText(sp, x, 520)
+          g.font = `600 20px ${FONT}`; g.globalAlpha *= 0.8
+          g.fillText(name === 'ACCOUNT' ? (account.token ? `${account.nick}  ·  내 계정` : '로그인 / 회원가입') : sub, x, 560)
         })
-        g.globalAlpha = m * ep
-        const bx = 1236 - 124, by0 = 70 + cw * 1.15 + 14
-        g.fillStyle = col; g.fillRect(bx, by0, 124, 124); g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(bx, by0 + 94, 124, 30)
-        g.fillStyle = '#fff'; g.font = `800 15px ${FONT}`; g.fillText('No.', bx + 26, by0 + 24); g.font = `900 84px ${FONT}`; g.fillText(String(sel + 1), bx + 70, by0 + 92)
-        for (let k = 0; k < 4; k++) { g.fillStyle = 'rgba(255,255,255,.85)'; g.fillRect(bx + 14 + k * 8, by0 + 116 - (k + 1) * 5, 5, (k + 1) * 5) }
-        g.font = `700 22px ${FONT}`; g.textAlign = 'right'; g.fillStyle = '#fff'; g.fillText(desc, 1236, by0 + 160)
-        g.textAlign = 'left'; g.globalAlpha = m
-        // 아래 모드 줄
-        ITEMS.forEach(([nm], i) => {
-          const w = 160, x = 50 + i * (w + 10), on = i === sel, y = on ? 548 : 562, h = on ? 100 : 86, c = COLORS[i % COLORS.length]
-          hit(x, y, w, h, () => { if (i === sel) press('Enter'); else sel = i })
-          g.fillStyle = on ? c : 'rgba(4,9,22,.78)'; if (on) glow(g, c, 20, () => g.fillRect(x, y, w, h)); else g.fillRect(x, y, w, h)
-          g.fillStyle = c; g.fillRect(x, y, w, 4); g.strokeStyle = on ? '#fff' : 'rgba(255,255,255,.2)'; g.lineWidth = on ? 2 : 1; g.strokeRect(x + .5, y + .5, w - 1, h - 1)
-          g.font = `900 21px ${FONT}`; const tw = g.measureText(nm).width; g.font = `900 ${Math.min(21, Math.floor(21 * 140 / tw))}px ${FONT}`
-          g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText(nm, x + w / 2, y + h / 2 + 8); g.textAlign = 'left'
-          g.font = `800 12px ${FONT}`; g.fillStyle = on ? '#fff' : c; g.fillText(String(i + 1).padStart(2, '0'), x + 10, y + 22)
-        })
+        g.globalAlpha = m
+        hit(340, 120, 600, 460, () => press('Enter'))
         g.globalAlpha = m; g.textAlign = 'left'
         // 좌우 화살표 · 현재 위치 점
         if (m > 0.6) {
