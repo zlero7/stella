@@ -157,12 +157,12 @@ export const SongSelect = (sm: SceneManager): Scene => {
       glow(g, CYAN, 10, () => { slant(g, 30, 22, 12, 24, 7); g.fillStyle = CYAN; g.fill(); slant(g, 47, 22, 7, 24, 7); g.fillStyle = '#ff3fa4'; g.fill() })
       g.font = `300 22px ${FONT}`; g.fillStyle = '#fff'; g.fillText('BUTTON TUNES', 78, 34); g.font = `900 26px ${FONT}`; g.fillText(String(settings.keyMode), 78, 60)
       if (searching || query) {
-        hit(232, 16, 698, 36, () => openSearch(true))
-        pill(g, 232, 16, 698, 36, 'rgba(6,11,28,.7)'); g.strokeStyle = searching ? CYAN : 'rgba(255,255,255,.45)'; g.lineWidth = searching ? 2.5 : 1.5; g.stroke()
-        g.font = `800 14px ${FONT}`; g.fillStyle = CYAN; g.fillText('SEARCH', 252, 40)
+        hit(262, 16, 668, 36, () => openSearch(true))
+        pill(g, 262, 16, 668, 36, 'rgba(6,11,28,.7)'); g.strokeStyle = searching ? CYAN : 'rgba(255,255,255,.45)'; g.lineWidth = searching ? 2.5 : 1.5; g.stroke()
+        g.font = `800 14px ${FONT}`; g.fillStyle = CYAN; g.fillText('SEARCH', 282, 40)
         g.font = `700 18px ${FONT}`; g.fillStyle = '#fff'
-        const shown = fit(g, query, 560) + (searching && Math.floor(performance.now() / 500) % 2 === 0 ? '|' : '')
-        g.fillText(shown || (searching ? '' : '(검색어 없음)'), 330, 41)
+        const shown = fit(g, query, 500) + (searching && Math.floor(performance.now() / 500) % 2 === 0 ? '|' : '')
+        g.fillText(shown || (searching ? '' : '(검색어 없음)'), 360, 41)
         g.font = `700 13px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.7)'; g.textAlign = 'right'; g.fillText(`${songs.length}곡  ·  ${searching ? 'Enter 확인  Esc 지우기' : 'F2 수정  Esc 지우기'}`, 916, 40); g.textAlign = 'left'
       } else {
         const ci = Math.max(cats.indexOf(cat), 0)
@@ -324,7 +324,7 @@ export const SongSelect = (sm: SceneManager): Scene => {
         const s0 = songs[idx], d0 = diffs()[di] ?? 'hard', k0 = `${s0.dir}|${d0}|${settings.keyMode}`
         if (k0 !== rankKey) { rankKey = k0; rankRows = undefined; void fetchRank(s0.dir, d0, settings.keyMode).then(r => { if (rankKey === k0) rankRows = r ?? [] }) }
         const X = 330, Y = 96, W = 620, H = 560
-        g.fillStyle = 'rgba(0,0,0,.86)'; g.fillRect(X, Y, W, H); g.strokeStyle = 'rgba(255,255,255,.2)'; g.lineWidth = 1; g.strokeRect(X + 0.5, Y + 0.5, W - 1, H - 1)
+        g.fillStyle = 'rgba(0,0,0,.96)'; g.fillRect(X, Y, W, H); g.strokeStyle = 'rgba(255,255,255,.2)'; g.lineWidth = 1; g.strokeRect(X + 0.5, Y + 0.5, W - 1, H - 1)
         slant(g, X + 24, Y + 18, 214, 34, 10); g.fillStyle = 'rgba(120,128,142,.6)'; g.fill(); g.textAlign = 'center'; g.font = `300 22px ${FONT}`; g.fillStyle = '#fff'; g.fillText('ONLINE RANKING', X + 24 + 107, Y + 42)
         g.textAlign = 'left'; g.font = `700 14px ${FONT}`; g.fillStyle = 'rgba(230,240,255,.8)'; g.fillText(fit(g, `${s0.meta.title}  ·  ${settings.keyMode}K ${diffName(d0)}`, 340), X + 256, Y + 41)
         g.textAlign = 'right'; g.font = `600 12px ${FONT}`; g.fillStyle = 'rgba(230,240,255,.6)'; g.fillText('F8 · Esc 닫기', X + W - 20, Y + 41)

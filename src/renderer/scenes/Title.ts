@@ -38,77 +38,38 @@ export const Title = (sm: SceneManager): Scene => {
       const now = performance.now(), t = now / 1000
       const p = Math.min(1, (now - since) / 520), m = 1 - (1 - (menu ? p : 1 - p)) ** 3 // 0 = 시작 화면, 1 = 메뉴 (부드럽게 오간다)
 
-      // 한가운데에서 퍼지는 빛줄기: 천천히 돈다
-      g.save(); g.translate(640, 330); g.rotate(t * 0.035)
-      const ray = g.createRadialGradient(0, 0, 40, 0, 0, 900); ray.addColorStop(0, 'rgba(34,224,255,.16)'); ray.addColorStop(1, 'rgba(34,224,255,0)')
-      g.fillStyle = ray
-      for (let i = 0; i < 12; i++) { g.rotate(Math.PI / 6); g.beginPath(); g.moveTo(0, 0); g.lineTo(900, -34); g.lineTo(900, 34); g.closePath(); g.fill() }
-      g.restore()
-
-      // 양옆: 천천히 내려오는 노트 (인게임 레인의 메아리). 메뉴가 열리면 오른쪽 줄은 메뉴 뒤로 사라진다
-      for (const [side, x0] of [[0, 56], [1, 1040]] as const) {
-        g.globalAlpha = side ? 1 - m : 1
-        for (let l = 0; l < 2; l++) {
-          const x = x0 + l * 92
-          slant(g, x, -20, 84, 760, 20); g.fillStyle = 'rgba(255,255,255,.10)'; g.fill(); g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 1; g.stroke()
-          const blue = (l + side) % 2 === 0, [c1, c2] = blue ? ['#4f9bff', '#cfeeff'] : ['#ffffff', '#9db6d0']
-          for (let k = 0; k < 3; k++) {
-            const y = ((t * 60 + side * 170 + l * 230 + k * 270) % 800) - 40
-            const gr = g.createLinearGradient(x, 0, x + 84, 0); gr.addColorStop(0, c1); gr.addColorStop(1, c2)
-            glow(g, c1, 14, () => { slant(g, x + 8, y, 68, 22, 11); g.fillStyle = gr; g.fill() })
-          }
+      // 시작 화면 (디맥 타이틀): 분홍~연보라 그라데이션 + 사선 무늬 + 위에서 모이는 V자 빛기둥, 가운데 큰 로고 마크와 넓게 벌린 검정 글자, 아래 회색 직사각 안내 버튼
+      const sa = 1 - m
+      if (sa > 0.001) {
+        g.save(); g.globalAlpha = sa
+        const sg = g.createLinearGradient(0, 0, 0, 720); sg.addColorStop(0, '#a9b0dc'); sg.addColorStop(1, '#f09fb0'); g.fillStyle = sg; g.fillRect(0, 0, 1280, 720)
+        g.strokeStyle = 'rgba(255,255,255,.12)'; g.lineWidth = 1
+        g.beginPath(); for (let k = -720; k < 1280; k += 5) { g.moveTo(k, 720); g.lineTo(k + 720, 0) } g.stroke()
+        g.fillStyle = 'rgba(70,60,140,.26)' // 두 갈래 빛기둥이 가운데 아래에서 만나 V를 이룬다
+        for (const sx of [-1, 1]) { g.beginPath(); g.moveTo(640 + sx * 330, 0); g.lineTo(640 + sx * 160, 0); g.lineTo(640, 540); g.closePath(); g.fill() }
+        for (let i = 0; i < 16; i++) { // 반짝이는 십자 별
+          const x = (i * 311) % 1280, y = (i * 197) % 560, a = 0.3 + 0.6 * Math.abs(Math.sin(t * 1.3 + i * 1.7))
+          g.fillStyle = `rgba(255,248,220,${a})`; starPath(g, x, y, 4 + (i % 4) * 3); g.fill()
         }
-        g.globalAlpha = 1
+        const cx = 640, my = 290
+        g.fillStyle = '#ffd23a'; starPath(g, cx + 12, my - 8, 124); g.fill() // 로고 마크: 노란 별 위에 검은 별, 위에 왕관
+        g.fillStyle = '#0b0b12'; starPath(g, cx, my, 112); g.fill()
+        g.fillStyle = '#ffd23a'; g.beginPath(); g.moveTo(cx - 44, my - 128); g.lineTo(cx - 44, my - 168); g.lineTo(cx - 22, my - 148); g.lineTo(cx, my - 178); g.lineTo(cx + 22, my - 148); g.lineTo(cx + 44, my - 168); g.lineTo(cx + 44, my - 128); g.closePath(); g.fill()
+        g.textAlign = 'left'; g.font = `900 62px ${FONT}`; g.letterSpacing = '20px'
+        const parts: [string, string][] = [['STELLA', '#0b0b12'], ['/', '#ffd23a'], [`${settings.keyMode}K`, '#0b0b12']]
+        const tw = parts.reduce((n, [x]) => n + g.measureText(x).width, 0)
+        let lx2 = cx - tw / 2 + 10; for (const [x, col2] of parts) { g.fillStyle = col2; g.fillText(x, lx2, 470); lx2 += g.measureText(x).width }
+        g.letterSpacing = '0px'
+        const pa2 = 0.75 + 0.25 * Math.abs(Math.sin(t * 2.2))
+        g.fillStyle = `rgba(104,104,122,${0.85 * pa2})`; g.fillRect(cx - 170, 546, 340, 38); g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 1; g.strokeRect(cx - 169.5, 546.5, 339, 37)
+        g.textAlign = 'center'; g.font = `800 14px ${FONT}`; g.fillStyle = '#fff'; g.fillText('PRESS ANY KEY TO START', cx, 570)
+        g.font = `600 12px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.92)'; g.fillText('STELLIVE COVER RHYTHM', cx, 612)
+        g.textAlign = 'right'; g.font = `700 12px ${FONT}`; g.fillText(`v${APP_VERSION}`, 1250, 706)
+        g.restore()
       }
-
-      // 떠오르는 별가루
-      for (let i = 0; i < 44; i++) {
-        const x = (i * 997) % 1280, y = ((i * 571) % 740 - t * (7 + (i % 7) * 4) + 1480) % 740 - 10, a = 0.25 + 0.55 * Math.abs(Math.sin(t * 1.4 + i))
-        g.fillStyle = `rgba(255,255,255,${a})`
-        if (i % 6 === 0) { starPath(g, x, y, 5 + (i % 3) * 2); g.fill() } else { g.beginPath(); g.arc(x, y, 1 + (i % 3) * 0.8, 0, 7); g.fill() }
-      }
-      g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 2
-      const sp = (t % 5) / 1.3 // 별똥별: 5초 주기로 한 줄기
-      if (sp < 1) {
-        const sx = 1000 - sp * 700, sy = 40 + sp * 240, tail = g.createLinearGradient(sx, sy, sx + 160, sy - 64)
-        tail.addColorStop(0, `rgba(255,255,255,${0.95 * (1 - sp)})`); tail.addColorStop(1, 'rgba(143,123,255,0)')
-        g.strokeStyle = tail; g.beginPath(); g.moveTo(sx, sy); g.lineTo(sx + 160, sy - 64); g.stroke()
-      }
-
-      // 로고: 시작 화면에서는 한가운데에 크게, 메뉴가 열리면 왼쪽으로 옮겨 앉는다
-      const fs = 196, by = 352, cx = 640
-      g.globalAlpha = 1 - m
-      g.textAlign = 'center'
-      g.font = `700 15px ${FONT}`; g.fillStyle = '#eaf6ff'
-      g.fillText('S T E L L I V E   C O V E R   R H Y T H M', cx, by - fs * 0.76 - 14)
-      g.font = `900 ${fs}px ${FONT}`
-      const w = g.measureText('STELLA').width, lx = cx - w / 2
-      const gr = g.createLinearGradient(lx, 0, lx + w, 0); gr.addColorStop(0, '#fff'); gr.addColorStop(0.5, '#d9f6ff'); gr.addColorStop(1, '#6fdcff')
-      glow(g, 'rgba(0,170,255,.7)', 34, () => { g.fillStyle = gr; g.fillText('STELLA', cx, by) })
-      for (const [dx, dy, r, ph] of [[w / 2 + 6, -fs * 0.62, fs * 0.1, 0], [w / 2 - 22, -fs * 0.74, fs * 0.05, 1.3], [-w / 2 + 30, -fs * 0.3, fs * 0.045, 2.6]] as const) {
-        const k = 0.65 + 0.35 * Math.sin(t * 2.4 + ph)
-        glow(g, AMBER, 18, () => { starPath(g, cx + dx, by + dy, r * k); g.fillStyle = '#fff6d6'; g.fill() })
-      }
-      slant(g, cx - 210, by + 26, 420, 5, 2); g.fillStyle = accentFill(g, cx - 210, 420); g.fill()
-      g.font = `15px ${FONT}`; g.fillStyle = '#eaf6ff'
-      g.fillText(`${settings.keyMode}K  ·  세로 리듬 게임`, cx, by + 62)
-      g.globalAlpha = 1
 
       const up = updateInfo.value // 새 버전이 있으면 아래에 안내 (앱에는 자동 업데이트가 없다)
-      if (up) { g.textAlign = 'center'; g.font = `700 15px ${FONT}`; g.fillStyle = AMBER; g.fillText(updMsg || (window.api ? `새 버전 v${up.latest}이 나왔습니다 — U 키를 누르면 지금 업데이트합니다 (현재 v${APP_VERSION})` : `새 버전 v${up.latest}이 나왔습니다 — ${up.url.replace('https://', '')} (현재 v${APP_VERSION})`), 640, 690); g.textAlign = 'left' }
-      // 시작 화면: 깜빡이는 PRESS ANY KEY
-      if (m < 1) {
-        g.globalAlpha = 1 - m
-        const a = 0.4 + 0.6 * Math.abs(Math.sin(t * 2.2)), label = 'P R E S S   A N Y   K E Y'
-        g.font = `800 24px ${FONT}`; const lw = g.measureText(label).width
-        for (const s of [-1, 1]) {
-          const lg = g.createLinearGradient(640 + s * (lw / 2 + 30), 0, 640 + s * (lw / 2 + 280), 0); lg.addColorStop(0, 'rgba(255,255,255,.8)'); lg.addColorStop(1, 'rgba(255,255,255,0)')
-          g.fillStyle = lg; g.fillRect(s > 0 ? 640 + lw / 2 + 30 : 640 - lw / 2 - 280, 584, 250, 2)
-        }
-        g.fillStyle = `rgba(255,255,255,${a})`; glow(g, '#2b6ee0', 14, () => g.fillText(label, 640, 594))
-        g.globalAlpha = 1
-      }
-
+      if (up) { g.textAlign = 'center'; g.font = `700 15px ${FONT}`; g.fillStyle = m > 0.5 ? AMBER : '#5b1020'; g.fillText(updMsg || (window.api ? `새 버전 v${up.latest}이 나왔습니다 — U 키를 누르면 지금 업데이트합니다 (현재 v${APP_VERSION})` : `새 버전 v${up.latest}이 나왔습니다 — ${up.url.replace('https://', '')} (현재 v${APP_VERSION})`), 640, 690); g.textAlign = 'left' }
       // 메뉴: 디맥처럼 모드 하나가 화면 가운데에 크게, 좌우 화살표로 넘긴다. 모드마다 색이 다르다
       if (m > 0) {
         const n = ITEMS.length, dt = Math.min((now - last) / 1000, 0.05); last = now
@@ -124,7 +85,11 @@ export const Title = (sm: SceneManager): Scene => {
         g.globalAlpha = m; g.fillStyle = bgg; g.fillRect(0, 0, 1280, 720)
         g.strokeStyle = 'rgba(255,255,255,.12)'; g.lineWidth = 1 // 가는 사선 무늬
         g.beginPath(); for (let k = -720; k < 1280; k += 5) { g.moveTo(k, 720); g.lineTo(k + 720, 0) } g.stroke()
-        profileCard(g, 40, 24, prof.v)
+        hit(940, 2, 300, 64, () => sm.go('collection')); profileCard(g, 940, 2, prof.v); g.textAlign = 'left' // 오른쪽 위 프로필 (곡 선택 화면과 같은 자리): 누르면 컬렉션
+        if (updateInfo.value) { // 디맥의 RECENT NOTICE 같은 빨간 꼬리표: 새 버전이 있으면 왼쪽 위에
+          hit(40, 24, 300, 36, () => press('u'))
+          g.fillStyle = '#d12a3f'; g.fillRect(40, 24, 300, 36); g.font = `800 15px ${FONT}`; g.fillStyle = '#fff'; g.fillText('NEW UPDATE', 56, 48); g.fillStyle = '#ffe14a'; g.fillText(`v${updateInfo.value.latest}`, 168, 48); g.font = `600 12px ${FONT}`; g.fillStyle = '#fff'; g.fillText('U 키로 업데이트', 232, 47)
+        }
         ITEMS.forEach(([name, sub], i) => {
           const d = near(i), ad = Math.abs(d); if (ad > 1.2) return
           const ink = pal(i)[2], x = 640 + d * 760
@@ -150,8 +115,8 @@ export const Title = (sm: SceneManager): Scene => {
         }
         g.globalAlpha = m
         footer(g)
-        let kx = 24
-        for (const [k, label, real] of [['←→', '모드 선택', null], ['Enter', '확인', undefined], ['Esc', '뒤로', undefined]] as [string, string, string | null | undefined][]) kx = chip(g, kx, 684, k, label, '#fff', real, 24, 13)
+        chip(g, 24, 684, '←→', '모드 선택', '#fff', null, 24, 13) // 디맥 하단 띠: 이동은 왼쪽, 확인·뒤로는 오른쪽
+        chip(g, 1010, 684, 'Esc', '뒤로', '#fff', undefined, 24, 13); chip(g, 1120, 684, 'Enter', '확인', '#fff', undefined, 24, 13)
         g.globalAlpha = 1
       }
       g.textAlign = 'left'
