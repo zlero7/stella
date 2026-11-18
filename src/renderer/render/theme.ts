@@ -131,7 +131,7 @@ export function artOf(song?: Song): Art | undefined {
 
 // 모든 화면 공통 배경 층: 하늘 그라데이션 + 햇살 + 구름 + 반짝이는 별 + 가장자리 어둡힘. 한 번만 그려 두고 매 프레임 drawImage 한 번으로 쓴다
 // 화면(모드)마다 다른 바탕색 (디맥은 모드마다 바탕색이 다르다): 위·아래 두 색
-export const TONES: [string, string][] = [['#5a6ab6', '#c08aa6'], ['#c4663f', '#a83a52'], ['#2f8fa6', '#3a52b0'], ['#2b2519', '#86621f'], ['#6e58b8', '#3a8aa6'], ['#3b322c', '#7a6552']]
+export const TONES: [string, string][] = [['#5a6ab6', '#c08aa6'], ['#1d2230', '#6a4f24'], ['#2f8fa6', '#3a52b0'], ['#2b2519', '#86621f'], ['#6e58b8', '#3a8aa6'], ['#3b322c', '#7a6552']]
 function layer(solid: boolean, tone = 0) {
   const c = document.createElement('canvas'); c.width = 1280; c.height = 720
   const x = c.getContext('2d')!
