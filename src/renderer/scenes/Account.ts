@@ -142,13 +142,6 @@ export const Account = (sm: SceneManager): Scene => {
       drawBg(g, undefined, 4)
       const now = performance.now(), t = now / 1000, p = Math.min(1, (now - since) / 520), m = 1 - (1 - p) ** 3 // 들어올 때 부드럽게
 
-      // 한가운데에서 퍼지는 빛줄기 (타이틀과 같은 느낌, 더 옅게)
-      g.save(); g.translate(400, 340); g.rotate(t * 0.035)
-      const ray = g.createRadialGradient(0, 0, 40, 0, 0, 800); ray.addColorStop(0, 'rgba(255,255,255,.16)'); ray.addColorStop(1, 'rgba(255,255,255,0)')
-      g.fillStyle = ray
-      for (let i = 0; i < 12; i++) { g.rotate(Math.PI / 6); g.beginPath(); g.moveTo(0, 0); g.lineTo(800, -30); g.lineTo(800, 30); g.closePath(); g.fill() }
-      g.restore()
-
       header(g, 'ACCOUNT', mode === 'profile' ? '내 계정' : mode === 'login' ? '로그인' : mode === 'register' ? '회원가입' : mode === 'nick' ? '닉네임 변경' : '비밀번호 변경')
       // 왼쪽: 내 계정은 프로필 대시보드, 나머지는 큰 글자 (화면 이름)
       const cx = 380, by = 372
@@ -158,13 +151,12 @@ export const Account = (sm: SceneManager): Scene => {
       g.font = `700 15px ${FONT}`; g.fillStyle = '#eaf6ff'
       g.fillText(mode === 'nick' || mode === 'pass' ? 'M Y   A C C O U N T' : 'P L A Y E R   A C C O U N T', cx, by - 108)
       const big = mode === 'login' ? 'LOGIN' : mode === 'register' ? 'SIGN UP' : mode === 'nick' ? 'NICKNAME' : 'PASSWORD'
-      const label = fitFont(g, big, 600, 900, 132, 40)
+      const label = fitFont(g, big, 600, 300, 132, 40)
       const w = g.measureText(label).width, lx = cx - w / 2, gr = g.createLinearGradient(lx, 0, lx + w, 0)
       gr.addColorStop(0, '#fff'); gr.addColorStop(0.5, '#e8f7ff'); gr.addColorStop(1, '#bfe6ff')
-      glow(g, 'rgba(10,50,140,.65)', 34, () => { g.fillStyle = gr; g.fillText(label, cx, by) })
-      const k1 = 0.65 + 0.35 * Math.sin(t * 2.4)
-      glow(g, AMBER, 18, () => { starPath(g, cx + w / 2 + 6, by - 96, 14 * k1); g.fillStyle = '#fff6d6'; g.fill() })
-      slant(g, cx - 210, by + 26, 420, 5, 2); g.fillStyle = accentFill(g, cx - 210, 420); g.fill()
+      g.fillStyle = '#fff'; g.fillText(label, cx, by); void gr
+      g.fillStyle = 'rgba(255,255,255,.6)'; g.fillRect(cx - 210, by + 28, 420, 1)
+      void t
       g.font = `15px ${FONT}`; g.fillStyle = '#eaf6ff'
       g.fillText(mode === 'nick' ? '랭킹과 래더에 보이는 이름을 바꿉니다 (하루에 한 번)' : mode === 'pass' ? '비밀번호를 바꾸면 다른 기기의 로그인은 풀립니다' : mode === 'login' ? '로그인하면 온라인 랭킹에 기록이 올라갑니다' : '아이디와 비밀번호로 내 계정을 만듭니다', cx, by + 62)
       g.globalAlpha = 1
@@ -175,14 +167,8 @@ export const Account = (sm: SceneManager): Scene => {
       g.globalAlpha = m
       rows().forEach((r, i) => {
         const on0 = i === focus, k = ease('acct' + i, on0), on = k > 0.5, w = 440 + 40 * k, x = 770 - 40 * k + (1 - m) * 160, y = top + i * PITCH
-        slant(g, x, y, w, H, 22); g.fillStyle = 'rgba(6,11,28,.74)'; g.fill()
-        g.strokeStyle = `rgba(255,255,255,${0.3 * (1 - k)})`; g.lineWidth = 1; g.stroke()
-        if (k > 0.01) {
-          g.save(); g.globalAlpha *= k
-          const og = g.createLinearGradient(x, 0, x + w, 0); og.addColorStop(0, '#ffb13b'); og.addColorStop(0.7, '#ff7a59'); og.addColorStop(1, '#ff5c8a')
-          glow(g, 'rgba(255,140,60,.6)', 16, () => { slant(g, x, y, w, H, 22); g.fillStyle = og; g.fill() })
-          g.restore()
-        }
+        g.fillStyle = 'rgba(52,44,40,.86)'; g.fillRect(x, y, w, H)
+        if (k > 0.01) { g.save(); g.globalAlpha *= k; g.fillStyle = 'rgba(122,104,90,.6)'; g.fillRect(x, y, w, H); g.strokeStyle = '#ffb400'; g.lineWidth = 3; g.strokeRect(x + 1.5, y + 1.5, w - 3, H - 3); g.restore() }
         if (m > 0.6) hit(x, y, w, H, () => { focus = i; if (!isField(r.kind)) press('Enter') }, () => { focus = i })
         g.textAlign = 'left'; g.fillStyle = '#fff'
         if (isField(r.kind)) {
@@ -207,7 +193,7 @@ export const Account = (sm: SceneManager): Scene => {
         g.font = `800 ${msg ? 17 : 15}px ${FONT}`
         const lines = wrap(g, (msg && bad ? '⚠  ' : '') + text, bw - pad * 2 - 10), bh = 22 + lines.length * 24, bx = 770 + shake, by = top + n * PITCH + 4
         g.globalAlpha = m * (msg ? 0.4 + 0.6 * age : 1)
-        slant(g, bx, by, bw, bh, 14); g.fillStyle = msg ? (bad ? 'rgba(168,28,52,.94)' : 'rgba(6,11,28,.92)') : 'rgba(6,11,28,.78)'; g.fill()
+        g.beginPath(); g.rect(bx, by, bw, bh); g.fillStyle = msg ? (bad ? 'rgba(168,28,52,.94)' : 'rgba(6,11,28,.92)') : 'rgba(6,11,28,.78)'; g.fill()
         g.lineWidth = msg ? 2 : 1; g.strokeStyle = msg ? (bad ? '#ffb3bd' : AMBER) : 'rgba(255,255,255,.3)'; g.stroke()
         g.textAlign = 'left'; g.fillStyle = msg ? '#fff' : ICE
         lines.forEach((ln, i) => g.fillText(ln, bx + pad + 10, by + 28 + i * 24))
