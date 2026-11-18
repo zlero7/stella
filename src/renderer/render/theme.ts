@@ -134,31 +134,22 @@ function layer(solid: boolean) {
   const c = document.createElement('canvas'); c.width = 1280; c.height = 720
   const x = c.getContext('2d')!
   if (solid) {
-    const g1 = x.createLinearGradient(0, 0, 0, 720); g1.addColorStop(0, '#02050d'); g1.addColorStop(0.6, '#060e1e'); g1.addColorStop(1, '#0a1730')
+    const g1 = x.createLinearGradient(0, 0, 0, 720); g1.addColorStop(0, '#5a6ab6'); g1.addColorStop(0.55, '#8a78b4'); g1.addColorStop(1, '#c08aa6') // 디맥 메인 메뉴 같은 파스텔 그라데이션
     x.fillStyle = g1; x.fillRect(0, 0, 1280, 720)
-    for (const [cx, cy, r, c] of [[130, 90, 560, '0,200,255'], [1180, 650, 600, '255,40,150'], [900, 120, 420, '60,90,255']] as const) { // 모서리의 네온 번짐
-      const gl = x.createRadialGradient(cx, cy, 0, cx, cy, r); gl.addColorStop(0, `rgba(${c},.20)`); gl.addColorStop(1, `rgba(${c},0)`)
-      x.fillStyle = gl; x.fillRect(0, 0, 1280, 720)
-    }
-    x.strokeStyle = 'rgba(120,200,255,.045)'; x.lineWidth = 1 // 사선 격자
-    for (let i = -720; i < 1280; i += 26) { x.beginPath(); x.moveTo(i, 720); x.lineTo(i + 720, 0); x.stroke() }
+    x.strokeStyle = 'rgba(255,255,255,.11)'; x.lineWidth = 1 // 가는 사선 무늬
+    x.beginPath(); for (let i = -720; i < 1280; i += 5) { x.moveTo(i, 720); x.lineTo(i + 720, 0) } x.stroke()
     let r = 20260101; const rnd = () => ((r = (Math.imul(r, 1664525) + 1013904223) | 0) >>> 0) / 4294967296
-    for (let i = 0; i < 7; i++) { // 긴 사선 네온 줄
-      const x0 = rnd() * 1400 - 100, w = 2 + rnd() * 3, len = 200 + rnd() * 380, cyan = rnd() < 0.6
-      const lg = x.createLinearGradient(x0, 720, x0 + len * 0.7, 720 - len); lg.addColorStop(0, cyan ? 'rgba(34,224,255,0)' : 'rgba(255,60,160,0)'); lg.addColorStop(1, cyan ? 'rgba(34,224,255,.35)' : 'rgba(255,60,160,.3)')
-      x.strokeStyle = lg; x.lineWidth = w; x.beginPath(); x.moveTo(x0, 720); x.lineTo(x0 + len * 0.7, 720 - len); x.stroke()
-    }
-    for (let i = 0; i < 50; i++) { x.fillStyle = `rgba(190,235,255,${0.12 + rnd() * 0.3})`; x.fillRect(rnd() * 1280, rnd() * 720, 2, 2) }
+    for (let i = 0; i < 14; i++) { x.fillStyle = `rgba(255,248,220,${0.35 + rnd() * 0.45})`; starPath(x, rnd() * 1280, rnd() * 640, 4 + rnd() * 10); x.fill() } // 반짝이는 십자 별
   }
   x.save(); x.globalCompositeOperation = 'lighter'
-  for (const [x0, w, a] of [[-100, 260, .04], [260, 90, .03], [880, 300, .04], [1120, 70, .03]] as const) {
+  for (const [x0, w, a] of [[-100, 260, .06], [260, 90, .04], [880, 300, .06], [1120, 70, .04]] as const) {
     const g2 = x.createLinearGradient(x0, 0, x0 + w, 0)
     g2.addColorStop(0, 'rgba(255,255,255,0)'); g2.addColorStop(.5, `rgba(255,255,255,${a})`); g2.addColorStop(1, 'rgba(255,255,255,0)')
     x.fillStyle = g2; x.beginPath(); x.moveTo(x0 + 240, 0); x.lineTo(x0 + 240 + w, 0); x.lineTo(x0 + w, 720); x.lineTo(x0, 720); x.fill()
   }
   x.restore()
   const v = x.createRadialGradient(640, 360, 380, 640, 360, 880)
-  v.addColorStop(0, 'rgba(0,3,10,0)'); v.addColorStop(1, 'rgba(0,3,10,.55)')
+  v.addColorStop(0, 'rgba(20,16,50,0)'); v.addColorStop(1, 'rgba(20,16,50,.32)')
   x.fillStyle = v; x.fillRect(0, 0, 1280, 720)
   return c
 }
@@ -319,14 +310,12 @@ export function marquee(g: CanvasRenderingContext2D, text: string, x: number, y:
 // ---- 디맥식 화면 공통 부품: 머리띠 · 옵션 줄 · 칸 막대 · 아이콘 ----
 // 화면 위의 머리띠: 어두운 띠 + 아래 무지개빛 선 + 별. 곡 선택 화면의 머리와 같은 모양
 export function header(g: CanvasRenderingContext2D, title: string, sub = '') {
-  const bg = g.createLinearGradient(0, 0, 1280, 0); bg.addColorStop(0, 'rgba(2,6,16,.94)'); bg.addColorStop(1, 'rgba(8,16,36,.82)')
+  const bg = g.createLinearGradient(0, 0, 1280, 0); bg.addColorStop(0, 'rgba(14,16,40,.78)'); bg.addColorStop(1, 'rgba(14,16,40,.45)')
   g.fillStyle = bg; g.fillRect(0, 0, 1280, 66)
-  const lg = g.createLinearGradient(0, 0, 1280, 0); lg.addColorStop(0, CYAN); lg.addColorStop(0.55, '#7a6bff'); lg.addColorStop(1, '#ff3fa4')
-  g.fillStyle = lg; g.fillRect(0, 64, 1280, 2)
-  glow(g, CYAN, 12, () => { // 사선 두 줄 표식
-    slant(g, 40, 20, 14, 26, 8); g.fillStyle = CYAN; g.fill(); slant(g, 60, 20, 8, 26, 8); g.fillStyle = '#ff3fa4'; g.fill() })
-  g.textAlign = 'left'; g.font = `900 26px ${FONT}`; g.fillStyle = '#fff'; g.fillText(title, 94, 42)
-  if (sub) { const tw = g.measureText(title).width; g.font = `600 13px ${FONT}`; g.fillStyle = 'rgba(200,235,255,.7)'; g.fillText(sub, 94 + tw + 16, 41) }
+  g.fillStyle = 'rgba(255,255,255,.7)'; g.fillRect(0, 65, 1280, 1)
+  slant(g, 36, 18, 14, 30, 8); g.fillStyle = '#fff'; g.fill(); slant(g, 56, 18, 8, 30, 8); g.fillStyle = AMBER; g.fill() // 사선 두 줄 표식
+  g.textAlign = 'left'; g.font = `300 32px ${FONT}`; g.fillStyle = '#fff'; g.fillText(title.split('').join(String.fromCharCode(8202)), 86, 46) // 얇은 글자 (디맥 메뉴 제목)
+  if (sub) { const tw = g.measureText(title).width; g.font = `600 13px ${FONT}`; g.fillStyle = 'rgba(235,240,255,.8)'; g.fillText(sub, 86 + tw + 28, 44) }
 }
 // 비스듬한 옵션 줄. k: 0(어두운 띠) ~ 1(주황 띠: 왼쪽 흰 줄과 빛)
 export function optRow(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, k: number) {
