@@ -38,7 +38,7 @@ type RailStyle = 'steel' | 'neon' | 'rope' | 'vine' | 'thorn' | 'wave' | 'circui
 type FieldStyle = 'none' | 'grid' | 'lattice' | 'petals' | 'leaves' | 'slashes' | 'waves' | 'hex' | 'snow' | 'rays' | 'pixels'
 interface GearStyle { rail: RailStyle; field: FieldStyle; wing: 'swept' | 'angular' | 'round' | 'none'; cut: number }
 const STYLE_OF: Record<string, GearStyle> = {
-  steel: { rail: 'steel', field: 'none', wing: 'swept', cut: 24 }, neon: { rail: 'neon', field: 'grid', wing: 'angular', cut: 24 },
+  steel: { rail: 'neon', field: 'none', wing: 'angular', cut: 24 }, neon: { rail: 'neon', field: 'grid', wing: 'angular', cut: 24 },
   gold: { rail: 'rope', field: 'lattice', wing: 'round', cut: 24 }, sakura: { rail: 'soft', field: 'petals', wing: 'round', cut: 10 },
   forest: { rail: 'vine', field: 'leaves', wing: 'swept', cut: 24 }, crimson: { rail: 'thorn', field: 'slashes', wing: 'angular', cut: 44 },
   ocean: { rail: 'wave', field: 'waves', wing: 'round', cut: 24 }, violet: { rail: 'circuit', field: 'hex', wing: 'angular', cut: 30 },

@@ -324,15 +324,15 @@ export const Play = (sm: SceneManager): Scene => {
       activeKeys().slice(0, LANES).forEach((k, i) => {
         const on = down.has(i), blue = isBlue(i), x = FIELD_X + i * LANE_W + 4, w = LANE_W - 8, y = JUDGE_Y + 32 + (on ? 2 : 0), h = 60 - (on ? 2 : 0) // 디맥 키처럼 반듯한 네모 건반: 누르면 가라앉으며 빛난다
         const ka = keyArt(gs.id); if (ka) { ka(g, x, y, w, h, on, blue, keyLabel(k), gs, noteColor()); return } // 스틸이 아니면 건반 모양도 스킨이 그린다
-        const top = on ? (blue ? lighten(noteColor(), 0.5) : '#ffffff') : '#4a5262', bot = on ? (blue ? lighten(noteColor(), 0.15) : '#cfe3ff') : '#1b1f27' // 어두운 금속 건반: 누르면 켜진다
-        const kg = g.createLinearGradient(0, y, 0, y + h); kg.addColorStop(0, top); kg.addColorStop(1, bot)
-        if (on) glow(g, blue ? noteColor() : '#ffffff', 22, () => { g.beginPath(); g.roundRect(x, y, w, h, 6); g.fillStyle = kg; g.fill() })
-        else { g.beginPath(); g.roundRect(x, y, w, h, 6); g.fillStyle = kg; g.fill() }
-        g.fillStyle = 'rgba(255,255,255,.55)'; g.fillRect(x + 4, y + 2, w - 8, 3) // 윗면 하이라이트
-        g.fillStyle = 'rgba(4,9,24,.35)'; g.fillRect(x + 2, y + h - 6, w - 4, 4) // 아랫면 그림자
-        g.beginPath(); g.roundRect(x, y, w, h, 6); g.strokeStyle = on ? '#fff' : 'rgba(255,255,255,.65)'; g.lineWidth = 1.5; g.stroke()
-        g.font = `900 ${keyLabel(k).length > 2 ? 15 : 26}px ${FONT}`; g.fillStyle = on ? '#061224' : blue ? lighten(noteColor(), 0.3) : '#e7edf7'; g.textAlign = 'center'
-        g.fillText(keyLabel(k), x + w / 2, y + h / 2 + (keyLabel(k).length > 2 ? 5 : 9))
+        // 디맥 RESPECT V 기본 기어처럼 다이아몬드 모양 키: 평소엔 어두운 청록 테두리, 누르면 안이 켜진다
+        const cx = x + w / 2, cy = y + h / 2 + 2, r = Math.min(w, h) / 2 + 8, col = blue ? noteColor() : '#ffffff'
+        const dia = () => { g.beginPath(); g.moveTo(cx, cy - r); g.lineTo(cx + r, cy); g.lineTo(cx, cy + r); g.lineTo(cx - r, cy); g.closePath() }
+        const kg = g.createLinearGradient(0, cy - r, 0, cy + r); kg.addColorStop(0, on ? lighten(col, 0.6) : '#0c3a46'); kg.addColorStop(1, on ? col : '#04161c')
+        if (on) glow(g, col, 24, () => { dia(); g.fillStyle = kg; g.fill() }); else { dia(); g.fillStyle = kg; g.fill() }
+        dia(); g.strokeStyle = on ? '#fff' : gs.accent; g.lineWidth = 2.5; g.stroke()
+        g.save(); g.translate(cx, cy); g.scale(0.62, 0.62); g.translate(-cx, -cy); dia(); g.strokeStyle = on ? 'rgba(255,255,255,.7)' : 'rgba(80,240,220,.35)'; g.lineWidth = 2; g.stroke(); g.restore()
+        g.font = `900 ${keyLabel(k).length > 2 ? 12 : 18}px ${FONT}`; g.fillStyle = on ? '#061224' : gs.accent; g.textAlign = 'center'
+        g.fillText(keyLabel(k), cx, cy + 6)
       })
       drawConsoleFront(g, FIELD_X, fw, JUDGE_Y, { score: sk.score, scroll: settings.scroll, mult: sk.mult, hp: sk.hp, hpLow: sk.hp <= 25 }, gs)
       g.textAlign = 'center'; g.font = `900 22px ${FONT}`; g.fillStyle = sk.accuracy >= 100 ? '#ffe27a' : 'rgba(255,255,255,.85)' // 판정선 위: 지금까지의 정확도

@@ -44,7 +44,7 @@ export const Result = (sm: SceneManager): Scene => {
       const sc = ease(prog(1.7, 3.0)) // 점수는 링이 거의 찬 뒤에 올라간다
       const bl = 16 * (1 - ease(prog(-0.3, 2.4))) // 뒷그림이 흐렸다가 점점 또렷해진다
       if (bl > 0.3) g.filter = `blur(${bl.toFixed(1)}px)`
-      drawBg(g, song)
+      g.fillStyle = '#04050a'; g.fillRect(0, 0, 1280, 720) // 디맥 결과 화면은 검은 바탕
       g.filter = 'none'
       if (el < O - 0.1) { // STAGE CLEAR 배너: 왼쪽에서 들어와 가는 글씨로 바뀌고 반짝이 하나가 지나간다
         const bp = (a: number, b: number) => Math.min(Math.max((el - a) / (b - a), 0), 1), fail = !!d.failed

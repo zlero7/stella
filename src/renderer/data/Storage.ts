@@ -13,6 +13,7 @@ export interface Settings { screen: number; nick: string; lastIp: string; relay:
 export const settings: Settings = read('rg.settings', { screen: 2, nick: 'PLAYER', lastIp: '', relay: '', ui: 0, keyMode: 4, keys6: ['KeyS', 'KeyD', 'KeyF', 'KeyJ', 'KeyK', 'KeyL'], keys: ['KeyD', 'KeyF', 'KeyJ', 'KeyK'], scroll: 6.5, volume: 0.8, offset: 0, align: 1, judgeOffset: 0, bg: 1, noteColor: 0, bgBright: 70, panelA: 80, fx: 2, beam: 2, musicVol: 1, uiVol: 1, random: 0, fade: 0, judgeMode: 0, hudCombo: 1, hudJudge: 1, hudRate: 1, hudGap: 1, hudY: 0, fastSlow: 1, mirror: 0, char: 1, gearSkin: 0, sfx: 1, hit: 1 }) // bgBright: 배경 밝기 30~100(%), panelA: 레인 패널 불투명도 50~95(%), fx: 이펙트 0 끔·1 약·2 보통, fastSlow: FAST/SLOW 표시 1/0 // bg: 플레이 배경 1 켜짐/0 꺼짐, noteColor: NOTE_COLORS 번호
 // UI 개편(2): 디맥처럼 기어를 화면 가운데에 두는 것을 기본으로 한다. 예전에 저장된 설정에도 한 번만 적용한다 (이후 설정에서 바꾸면 그대로 둔다)
 if (settings.ui < 2) { settings.align = 1; settings.ui = 2 }
+if (settings.ui < 3) { settings.char = 0; settings.ui = 3 } // UI 개편(3): 디맥처럼 기어 옆 캐릭터 없이 (설정에서 다시 켤 수 있다)
 // 예전 저장값('d', ' ')을 code 형식으로 변환
 settings.keys = settings.keys.map(k => (k.length > 1 ? k : k === ' ' ? 'Space' : `Key${k.toUpperCase()}`))
 export const saveSettings = () => write('rg.settings', settings)
