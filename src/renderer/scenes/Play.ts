@@ -350,11 +350,12 @@ export const Play = (sm: SceneManager): Scene => {
       g.fillStyle = AMBER; g.fillRect(0, 0, 1280 * Math.min(Math.max(t / endTime, 0), 1), 5)
       // 점수 카드: 곡 정보 카드와 같은 모양. 필드가 오른쪽이면 왼쪽 끝으로 옮긴다
       const qx = settings.align !== 2 ? 1280 - 24 - 300 : 24, qy = 24, qi = 260
-      card(g, qx, qy, 300, 132, 'SCORE')
-      g.font = `800 50px ${FONT}`; g.fillStyle = '#fff'; g.fillText(String(sk.score).padStart(7, '0'), qx + 20, qy + 80)
-      meter(g, qx + 20, qy + 96, qi, sk.accuracy / 100) // 정확도 막대
-      g.font = `600 13px ${FONT}`; g.fillStyle = ICE; g.fillText('ACCURACY', qx + 20, qy + 120)
-      g.textAlign = 'right'; g.fillText(sk.counts.some(n => n) ? `${sk.accuracy.toFixed(2)}%` : '--.--%', qx + 20 + qi, qy + 120)
+      g.save(); g.shadowColor = 'rgba(0,0,0,.9)'; g.shadowBlur = 8 // 상자 없이 영상 위에 바로 (디맥)
+      slant(g, qx + 20, qy, 80, 20, 8); g.fillStyle = 'rgba(120,128,150,.75)'; g.fill(); g.font = `800 12px ${FONT}`; g.fillStyle = '#fff'; g.textAlign = 'left'; g.fillText('SCORE', qx + 36, qy + 15)
+      g.font = `300 60px ${FONT}`; g.fillStyle = '#fff'; g.fillText(String(sk.score).padStart(7, '0'), qx + 18, qy + 82)
+      g.fillStyle = 'rgba(255,255,255,.25)'; g.fillRect(qx + 20, qy + 94, qi, 2); g.fillStyle = AMBER; g.fillRect(qx + 20, qy + 94, qi * Math.min(sk.accuracy / 100, 1), 2)
+      g.font = `600 13px ${FONT}`; g.fillStyle = ICE; g.fillText('ACCURACY', qx + 20, qy + 118)
+      g.textAlign = 'right'; g.fillText(sk.counts.some(n => n) ? `${sk.accuracy.toFixed(2)}%` : '--.--%', qx + 20 + qi, qy + 118); g.restore()
       if (bestRec && settings.hudGap) { // 내 최고 기록과의 점수 차이: 같은 진행도(판정 수 기준)에서 최고 기록을 쳤을 때의 점수와 비교
         const judged = sk.counts.reduce((a, b) => a + b, 0), pc = bestRec.pace
         g.font = `700 14px ${FONT}`; g.textAlign = 'left'; g.fillStyle = ICE; g.fillText(`BEST ${bestRec.score.toLocaleString()}`, qx + 20, qy + 152)
@@ -378,11 +379,14 @@ export const Play = (sm: SceneManager): Scene => {
         // 콤보 숫자 색과 글자로 지금 올 퍼펙트(금색)·풀 콤보(하늘색)가 가능한지 알린다 (색만으로 전하지 않는다)
         const ap = sk.counts.slice(1).every(c => c === 0), fc = sk.counts[MISS] === 0
         const pop = 1 + 0.18 * Math.max(0, 1 - (performance.now() - flash.at) / 120) // 칠 때마다 살짝 커졌다 돌아온다
-        g.save(); g.translate(CX, 250); g.scale(pop, pop)
-        g.globalAlpha = 0.55; g.font = `900 104px ${FONT}`; g.lineJoin = 'round'; g.lineWidth = 8; g.strokeStyle = 'rgba(6,10,24,.85)'; g.strokeText(String(sk.combo), 0, 0) // 큰 반투명 콤보 숫자 (노트가 비쳐 보인다)
-        const cg = g.createLinearGradient(0, -56, 0, 6); if (ap) { cg.addColorStop(0, '#fff6c2'); cg.addColorStop(1, '#ffb52e') } else if (fc) { cg.addColorStop(0, '#e6fbff'); cg.addColorStop(1, '#5fd0ff') } else { cg.addColorStop(0, '#ffffff'); cg.addColorStop(1, '#bcd6ff') }
+        // 디맥: 필드 위쪽에 아주 큰 반투명 콤보 숫자, 그 아래 금색 큰 배율 글자
+        g.save(); g.translate(CX, 178); g.scale(pop, pop)
+        g.globalAlpha = 0.6; g.font = `900 124px ${FONT}`; g.lineJoin = 'round'; g.lineWidth = 9; g.strokeStyle = 'rgba(2,5,12,.9)'; g.strokeText(String(sk.combo), 0, 0)
+        const cg = g.createLinearGradient(0, -90, 0, 6); if (ap) { cg.addColorStop(0, '#fff6c2'); cg.addColorStop(1, '#ffb52e') } else if (fc) { cg.addColorStop(0, '#f2fcff'); cg.addColorStop(1, '#8fdcff') } else { cg.addColorStop(0, '#ffffff'); cg.addColorStop(1, '#c4cbd8') }
         g.fillStyle = cg; g.fillText(String(sk.combo), 0, 0); g.globalAlpha = 1; g.restore()
-        g.font = `900 17px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.95)'; g.fillText(ap ? 'ALL PERFECT' : fc ? 'FULL COMBO' : 'COMBO', CX, 278)
+        g.font = `800 15px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.9)'; g.fillText(ap ? 'ALL PERFECT' : fc ? 'FULL COMBO' : 'COMBO', CX, 78)
+        g.font = `900 72px ${FONT}`; g.lineWidth = 7; g.strokeStyle = 'rgba(2,5,12,.85)'; g.strokeText(`x${sk.mult % 1 ? sk.mult.toFixed(2) : sk.mult}`, CX, 262)
+        const mg = g.createLinearGradient(0, 210, 0, 268); mg.addColorStop(0, '#ffe38a'); mg.addColorStop(1, '#e08a00'); g.fillStyle = mg; g.globalAlpha = 0.9; g.fillText(`x${sk.mult % 1 ? sk.mult.toFixed(2) : sk.mult}`, CX, 262); g.globalAlpha = 1
       }
       const age = performance.now() - flash.at
       if (age < 380 && settings.hudJudge) { // 판정 글자: 정확도(%) 글자(y484) 위에 겹치지 않게 그보다 60px 위에 짧게 떴다 사라진다
@@ -401,19 +405,20 @@ export const Play = (sm: SceneManager): Scene => {
       g.textAlign = 'left'
       // 곡 정보 카드: 필드와 안 겹치는 빈 쪽에 둔다 (가운데=왼쪽 끝, 왼쪽 필드=필드 오른쪽, 오른쪽 필드=점수 카드 옆)
       const px = [FIELD_X + fw + 40, 24, 380][settings.align] ?? 24, pw = settings.align === 1 ? 340 : 400, py = 24, iw = pw - 40
-      card(g, px, py, pw, 132, `${data.vs ? 'VERSUS' : practice ? 'PRACTICE · 기록 안 됨' : 'NOW PLAYING'}  ·  ${LANES}K ${diffName(data.diff)}`)
-      const line = `${song.meta.title} - ${song.meta.artist}`
-      g.font = `800 19px ${FONT}`; g.fillStyle = '#fff'
+      g.save(); g.shadowColor = 'rgba(0,0,0,.9)'; g.shadowBlur = 8 // 상자 없이 영상 위에 바로
+      const tag = `${data.vs ? 'VERSUS' : practice ? 'PRACTICE · 기록 안 됨' : `${LANES}B TUNES`}  ·  ${diffName(data.diff)}`
+      g.font = `800 12px ${FONT}`; slant(g, px + 4, py, g.measureText(tag).width + 28, 20, 8); g.fillStyle = 'rgba(120,128,150,.75)'; g.fill(); g.fillStyle = '#fff'; g.fillText(tag, px + 18, py + 15)
+      const line = song.meta.title
+      g.font = `300 30px ${FONT}`; g.fillStyle = '#fff'
       const tw = g.measureText(line).width
-      g.save(); g.beginPath(); g.rect(px + 20, py + 38, iw, 32); g.clip() // 긴 곡명은 옆으로 흘러간다
-      if (tw <= iw) g.fillText(line, px + 20, py + 62)
-      else { const o = (performance.now() / 1000 * 45) % (tw + 60); g.fillText(line, px + 20 - o, py + 62); g.fillText(line, px + 20 - o + tw + 60, py + 62) }
+      g.save(); g.beginPath(); g.rect(px + 4, py + 28, pw, 44); g.clip() // 긴 곡명은 옆으로 흘러간다
+      if (tw <= pw) g.fillText(line, px + 4, py + 62)
+      else { const o = (performance.now() / 1000 * 45) % (tw + 60); g.fillText(line, px + 4 - o, py + 62); g.fillText(line, px + 4 - o + tw + 60, py + 62) }
       g.restore()
-      const cur = Math.min(Math.max(t, 0), dur), kx = px + 20 + iw * cur / dur // 재생 시간 / 전체 시간
-      meter(g, px + 20, py + 87, iw, cur / dur)
-      glow(g, '#ff9f1a', 10, () => { g.fillStyle = '#fff'; g.beginPath(); g.arc(kx, py + 89, 7, 0, Math.PI * 2); g.fill() })
-      g.font = `600 13px ${FONT}`; g.fillStyle = ICE; g.fillText(mmss(cur), px + 20, py + 116)
-      g.textAlign = 'right'; g.fillText(mmss(dur), px + 20 + iw, py + 116); g.textAlign = 'left'
+      const cur = Math.min(Math.max(t, 0), dur)
+      g.font = `700 15px ${FONT}`; g.fillStyle = '#e8f1ff'; g.fillText(fit(g, song.meta.artist, pw - 110), px + 4, py + 88)
+      g.font = `600 13px ${FONT}`; g.fillStyle = ICE; g.textAlign = 'right'; g.fillText(`${mmss(cur)} / ${mmss(dur)}`, px + pw, py + 88); g.textAlign = 'left'
+      g.restore()
       const hx = px
       g.font = `16px ${FONT}`; g.fillStyle = `rgba(255,255,255,${t < 10 ? 0.85 : 0.35})`; g.fillText(data.vs ? 'Esc 두 번 기권   ↑↓ 속도' : 'Esc 일시정지   F5 다시   ↑↓ 속도', hx, 700)
       if (data.vs && performance.now() - giveUpAt < 2000) { g.font = `800 24px ${FONT}`; g.fillStyle = '#ff8a8a'; g.textAlign = 'center'; g.fillText('Esc를 한 번 더 누르면 기권합니다', CX, 330); g.textAlign = 'left' }
