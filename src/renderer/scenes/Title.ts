@@ -11,7 +11,7 @@ const ign = (k: string) => /^(Shift|Control|Alt|Meta|CapsLock|NumLock|F\d+)$/.te
 let seen = false // 처음 켰을 때만 "PRESS ANY KEY" 화면을 거친다 (설정 등에서 돌아오면 바로 메뉴)
 
 export const Title = (sm: SceneManager): Scene => {
-  let sel = 0, menu = false, since = 0, cp = 0, last = 0 // cp: 화면에 보이는 위치 (고른 칸으로 부드럽게 따라간다)
+  let shown = -1, shownAt = 0, sel = 0, menu = false, since = 0, cp = 0, last = 0 // cp: 화면에 보이는 위치 (고른 칸으로 부드럽게 따라간다)
   let updMsg = '' // 업데이트 진행·실패 안내 (비었으면 기본 안내)
   const open = (v: boolean) => { menu = seen = v; since = performance.now() }
   return {
@@ -113,19 +113,34 @@ export const Title = (sm: SceneManager): Scene => {
         slant(g, -80, 250, 1500, 70, 40); g.fill(); slant(g, -80, 400, 1500, 24, 40); g.fill()
         g.globalAlpha = m
         profileCard(g, 40, 24, prof.v)
-        ITEMS.forEach(([name, sub], i) => {
-          const d = near(i), ad = Math.abs(d); if (ad > 1.6) return
-          // 글자 폭에 맞춰 크기를 정한다: 가운데 글자는 600px 안, 양옆 글자는 190px 안. COLLECTION처럼 긴 이름이 옆 글자·화살표와 겹치지 않게
-          g.font = `900 100px ${FONT}`; const wu = g.measureText(name).width / 100
-          const big = Math.min(128, 600 / wu), small = Math.min(36, 190 / wu)
-          const x = 640 + Math.sign(d) * Math.min(ad, 1) * 430 + Math.sign(d) * Math.max(ad - 1, 0) * 300, fsz = big + (small - big) * Math.min(ad, 1), al = Math.max(0, 1 - ad * 0.7)
-          g.globalAlpha = m * al; g.textAlign = 'center'; g.font = `900 ${fsz.toFixed(0)}px ${FONT}`
-          if (ad < 0.5) { g.fillStyle = col; g.fillText(name, x - 5, 360 + 3); g.fillStyle = 'rgba(255,255,255,.35)'; g.fillText(name, x + 5, 360 - 3) } // 어긋난 그림자 (디맥의 지직거리는 글자)
-          g.fillStyle = '#fff'; glow(g, ad < 0.5 ? col : 'rgba(0,0,0,0)', 26, () => g.fillText(name, x, 360))
-          if (ad < 0.6) {
-            g.globalAlpha = m * (1 - ad / 0.6); g.font = `600 20px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.85)'
-            g.fillText(name === 'ACCOUNT' ? (account.token ? `${account.nick}  ·  내 계정` : '로그인 / 회원가입') : sub, x, 408)
-          }
+        // 디맥 메인 메뉴: 오른쪽 위에 모드 이름을 네모 글자 타일로, 그 아래 No. 번호 상자, 아래 줄에 모든 모드 타일
+        if (shown !== sel) { shown = sel; shownAt = now }
+        const pop = Math.min(1, (now - shownAt) / 260), ep = 1 - (1 - pop) ** 3
+        const [name, sub] = ITEMS[sel], desc = name === 'ACCOUNT' ? (account.token ? `${account.nick}  ·  내 계정` : '로그인 / 회원가입') : sub
+        g.textAlign = 'center'
+        const cw = Math.min(60, 640 / name.length), chars = [...name]
+        chars.forEach((ch, k) => {
+          const x = 1236 - (chars.length - k) * (cw + 6) + (1 - ep) * 40 * (1 + k * 0.15), y = 70, on = k % 2 === 0
+          g.globalAlpha = m * ep
+          g.fillStyle = on ? '#fff' : col; glow(g, col, 14, () => g.fillRect(x, y, cw, cw * 1.15))
+          g.fillStyle = on ? '#07101e' : '#fff'; g.font = `900 ${Math.round(cw * 0.78)}px ${FONT}`; g.fillText(ch, x + cw / 2, y + cw * 0.9)
+        })
+        g.globalAlpha = m * ep
+        const bx = 1236 - 124, by0 = 70 + cw * 1.15 + 14
+        g.fillStyle = col; g.fillRect(bx, by0, 124, 124); g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(bx, by0 + 94, 124, 30)
+        g.fillStyle = '#fff'; g.font = `800 15px ${FONT}`; g.fillText('No.', bx + 26, by0 + 24); g.font = `900 84px ${FONT}`; g.fillText(String(sel + 1), bx + 70, by0 + 92)
+        for (let k = 0; k < 4; k++) { g.fillStyle = 'rgba(255,255,255,.85)'; g.fillRect(bx + 14 + k * 8, by0 + 116 - (k + 1) * 5, 5, (k + 1) * 5) }
+        g.font = `700 22px ${FONT}`; g.textAlign = 'right'; g.fillStyle = '#fff'; g.fillText(desc, 1236, by0 + 160)
+        g.textAlign = 'left'; g.globalAlpha = m
+        // 아래 모드 줄
+        ITEMS.forEach(([nm], i) => {
+          const w = 160, x = 50 + i * (w + 10), on = i === sel, y = on ? 548 : 562, h = on ? 100 : 86, c = COLORS[i % COLORS.length]
+          hit(x, y, w, h, () => { if (i === sel) press('Enter'); else sel = i })
+          g.fillStyle = on ? c : 'rgba(4,9,22,.78)'; if (on) glow(g, c, 20, () => g.fillRect(x, y, w, h)); else g.fillRect(x, y, w, h)
+          g.fillStyle = c; g.fillRect(x, y, w, 4); g.strokeStyle = on ? '#fff' : 'rgba(255,255,255,.2)'; g.lineWidth = on ? 2 : 1; g.strokeRect(x + .5, y + .5, w - 1, h - 1)
+          g.font = `900 21px ${FONT}`; const tw = g.measureText(nm).width; g.font = `900 ${Math.min(21, Math.floor(21 * 140 / tw))}px ${FONT}`
+          g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText(nm, x + w / 2, y + h / 2 + 8); g.textAlign = 'left'
+          g.font = `800 12px ${FONT}`; g.fillStyle = on ? '#fff' : c; g.fillText(String(i + 1).padStart(2, '0'), x + 10, y + 22)
         })
         g.globalAlpha = m; g.textAlign = 'left'
         // 좌우 화살표 · 현재 위치 점
@@ -136,9 +151,7 @@ export const Title = (sm: SceneManager): Scene => {
             g.beginPath(); g.moveTo(ax + 12 * dir * -1, 306); g.lineTo(ax + 12 * dir, 330); g.lineTo(ax + 12 * dir * -1, 354); g.stroke()
             g.lineWidth = 2; g.strokeStyle = col; g.beginPath(); g.moveTo(ax + 20 * dir * -1, 302); g.lineTo(ax + 20 * dir, 330); g.lineTo(ax + 20 * dir * -1, 358); g.stroke()
           }
-          hit(440, 270, 400, 120, () => press('Enter')) // 가운데 이름을 누르면 실행
         }
-        ITEMS.forEach((_, i) => { g.fillStyle = i === sel ? col : 'rgba(255,255,255,.3)'; g.beginPath(); g.arc(640 + (i - (n - 1) / 2) * 22, 560, i === sel ? 5 : 3.5, 0, Math.PI * 2); g.fill() })
         g.globalAlpha = m
         footer(g)
         let kx = 24
