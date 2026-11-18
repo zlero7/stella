@@ -165,7 +165,7 @@ export const Settings = (sm: SceneManager): Scene => {
       // 분류 이름 (탭을 바꾸면 위에서 내려온다)
       const e = Math.min(1, (performance.now() - since) / 220)
       g.save(); g.globalAlpha = e; g.textAlign = 'left'
-      g.font = `800 30px ${FONT}`; g.fillStyle = '#fff'; g.fillText(CATS[ci].name, X, 112 - 8 * (1 - e))
+      g.font = `300 38px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.75)'; g.fillText(CATS[ci].name, X, 114 - 8 * (1 - e))
       const nw = g.measureText(CATS[ci].name).width
       g.font = `600 14px ${FONT}`; g.fillStyle = ICE; g.fillText(CAT_SUB[ci], X + nw + 16, 110 - 8 * (1 - e)); g.restore()
 

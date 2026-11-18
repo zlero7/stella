@@ -171,11 +171,9 @@ export function drawCover(g: CanvasRenderingContext2D, src: CanvasImageSource, s
 }
 
 // 오른쪽으로 기운 평행사변형 경로 (디맥식 사선 패널)
-export function slant(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, s = 18) {
-  g.beginPath()
-  g.moveTo(x + s, y); g.lineTo(x + w, y); g.lineTo(x + w - s, y + h); g.lineTo(x, y + h)
-  g.closePath()
-}
+// 디맥 UI는 거의 전부 직각이다: 사선·둥근 모서리를 쓰던 모든 곳(slant·pill·카드·썸네일)이 같은 직사각형이 되도록 모양을 여기서 통일한다
+export function slant(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, _s = 18) { g.beginPath(); g.rect(x, y, w, h) }
+;(CanvasRenderingContext2D.prototype as unknown as { roundRect: unknown }).roundRect = function (this: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) { this.rect(x, y, w, h) }
 // 네 갈래 별(반짝임) 경로: 중심 (x,y), 반지름 r
 export function starPath(g: CanvasRenderingContext2D, x: number, y: number, r: number) { // 각진 네 갈래 반짝임 (곡선 없이 곧은 변)
   const n = r * 0.16
