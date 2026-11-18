@@ -87,8 +87,10 @@ export const Collection = (sm: SceneManager): Scene => {
           if (tab === 1) {
             const [c1, c2] = PLATE_COLOR[x.id] ?? PLATE_COLOR.default
             g.save(); g.globalAlpha = x.on ? 1 : 0.45
-            slant(g, cx, cy, cw, ch, 18); const gr = g.createLinearGradient(cx, cy, cx + cw, cy + ch); gr.addColorStop(0, c1); gr.addColorStop(1, c2); g.fillStyle = gr; g.fill(); g.restore()
-            slant(g, cx, cy, cw, ch, 18); g.strokeStyle = cur ? '#fff' : 'rgba(255,255,255,.35)'; g.lineWidth = cur ? 3 : 1; g.stroke()
+            g.fillStyle = 'rgba(28,24,22,.92)'; g.fillRect(cx, cy, cw, ch); const gr = g.createLinearGradient(cx, cy, cx + cw, cy + ch); gr.addColorStop(0, c1); gr.addColorStop(1, c2); g.fillStyle = gr; g.fillRect(cx + 14, cy + 34, cw - 28, 40); g.restore()
+            // 디맥 보상 카드처럼: 왼쪽 위 꼬리표(사용 중은 금색, 잠김은 회색) · 고른 카드는 금색 테두리
+            if (x.on) { if (worn) { g.fillStyle = '#ffb400'; g.fillRect(cx, cy, 70, 22); g.fillStyle = '#12131a'; g.font = `800 12px ${FONT}`; g.textAlign = 'left'; g.fillText('IN USE', cx + 8, cy + 16) } } else { g.fillStyle = 'rgba(180,180,190,.8)'; g.fillRect(cx, cy, 70, 22); g.fillStyle = '#12131a'; g.font = `800 12px ${FONT}`; g.textAlign = 'left'; g.fillText('LOCKED', cx + 8, cy + 16) }
+            g.strokeStyle = cur ? '#ffb400' : 'rgba(255,255,255,.25)'; g.lineWidth = cur ? 3 : 1; g.strokeRect(cx + 1, cy + 1, cw - 2, ch - 2)
             g.textAlign = 'center'; g.font = `800 17px ${FONT}`; g.fillStyle = '#fff'; g.fillText(x.name, cx + cw / 2, cy + 82)
             g.font = `600 12px ${FONT}`; g.fillStyle = x.on ? 'rgba(255,255,255,.85)' : '#ffd0d0'; g.fillText(x.on ? (worn ? '사용 중' : '') : `🔒 ${x.need}`, cx + cw / 2, cy + 106)
           } else {
