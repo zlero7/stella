@@ -76,7 +76,7 @@ export const Result = (sm: SceneManager): Scene => {
       // 위 머리띠: 곡 정보 (가운데 모아서, 디맥처럼)
       const hy = -80 * (1 - ease(prog(-0.2, 0.3)))
       g.save(); g.translate(0, hy)
-      g.fillStyle = 'rgba(10,16,34,.8)'; g.fillRect(0, 0, 1280, 80)
+      const hb = g.createLinearGradient(0, 0, 1280, 0); hb.addColorStop(0, 'rgba(10,50,60,.9)'); hb.addColorStop(0.5, 'rgba(10,16,30,.92)'); hb.addColorStop(1, 'rgba(70,30,10,.9)'); g.fillStyle = hb; g.fillRect(0, 0, 1280, 80) // 디맥 결과 머리띠: 왼쪽 청록 → 오른쪽 주황빛
       const im = artOf(song)!.img
       g.save(); g.beginPath(); g.roundRect(468, 16, 48, 48, 4); g.clip(); drawCover(g, im, im.width, im.height, 468, 16, 48, 48); g.restore()
       g.textAlign = 'left'; g.font = `600 11px ${FONT}`; g.fillStyle = 'rgba(230,240,255,.6)'; g.fillText(`${settings.keyMode}K TUNES`, 528, 24)

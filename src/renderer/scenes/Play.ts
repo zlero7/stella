@@ -335,8 +335,11 @@ export const Play = (sm: SceneManager): Scene => {
         g.fillText(keyLabel(k), cx, cy + 6)
       })
       drawConsoleFront(g, FIELD_X, fw, JUDGE_Y, { score: sk.score, scroll: settings.scroll, mult: sk.mult, hp: sk.hp, hpLow: sk.hp <= 25 }, gs)
-      g.textAlign = 'center'; g.font = `900 22px ${FONT}`; g.fillStyle = sk.accuracy >= 100 ? '#ffe27a' : 'rgba(255,255,255,.85)' // 판정선 위: 지금까지의 정확도
-      if (settings.hudRate && sk.counts.some(n => n)) g.fillText(`${sk.accuracy.toFixed(sk.accuracy >= 100 ? 0 : 1)}%`, FIELD_X + fw / 2, JUDGE_Y - 36); g.textAlign = 'left'
+      if (settings.hudRate && sk.counts.some(n => n)) { // 디맥: 판정 글자 바로 위에 작은 RATE 글자와 정확도
+        g.textAlign = 'right'; g.font = `700 10px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.6)'; g.fillText('RATE', FIELD_X + fw / 2 - 6, JUDGE_Y - 134)
+        g.textAlign = 'left'; g.font = `700 15px ${FONT}`; g.fillStyle = sk.accuracy >= 100 ? '#ffe27a' : '#fff'; g.fillText(`${sk.accuracy.toFixed(2)}%`, FIELD_X + fw / 2 + 2, JUDGE_Y - 133)
+      }
+      g.textAlign = 'left'
       // 체력 게이지: 기어 양옆 틀 안의 세로 막대 두 줄. 가득 → 하늘색, 절반 아래 → 금색, 25% 아래 → 깜빡이는 빨강
       dispHp += (sk.hp - dispHp) * 0.2
       const hy = 90, hh = JUDGE_Y - hy, fillH = (hh * dispHp) / 100
