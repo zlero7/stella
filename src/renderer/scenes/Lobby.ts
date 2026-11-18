@@ -75,7 +75,7 @@ export const Lobby = (sm: SceneManager): Scene => {
       if (step === 'connected' && vs.closed) { step = 'menu'; err = '상대와 연결이 끊어졌습니다'; vs.closed = false; vs.open = false }
     },
     render(g) {
-      drawBg(g)
+      drawBg(g, undefined, 2)
       header(g, 'VERSUS', '친구 대결')
       g.textAlign = 'center'
       const cx = 640

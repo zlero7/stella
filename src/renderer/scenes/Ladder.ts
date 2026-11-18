@@ -53,7 +53,7 @@ export const Ladder = (sm: SceneManager): Scene => {
       if (l.state === 'ban' && !free().includes(focus)) focus = free()[0] ?? 0
     },
     render(g) {
-      drawBg(g)
+      drawBg(g, undefined, 1)
       const l = vs.l, me = prof.v, now = performance.now(), t = now / 1000
       header(g, 'LADDER MATCH', '랭크 대전')
       g.textAlign = 'center'; g.fillStyle = '#fff'

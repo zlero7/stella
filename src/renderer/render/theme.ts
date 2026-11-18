@@ -130,11 +130,13 @@ export function artOf(song?: Song): Art | undefined {
 }
 
 // 모든 화면 공통 배경 층: 하늘 그라데이션 + 햇살 + 구름 + 반짝이는 별 + 가장자리 어둡힘. 한 번만 그려 두고 매 프레임 drawImage 한 번으로 쓴다
-function layer(solid: boolean) {
+// 화면(모드)마다 다른 바탕색 (디맥은 모드마다 바탕색이 다르다): 위·아래 두 색
+export const TONES: [string, string][] = [['#5a6ab6', '#c08aa6'], ['#c4663f', '#a83a52'], ['#2f8fa6', '#3a52b0'], ['#2b2519', '#86621f'], ['#6e58b8', '#3a8aa6'], ['#5f6b86', '#8a93ac']]
+function layer(solid: boolean, tone = 0) {
   const c = document.createElement('canvas'); c.width = 1280; c.height = 720
   const x = c.getContext('2d')!
   if (solid) {
-    const g1 = x.createLinearGradient(0, 0, 0, 720); g1.addColorStop(0, '#5a6ab6'); g1.addColorStop(0.55, '#8a78b4'); g1.addColorStop(1, '#c08aa6') // 디맥 메인 메뉴 같은 파스텔 그라데이션
+    const g1 = x.createLinearGradient(0, 0, 0, 720); g1.addColorStop(0, TONES[tone][0]); g1.addColorStop(1, TONES[tone][1]) // 디맥 메인 메뉴 같은 파스텔 그라데이션
     x.fillStyle = g1; x.fillRect(0, 0, 1280, 720)
     x.strokeStyle = 'rgba(255,255,255,.11)'; x.lineWidth = 1 // 가는 사선 무늬
     x.beginPath(); for (let i = -720; i < 1280; i += 5) { x.moveTo(i, 720); x.lineTo(i + 720, 0) } x.stroke()
@@ -153,12 +155,13 @@ function layer(solid: boolean) {
   x.fillStyle = v; x.fillRect(0, 0, 1280, 720)
   return c
 }
-let SOLID: HTMLCanvasElement | undefined, OVER: HTMLCanvasElement | undefined
+const SOLID: HTMLCanvasElement[] = []
+let OVER: HTMLCanvasElement | undefined
 
-export function drawBg(g: CanvasRenderingContext2D, song?: Song) {
+export function drawBg(g: CanvasRenderingContext2D, song?: Song, tone = 0) {
   const art = artOf(song)
   if (art) g.drawImage(art.bg, 0, 0, 1280, 720)
-  g.drawImage(art ? (OVER ??= layer(false)) : (SOLID ??= layer(true)), 0, 0)
+  g.drawImage(art ? (OVER ??= layer(false)) : (SOLID[tone] ??= layer(true, tone)), 0, 0)
 }
 
 // 원본 비율을 지키며 x,y,w,h를 꽉 채워 그린다 (넘치는 부분은 잘라냄)

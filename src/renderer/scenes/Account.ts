@@ -139,7 +139,7 @@ export const Account = (sm: SceneManager): Scene => {
     },
     update() { place() },
     render(g) {
-      drawBg(g)
+      drawBg(g, undefined, 4)
       const now = performance.now(), t = now / 1000, p = Math.min(1, (now - since) / 520), m = 1 - (1 - p) ** 3 // 들어올 때 부드럽게
 
       // 한가운데에서 퍼지는 빛줄기 (타이틀과 같은 느낌, 더 옅게)

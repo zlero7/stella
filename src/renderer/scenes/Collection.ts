@@ -26,7 +26,7 @@ export const Collection = (sm: SceneManager): Scene => {
   return {
     enter() { msg = ''; busy = false; if (account.token) void refreshProfile().then(() => setTab(0)); else setTab(0) },
     render(g) {
-      drawBg(g)
+      drawBg(g, undefined, 3)
       const p = prof.v
       header(g, 'COLLECTION')
       g.textAlign = 'center'; g.fillStyle = '#fff'

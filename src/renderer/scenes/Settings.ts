@@ -144,7 +144,7 @@ export const Settings = (sm: SceneManager): Scene => {
   return {
     enter(d) { const o = d as { back?: string; backData?: unknown; at?: string } | undefined; back = o?.back ?? 'title'; backData = o?.backData; sel = Math.max(FLAT.findIndex(f => f.item.label === o?.at), 0); since = performance.now() },
     render(g) {
-      drawBg(g)
+      drawBg(g, undefined, 5)
       const ci = FLAT[sel].ci, mine = FLAT.map((f, i) => (f.ci === ci ? i : -1)).filter(i => i >= 0)
       const X = 48, W = 800, LW = 290, RH = 50, GAP = 8
       header(g, 'SETTINGS', '환경 설정')
