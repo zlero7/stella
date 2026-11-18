@@ -7,13 +7,13 @@ import noteB from '../assets/note-b.svg'
 const load = (src: string) => { const i = new Image(); i.src = src; return i }
 export const A = { lane: load(lane), noteW: load(noteW), noteB: load(noteB) } // 에디터가 쓰는 그림
 
-// 스텔라: 맑은 하늘색. 하늘 파랑 바탕에 흰 구름과 햇살, 포인트는 금빛 별. Bahnschrift는 각진 숫자꼴, 한글은 맑은 고딕으로 이어진다
+// 디맥(DJMAX RESPECT V)풍: 거의 검은 남색 바탕에 사선 패널, 네온 시안·마젠타 선, 포인트는 노랑·주황. Bahnschrift는 각진 숫자꼴, 한글은 맑은 고딕으로 이어진다
 export const FONT = "'Bahnschrift','Segoe UI','Malgun Gothic',sans-serif"
-export const CYAN = '#7ad8ff' // 밝은 하늘색 (선택·강조)
-export const BLUE = '#5b8cff' // 강조 그라데이션의 끝
-export const AMBER = '#ffd36b' // 별빛 금색
-export const ICE = '#e6f6ff'
-export const NAVY = '#0b2a6b' // 밝은 면 위의 글자색
+export const CYAN = '#22e0ff' // 네온 시안 (선택·강조)
+export const BLUE = '#2b6cff' // 강조 그라데이션의 끝
+export const AMBER = '#ffc21a' // 디맥 노랑
+export const ICE = '#dff7ff'
+export const NAVY = '#061224' // 밝은 면 위의 글자색
 // 노트 색(바깥 두 레인). 공식 색 표를 못 찾아 나무위키의 상징·오시마크·머리색을 바탕으로 정한 근사값이다
 export const NOTE_COLORS: [string, string][] = [
   ['기본', '#4fa8ff'], ['아이리 칸나', '#2f4fc9'], ['아야츠노 유니', '#b9a4ff'], ['시라유키 히나', '#ff8fb3'], ['네네코 마시로', '#aeb6c6'],
@@ -45,7 +45,7 @@ function bgOf(img: Img, blur: number) {
   const s = Math.max(1280 / img.width, 720 / img.height) * (blur ? 1.1 : 1) // 블러 가장자리 투명 방지
   if (blur) c.filter = `blur(${blur}px)`
   c.drawImage(img, (1280 - img.width * s) / 2, (720 - img.height * s) / 2, img.width * s, img.height * s)
-  c.filter = 'none'; c.fillStyle = 'rgba(4,8,22,.62)'; c.fillRect(0, 0, 1280, 720)
+  c.filter = 'none'; c.fillStyle = 'rgba(2,5,14,.66)'; c.fillRect(0, 0, 1280, 720)
   return bg
 }
 const makeArt = (img: Img): Art => ({ img, bg: bgOf(img, 0) })
@@ -134,33 +134,31 @@ function layer(solid: boolean) {
   const c = document.createElement('canvas'); c.width = 1280; c.height = 720
   const x = c.getContext('2d')!
   if (solid) {
-    const g1 = x.createLinearGradient(0, 0, 0, 720); g1.addColorStop(0, '#060d20'); g1.addColorStop(0.55, '#0d1b3e'); g1.addColorStop(1, '#17285a')
+    const g1 = x.createLinearGradient(0, 0, 0, 720); g1.addColorStop(0, '#02050d'); g1.addColorStop(0.6, '#060e1e'); g1.addColorStop(1, '#0a1730')
     x.fillStyle = g1; x.fillRect(0, 0, 1280, 720)
-    const sun = x.createRadialGradient(1010, 130, 0, 1010, 130, 520)
-    sun.addColorStop(0, 'rgba(110,140,255,.32)'); sun.addColorStop(0.3, 'rgba(90,110,220,.14)'); sun.addColorStop(1, 'rgba(90,110,220,0)')
-    x.fillStyle = sun; x.fillRect(0, 0, 1280, 720)
-    // 구름: 아래쪽에 부드럽게 겹친 흰 덩어리
+    for (const [cx, cy, r, c] of [[130, 90, 560, '0,200,255'], [1180, 650, 600, '255,40,150'], [900, 120, 420, '60,90,255']] as const) { // 모서리의 네온 번짐
+      const gl = x.createRadialGradient(cx, cy, 0, cx, cy, r); gl.addColorStop(0, `rgba(${c},.20)`); gl.addColorStop(1, `rgba(${c},0)`)
+      x.fillStyle = gl; x.fillRect(0, 0, 1280, 720)
+    }
+    x.strokeStyle = 'rgba(120,200,255,.045)'; x.lineWidth = 1 // 사선 격자
+    for (let i = -720; i < 1280; i += 26) { x.beginPath(); x.moveTo(i, 720); x.lineTo(i + 720, 0); x.stroke() }
     let r = 20260101; const rnd = () => ((r = (Math.imul(r, 1664525) + 1013904223) | 0) >>> 0) / 4294967296
-    for (let i = 0; i < 16; i++) {
-      const cx = rnd() * 1400 - 60, cy = 560 + rnd() * 220, cr = 110 + rnd() * 170
-      const cg = x.createRadialGradient(cx, cy, 0, cx, cy, cr); cg.addColorStop(0, 'rgba(120,150,255,.13)'); cg.addColorStop(1, 'rgba(120,150,255,0)')
-      x.fillStyle = cg; x.fillRect(cx - cr, cy - cr, cr * 2, cr * 2)
+    for (let i = 0; i < 7; i++) { // 긴 사선 네온 줄
+      const x0 = rnd() * 1400 - 100, w = 2 + rnd() * 3, len = 200 + rnd() * 380, cyan = rnd() < 0.6
+      const lg = x.createLinearGradient(x0, 720, x0 + len * 0.7, 720 - len); lg.addColorStop(0, cyan ? 'rgba(34,224,255,0)' : 'rgba(255,60,160,0)'); lg.addColorStop(1, cyan ? 'rgba(34,224,255,.35)' : 'rgba(255,60,160,.3)')
+      x.strokeStyle = lg; x.lineWidth = w; x.beginPath(); x.moveTo(x0, 720); x.lineTo(x0 + len * 0.7, 720 - len); x.stroke()
     }
-    for (let i = 0; i < 70; i++) {
-      const sx = rnd() * 1280, sy = rnd() * 520, big = rnd() < 0.12
-      x.fillStyle = `rgba(${rnd() < 0.2 ? '255,236,170' : '255,255,255'},${0.35 + rnd() * 0.5})`
-      if (big) { starPath(x, sx, sy, 5 + rnd() * 6); x.fill() } else x.fillRect(sx, sy, 2, 2)
-    }
+    for (let i = 0; i < 50; i++) { x.fillStyle = `rgba(190,235,255,${0.12 + rnd() * 0.3})`; x.fillRect(rnd() * 1280, rnd() * 720, 2, 2) }
   }
   x.save(); x.globalCompositeOperation = 'lighter'
-  for (const [x0, w, a] of [[-100, 260, .09], [260, 90, .06], [880, 300, .09], [1120, 70, .06]] as const) {
+  for (const [x0, w, a] of [[-100, 260, .04], [260, 90, .03], [880, 300, .04], [1120, 70, .03]] as const) {
     const g2 = x.createLinearGradient(x0, 0, x0 + w, 0)
     g2.addColorStop(0, 'rgba(255,255,255,0)'); g2.addColorStop(.5, `rgba(255,255,255,${a})`); g2.addColorStop(1, 'rgba(255,255,255,0)')
     x.fillStyle = g2; x.beginPath(); x.moveTo(x0 + 240, 0); x.lineTo(x0 + 240 + w, 0); x.lineTo(x0 + w, 720); x.lineTo(x0, 720); x.fill()
   }
   x.restore()
   const v = x.createRadialGradient(640, 360, 380, 640, 360, 880)
-  v.addColorStop(0, 'rgba(5,12,34,0)'); v.addColorStop(1, 'rgba(5,12,34,.4)')
+  v.addColorStop(0, 'rgba(0,3,10,0)'); v.addColorStop(1, 'rgba(0,3,10,.55)')
   x.fillStyle = v; x.fillRect(0, 0, 1280, 720)
   return c
 }
@@ -185,19 +183,19 @@ export function slant(g: CanvasRenderingContext2D, x: number, y: number, w: numb
   g.closePath()
 }
 // 네 갈래 별(반짝임) 경로: 중심 (x,y), 반지름 r
-export function starPath(g: CanvasRenderingContext2D, x: number, y: number, r: number) {
-  g.beginPath(); g.moveTo(x, y - r)
-  g.quadraticCurveTo(x, y, x + r, y); g.quadraticCurveTo(x, y, x, y + r)
-  g.quadraticCurveTo(x, y, x - r, y); g.quadraticCurveTo(x, y, x, y - r); g.closePath()
+export function starPath(g: CanvasRenderingContext2D, x: number, y: number, r: number) { // 각진 네 갈래 반짝임 (곡선 없이 곧은 변)
+  const n = r * 0.16
+  g.beginPath(); g.moveTo(x, y - r); g.lineTo(x + n, y - n); g.lineTo(x + r, y); g.lineTo(x + n, y + n); g.lineTo(x, y + r); g.lineTo(x - n, y + n); g.lineTo(x - r, y); g.lineTo(x - n, y - n); g.closePath()
 }
-// 푸른 유리 느낌의 사선 패널: 위가 살짝 밝은 면 + 윗변 하이라이트 + 흰 테두리. accent는 테두리 색
-export function panel(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, accent = 'rgba(255,255,255,.55)', s = 18, alpha = 0.78) {
+// 디맥식 어두운 사선 패널: 위가 살짝 밝은 면 + 윗변 빛 + 네온 테두리 + 오른쪽 아래 모서리 표식. accent는 테두리 색
+export function panel(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, accent = 'rgba(120,220,255,.6)', s = 18, alpha = 0.78) {
   slant(g, x, y, w, h, s)
   const f = g.createLinearGradient(0, y, 0, y + h)
-  f.addColorStop(0, `rgba(24,36,72,${Math.min(alpha, 0.9)})`); f.addColorStop(1, `rgba(10,18,44,${Math.min(alpha + 0.08, 0.95)})`)
+  f.addColorStop(0, `rgba(14,26,52,${Math.min(alpha, 0.92)})`); f.addColorStop(1, `rgba(3,8,22,${Math.min(alpha + 0.1, 0.96)})`)
   g.fillStyle = f; g.fill()
   g.strokeStyle = accent; g.lineWidth = 1.5; g.stroke()
-  g.fillStyle = 'rgba(255,255,255,.3)'; g.fillRect(x + s + 1, y + 1, w - s - 2, 1) // 윗변 빛
+  g.fillStyle = 'rgba(255,255,255,.28)'; g.fillRect(x + s + 1, y + 1, w - s - 2, 1) // 윗변 빛
+  g.fillStyle = accent; g.fillRect(x + w - s - 22, y + h - 3, 20, 3) // 아래 모서리 표식
 }
 // 시안→파랑 강조 그라데이션 (선택/주요 버튼)
 export function accentFill(g: CanvasRenderingContext2D, x: number, w: number) {
@@ -229,7 +227,7 @@ export function fit(g: CanvasRenderingContext2D, s: string, w: number) {
 // 디맥식 메뉴 줄: 선택한 줄은 주황 띠에 흰 막대, 나머지는 어두운 얇은 띠 (타이틀·일시정지 메뉴가 같이 쓴다)
 export function menuRow(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, on: boolean | number) {
   const k = +on // 0 = 어두운 줄, 1 = 주황 띠. 그 사이는 섞어서 서서히 바뀐다
-  g.fillStyle = 'rgba(6,11,28,.74)'; g.beginPath(); g.roundRect(x, y, w, h, 14); g.fill()
+  g.fillStyle = 'rgba(3,8,20,.78)'; g.beginPath(); g.roundRect(x, y, w, h, 14); g.fill()
   if (k < 1) { g.strokeStyle = `rgba(255,255,255,${0.22 * (1 - k)})`; g.lineWidth = 1; g.stroke() }
   if (k > 0.01) {
     g.save(); g.globalAlpha *= k
@@ -250,8 +248,8 @@ export function fitFont(g: CanvasRenderingContext2D, text: string, maxW: number,
 
 // 곡 정보 카드 모양의 둥근 카드: 어두운 남색 면 + 흰 테두리. head가 있으면 왼쪽 위에 작은 하늘색 머리글 (플레이·결과 화면이 같이 쓴다)
 export function card(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, head?: string, r = 20) {
-  g.fillStyle = 'rgba(6,11,28,.78)'; g.beginPath(); g.roundRect(x, y, w, h, r); g.fill()
-  g.strokeStyle = 'rgba(255,255,255,.16)'; g.lineWidth = 1.5; g.stroke()
+  g.fillStyle = 'rgba(3,8,20,.8)'; g.beginPath(); g.roundRect(x, y, w, h, r); g.fill()
+  g.strokeStyle = 'rgba(120,220,255,.22)'; g.lineWidth = 1.5; g.stroke()
   if (head) { g.font = `700 12px ${FONT}`; const hw = g.measureText(head).width + 28; slant(g, x + 14, y + 12, hw, 22, 8); g.fillStyle = 'rgba(120,128,150,.55)'; g.fill(); g.fillStyle = '#fff'; g.textAlign = 'left'; g.fillText(head, x + 28, y + 28) } // 디맥식 회색 사선 이름표
 }
 // 알약 모양 칩 (상태 표시·키 안내)
@@ -286,7 +284,7 @@ export function chip(g: CanvasRenderingContext2D, x: number, y: number, key: str
   g.font = `800 ${fs}px ${FONT}`
   pill(g, x, y + dy, kw, h, 'rgba(255,255,255,.92)')
   if (k > 0.01) { g.save(); g.globalAlpha = k; pill(g, x, y + dy, kw, h, '#ffd36b'); g.restore() }
-  g.fillStyle = '#0b2a6b'; g.fillText(key, x + 7, base + dy)
+  g.fillStyle = '#061224'; g.fillText(key, x + 7, base + dy)
   g.font = `${fs}px ${FONT}`; g.fillStyle = color; g.fillText(label, x + kw + 5, base + dy)
   const kk = real === undefined ? (key === 'Esc' ? 'Escape' : key) : real
   if (kk) hit(x - 2, y - 2, total + 4, h + 4, () => press(kk))
@@ -321,16 +319,18 @@ export function marquee(g: CanvasRenderingContext2D, text: string, x: number, y:
 // ---- 디맥식 화면 공통 부품: 머리띠 · 옵션 줄 · 칸 막대 · 아이콘 ----
 // 화면 위의 머리띠: 어두운 띠 + 아래 무지개빛 선 + 별. 곡 선택 화면의 머리와 같은 모양
 export function header(g: CanvasRenderingContext2D, title: string, sub = '') {
-  g.fillStyle = 'rgba(6,11,28,.86)'; g.fillRect(0, 0, 1280, 66)
-  const lg = g.createLinearGradient(0, 0, 1280, 0); lg.addColorStop(0, '#7ad8ff'); lg.addColorStop(0.6, '#b9a4ff'); lg.addColorStop(1, '#ff9ad0')
+  const bg = g.createLinearGradient(0, 0, 1280, 0); bg.addColorStop(0, 'rgba(2,6,16,.94)'); bg.addColorStop(1, 'rgba(8,16,36,.82)')
+  g.fillStyle = bg; g.fillRect(0, 0, 1280, 66)
+  const lg = g.createLinearGradient(0, 0, 1280, 0); lg.addColorStop(0, CYAN); lg.addColorStop(0.55, '#7a6bff'); lg.addColorStop(1, '#ff3fa4')
   g.fillStyle = lg; g.fillRect(0, 64, 1280, 2)
-  glow(g, AMBER, 12, () => { starPath(g, 70, 33, 11); g.fillStyle = '#fff6d6'; g.fill() })
+  glow(g, CYAN, 12, () => { // 사선 두 줄 표식
+    slant(g, 40, 20, 14, 26, 8); g.fillStyle = CYAN; g.fill(); slant(g, 60, 20, 8, 26, 8); g.fillStyle = '#ff3fa4'; g.fill() })
   g.textAlign = 'left'; g.font = `900 26px ${FONT}`; g.fillStyle = '#fff'; g.fillText(title, 94, 42)
-  if (sub) { const tw = g.measureText(title).width; g.font = `600 13px ${FONT}`; g.fillStyle = 'rgba(230,246,255,.75)'; g.fillText(sub, 94 + tw + 16, 41) }
+  if (sub) { const tw = g.measureText(title).width; g.font = `600 13px ${FONT}`; g.fillStyle = 'rgba(200,235,255,.7)'; g.fillText(sub, 94 + tw + 16, 41) }
 }
 // 비스듬한 옵션 줄. k: 0(어두운 띠) ~ 1(주황 띠: 왼쪽 흰 줄과 빛)
 export function optRow(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, k: number) {
-  slant(g, x, y, w, h, 14); g.fillStyle = 'rgba(6,11,28,.78)'; g.fill()
+  slant(g, x, y, w, h, 14); g.fillStyle = 'rgba(3,8,20,.8)'; g.fill()
   g.strokeStyle = `rgba(255,255,255,${0.28 * (1 - k)})`; g.lineWidth = 1; g.stroke()
   if (k < 0.01) return
   g.save(); g.globalAlpha *= k
@@ -358,6 +358,6 @@ export function icon(g: CanvasRenderingContext2D, kind: 'display' | 'game' | 'so
 
 // 화면 아래 어두운 띠 (디맥처럼 키 안내가 이 위에 놓인다)
 export function footer(g: CanvasRenderingContext2D) {
-  const f = g.createLinearGradient(0, 670, 0, 720); f.addColorStop(0, 'rgba(4,8,20,.7)'); f.addColorStop(1, 'rgba(2,5,14,.92)')
-  g.fillStyle = f; g.fillRect(0, 670, 1280, 50); g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(0, 670, 1280, 1)
+  const f = g.createLinearGradient(0, 670, 0, 720); f.addColorStop(0, 'rgba(2,5,14,.75)'); f.addColorStop(1, 'rgba(0,2,8,.95)')
+  g.fillStyle = f; g.fillRect(0, 670, 1280, 50); g.fillStyle = 'rgba(34,224,255,.35)'; g.fillRect(0, 670, 1280, 1)
 }

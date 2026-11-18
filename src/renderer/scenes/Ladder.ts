@@ -27,7 +27,7 @@ export const Ladder = (sm: SceneManager): Scene => {
     gem(g, x + w / 2, 262, 72, p?.tierLabel ?? 'UNRANKED')
     g.font = `900 26px ${FONT}`; g.lineJoin = 'round'; g.lineWidth = 5; g.strokeStyle = 'rgba(6,11,28,.85)'; g.strokeText(p?.tierLabel ?? 'UNRANKED', x + w / 2, 392) // 밝은 배경에서도 티어 글자가 읽히게 어두운 테두리
     g.fillStyle = col; g.fillText(p?.tierLabel ?? 'UNRANKED', x + w / 2, 392)
-    g.font = `700 14px ${FONT}`; g.fillStyle = '#0b2a6b'; g.fillText(`${p?.lp ?? 0} LP`, x + w / 2, 416)
+    g.font = `700 14px ${FONT}`; g.fillStyle = '#061224'; g.fillText(`${p?.lp ?? 0} LP`, x + w / 2, 416)
     slant(g, x, 440, w, 64, 16); g.fillStyle = 'rgba(6,11,28,.84)'; g.fill(); g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 1.5; g.stroke()
     const [c1, c2] = PLATE_COLOR.default; avatarCircle(g, x + 36, 472, 22, p?.nick, p?.avatar, c1, c2)
     g.fillStyle = '#fff'; g.font = `800 20px ${FONT}`; g.textAlign = 'left'; g.fillText(fit(g, p?.nick ?? '…', w - 150), x + 70, 478); g.textAlign = 'center'

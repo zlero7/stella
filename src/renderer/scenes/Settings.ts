@@ -187,7 +187,7 @@ export const Settings = (sm: SceneManager): Scene => {
           g.font = `800 14px ${FONT}`
           const ws = keys.map(k2 => Math.max(g.measureText(keyLabel(k2)).width + 18, 30)), total = ws.reduce((a, b) => a + b + 6, -6)
           let kx = mid - total / 2
-          keys.forEach((k2, i) => { pill(g, kx, y + 11, ws[i], 28, '#fff'); g.fillStyle = '#0b2a6b'; g.textAlign = 'center'; g.fillText(keyLabel(k2), kx + ws[i] / 2, y + 31); g.textAlign = 'left'; kx += ws[i] + 6 })
+          keys.forEach((k2, i) => { pill(g, kx, y + 11, ws[i], 28, '#fff'); g.fillStyle = '#061224'; g.textAlign = 'center'; g.fillText(keyLabel(k2), kx + ws[i] / 2, y + 31); g.textAlign = 'left'; kx += ws[i] + 6 })
         } else if (it.go) {
           g.font = `800 16px ${FONT}`; g.fillStyle = hot; g.textAlign = 'center'; g.fillText(`${it.value()}  ▶`, mid, y + 31); g.textAlign = 'left'
         } else {

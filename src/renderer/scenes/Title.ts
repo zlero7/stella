@@ -24,7 +24,7 @@ export const Title = (sm: SceneManager): Scene => {
 
       // 한가운데에서 퍼지는 빛줄기: 천천히 돈다
       g.save(); g.translate(640, 330); g.rotate(t * 0.035)
-      const ray = g.createRadialGradient(0, 0, 40, 0, 0, 900); ray.addColorStop(0, 'rgba(255,255,255,.22)'); ray.addColorStop(1, 'rgba(255,255,255,0)')
+      const ray = g.createRadialGradient(0, 0, 40, 0, 0, 900); ray.addColorStop(0, 'rgba(34,224,255,.16)'); ray.addColorStop(1, 'rgba(34,224,255,0)')
       g.fillStyle = ray
       for (let i = 0; i < 12; i++) { g.rotate(Math.PI / 6); g.beginPath(); g.moveTo(0, 0); g.lineTo(900, -34); g.lineTo(900, 34); g.closePath(); g.fill() }
       g.restore()
@@ -67,8 +67,8 @@ export const Title = (sm: SceneManager): Scene => {
       g.fillText('S T E L L I V E   C O V E R   R H Y T H M', cx, by - fs * 0.76 - 14)
       g.font = `900 ${fs}px ${FONT}`
       const w = g.measureText('STELLA').width, lx = cx - w / 2
-      const gr = g.createLinearGradient(lx, 0, lx + w, 0); gr.addColorStop(0, '#fff'); gr.addColorStop(0.5, '#e8f7ff'); gr.addColorStop(1, '#bfe6ff')
-      glow(g, 'rgba(10,50,140,.65)', 34, () => { g.fillStyle = gr; g.fillText('STELLA', cx, by) })
+      const gr = g.createLinearGradient(lx, 0, lx + w, 0); gr.addColorStop(0, '#fff'); gr.addColorStop(0.5, '#d9f6ff'); gr.addColorStop(1, '#6fdcff')
+      glow(g, 'rgba(0,170,255,.7)', 34, () => { g.fillStyle = gr; g.fillText('STELLA', cx, by) })
       for (const [dx, dy, r, ph] of [[w / 2 + 6, -fs * 0.62, fs * 0.1, 0], [w / 2 - 22, -fs * 0.74, fs * 0.05, 1.3], [-w / 2 + 30, -fs * 0.3, fs * 0.045, 2.6]] as const) {
         const k = 0.65 + 0.35 * Math.sin(t * 2.4 + ph)
         glow(g, AMBER, 18, () => { starPath(g, cx + dx, by + dy, r * k); g.fillStyle = '#fff6d6'; g.fill() })

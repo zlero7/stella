@@ -152,9 +152,9 @@ export const SongSelect = (sm: SceneManager): Scene => {
       }
       const lerp = (u: number, v: number, k: number) => u + (v - u) * k
       // 위쪽 띠: 로고 · 가수 분류 알약(Tab으로 넘긴다) · 모드
-      g.fillStyle = 'rgba(6,11,26,.78)'; g.fillRect(0, 0, 1280, 68)
-      g.fillStyle = accentFill(g, 0, 1280); g.fillRect(0, 67, 1280, 2)
-      glow(g, AMBER, 10, () => { starPath(g, 52, 34, 13); g.fillStyle = '#fff6d6'; g.fill() })
+      g.fillStyle = 'rgba(2,6,16,.86)'; g.fillRect(0, 0, 1280, 68)
+      const hdg = g.createLinearGradient(0, 0, 1280, 0); hdg.addColorStop(0, CYAN); hdg.addColorStop(0.55, '#7a6bff'); hdg.addColorStop(1, '#ff3fa4'); g.fillStyle = hdg; g.fillRect(0, 67, 1280, 2)
+      glow(g, CYAN, 10, () => { slant(g, 30, 22, 12, 24, 7); g.fillStyle = CYAN; g.fill(); slant(g, 47, 22, 7, 24, 7); g.fillStyle = '#ff3fa4'; g.fill() })
       g.font = `900 28px ${FONT}`; g.fillStyle = '#fff'; g.fillText('STELLA', 78, 44)
       if (searching || query) {
         hit(232, 16, 698, 36, () => openSearch(true))

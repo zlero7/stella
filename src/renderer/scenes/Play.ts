@@ -331,7 +331,7 @@ export const Play = (sm: SceneManager): Scene => {
         g.fillStyle = 'rgba(255,255,255,.55)'; g.fillRect(x + 4, y + 2, w - 8, 3) // 윗면 하이라이트
         g.fillStyle = 'rgba(4,9,24,.35)'; g.fillRect(x + 2, y + h - 6, w - 4, 4) // 아랫면 그림자
         g.beginPath(); g.roundRect(x, y, w, h, 6); g.strokeStyle = on ? '#fff' : 'rgba(255,255,255,.65)'; g.lineWidth = 1.5; g.stroke()
-        g.font = `900 ${keyLabel(k).length > 2 ? 15 : 26}px ${FONT}`; g.fillStyle = on ? '#0b2a6b' : blue ? lighten(noteColor(), 0.3) : '#e7edf7'; g.textAlign = 'center'
+        g.font = `900 ${keyLabel(k).length > 2 ? 15 : 26}px ${FONT}`; g.fillStyle = on ? '#061224' : blue ? lighten(noteColor(), 0.3) : '#e7edf7'; g.textAlign = 'center'
         g.fillText(keyLabel(k), x + w / 2, y + h / 2 + (keyLabel(k).length > 2 ? 5 : 9))
       })
       drawConsoleFront(g, FIELD_X, fw, JUDGE_Y, { score: sk.score, scroll: settings.scroll, mult: sk.mult, hp: sk.hp, hpLow: sk.hp <= 25 }, gs)
