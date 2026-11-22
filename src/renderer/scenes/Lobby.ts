@@ -82,13 +82,13 @@ export const Lobby = (sm: SceneManager): Scene => {
       // 디맥 오픈 매치 방 구성: 왼쪽 BUTTON TUNES 카드 · 가운데 방 설정 · 오른쪽 PLAYERS 목록
       const tg = g.createLinearGradient(60, 0, 420, 0); tg.addColorStop(0, '#0f8a6a'); tg.addColorStop(1, '#2fc78a')
       g.fillStyle = tg; g.fillRect(60, 96, 360, 64); g.textAlign = 'left'; g.fillStyle = '#fff'; g.font = `900 54px ${FONT}`; g.fillText(String(settings.keyMode), 76, 148); g.font = `900 20px ${FONT}`; g.fillText('BUTTON', 130, 126); g.font = `300 16px ${FONT}`; g.fillText('TUNES', 130, 148)
-      g.fillStyle = 'rgba(8,10,20,.82)'; g.fillRect(60, 160, 360, 330)
+      g.fillStyle = 'rgba(8,10,20,.82)'; g.fillRect(60, 160, 360, 380)
       g.font = `300 30px ${FONT}`; g.fillStyle = '#fff'; g.fillText('FRIENDLY MATCH', 80, 214)
       g.font = `15px ${FONT}`; g.fillStyle = ICE; g.fillText('같은 곡이 있는 친구와', 80, 252); g.fillText('동시에 쳐서 점수로 겨룹니다', 80, 276)
       g.fillStyle = 'rgba(255,255,255,.2)'; g.fillRect(80, 300, 320, 1)
       g.font = `700 13px ${FONT}`; g.fillStyle = AMBER; g.fillText(step === 'menu' ? '방을 만들거나 친구의 방에 들어가세요' : step === 'connected' ? (vs.role === 'host' ? '곡을 골라 시작하세요' : '방장이 곡을 고르는 중…') : '연결하는 중…', 80, 328)
       // 오른쪽 PLAYERS
-      g.fillStyle = 'rgba(8,10,20,.6)'; g.fillRect(860, 96, 360, 394)
+      g.fillStyle = 'rgba(8,10,20,.6)'; g.fillRect(860, 96, 360, 444)
       g.font = `300 40px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.55)'; g.fillText('PLAYERS', 880, 140)
       const slot = (i: number, nick: string | undefined, tag: string, col: string) => {
         const y = 160 + i * 52
@@ -100,10 +100,10 @@ export const Lobby = (sm: SceneManager): Scene => {
       const host = step === 'menu' || vs.role === 'host'
       slot(0, step === 'menu' ? settings.nick : host ? settings.nick : vs.peerNick || '…', 'HOST', '#ffb13b')
       slot(1, step === 'connected' ? (host ? vs.peerNick || '…' : settings.nick) : undefined, 'READY', '#ff8a3c')
-      for (let i = step === 'connected' ? 2 : 1; i < 6; i++) slot(i, undefined, '', '#000')
+      for (let i = step === 'connected' ? 2 : 1; i < 7; i++) slot(i, undefined, '', '#000')
       // 가운데
       if (step === 'menu') {
-        g.fillStyle = 'rgba(8,10,20,.6)'; g.fillRect(440, 96, 400, 394)
+        g.fillStyle = 'rgba(8,10,20,.6)'; g.fillRect(440, 96, 400, 444)
         ROWS.forEach((r, i) => {
           const on = i === focus, y = 112 + i * 70, k = ease('lobby' + i, on)
           hit(450, y, 380, 58, () => { if (focus === i && i > 0) press('Enter'); focus = i; if (i === 1) press('Enter') }, () => { focus = i }) // 올리면 고르고, 방 만들기/참가하기는 누르면 실행
@@ -116,9 +116,9 @@ export const Lobby = (sm: SceneManager): Scene => {
         const tip = focus === 0 ? (account.token ? '로그인한 계정의 닉네임입니다' : '닉네임 (한글·영문·숫자, 최대 12자)')
           : focus === 2 ? (relay() ? '친구가 알려 준 방 코드를 입력하고 Enter' : '상대가 알려 준 IP를 입력하고 Enter')
           : 'Enter로 방을 엽니다'
-        g.fillText(err || tip, 640, 440)
+        g.fillText(err || tip, 640, 500)
       } else if (step === 'hosting' || step === 'joining') {
-        g.fillStyle = 'rgba(8,10,20,.6)'; g.fillRect(440, 96, 400, 394); g.textAlign = 'center'
+        g.fillStyle = 'rgba(8,10,20,.6)'; g.fillRect(440, 96, 400, 444); g.textAlign = 'center'
         g.font = `800 22px ${FONT}`; g.fillStyle = '#fff'
         g.fillText(step === 'hosting' ? '상대를 기다리는 중…' : '접속하는 중…', cx, 150)
         if (step === 'hosting' && relay()) {
@@ -130,7 +130,7 @@ export const Lobby = (sm: SceneManager): Scene => {
           g.font = `12px ${FONT}`; g.fillStyle = ICE; g.fillText('인터넷으로 만나려면 Tailscale 같은 가상망 주소를 쓰거나 포트를 열어야 합니다', cx, 440)
         }
       } else {
-        g.fillStyle = 'rgba(8,10,20,.6)'; g.fillRect(440, 96, 400, 394); g.textAlign = 'center'
+        g.fillStyle = 'rgba(8,10,20,.6)'; g.fillRect(440, 96, 400, 444); g.textAlign = 'center'
         g.font = `900 46px ${FONT}`; g.fillStyle = AMBER; g.fillText('VS', cx, 230)
         g.font = `800 20px ${FONT}`; g.fillStyle = '#fff'
         g.fillText(vs.role === 'host' ? 'Enter 를 눌러 곡을 고르세요' : '방장이 곡을 고르는 중…', cx, 330)

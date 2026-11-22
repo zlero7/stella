@@ -16,8 +16,8 @@ const PALETTE: [string, string, string][] = [['#aab4e0', '#f2a0ac', '#0b0b12'], 
 function glyph(g: CanvasRenderingContext2D, i: number) {
   const poly = (...p: number[]) => { g.beginPath(); g.moveTo(p[0], p[1]); for (let k = 2; k < p.length; k += 2) g.lineTo(p[k], p[k + 1]); g.closePath(); g.fill() }
   if (i === 0) { // 키 네 개가 있는 기어 (FREE STYLE)
-    poly(-150, 100, -100, -100, 150, -100, 150, -50, -60, -50, -80, 0, 150, 0, 150, 40, -96, 40, -110, 100)
-    g.fillStyle = '#fff'; for (const x of [-60, 20]) { g.beginPath(); g.arc(x, 55, 36, 0, 7); g.fill(); g.lineWidth = 5; g.strokeStyle = 'rgba(0,0,0,.3)'; g.stroke() }
+    poly(-150, 30, -100, -100, 150, -100, 150, -55, -62, -55, -76, -20, 150, -20, 150, 15, -90, 15, -104, 30) // F
+    for (let k = 0; k < 4; k++) g.fillRect(-150 + k * 78, 56, 66, 44) // 네 키
   } else if (i === 1) { for (let k = 0; k < 5; k++) g.fillRect(-150 + k * 64, 100 - (k + 1) * 42, 52, (k + 1) * 42) } // 계단 (래더)
   else if (i === 2) { poly(-150, -100, -90, -100, 0, 60, 90, -100, 150, -100, 30, 110, -30, 110); g.globalAlpha *= 0.55; poly(-30, -100, 30, -100, 0, -40) } // V
   else if (i === 3) { for (const [dx, dy, r] of [[0, 0, 90], [-100, 20, 40], [100, 20, 40]]) { g.beginPath(); g.moveTo(dx, dy - r); g.lineTo(dx + r * 0.55, dy); g.lineTo(dx, dy + r); g.lineTo(dx - r * 0.55, dy); g.closePath(); g.fill() } }
@@ -54,7 +54,7 @@ export const Title = (sm: SceneManager): Scene => {
         const cx = 640, my = 290
         g.fillStyle = '#ffd23a'; starPath(g, cx + 12, my - 8, 124); g.fill() // 로고 마크: 노란 별 위에 검은 별, 위에 왕관
         g.fillStyle = '#0b0b12'; starPath(g, cx, my, 112); g.fill()
-        g.fillStyle = '#ffd23a'; g.beginPath(); g.moveTo(cx - 44, my - 128); g.lineTo(cx - 44, my - 168); g.lineTo(cx - 22, my - 148); g.lineTo(cx, my - 178); g.lineTo(cx + 22, my - 148); g.lineTo(cx + 44, my - 168); g.lineTo(cx + 44, my - 128); g.closePath(); g.fill()
+        g.fillStyle = '#ffd23a'; g.beginPath(); g.moveTo(cx - 44, my - 106); g.lineTo(cx - 44, my - 146); g.lineTo(cx - 22, my - 126); g.lineTo(cx, my - 156); g.lineTo(cx + 22, my - 126); g.lineTo(cx + 44, my - 146); g.lineTo(cx + 44, my - 106); g.closePath(); g.fill()
         g.textAlign = 'left'; g.font = `900 62px ${FONT}`; g.letterSpacing = '20px'
         const parts: [string, string][] = [['STELLA', '#0b0b12'], ['/', '#ffd23a'], [`${settings.keyMode}K`, '#0b0b12']]
         const tw = parts.reduce((n, [x]) => n + g.measureText(x).width, 0)
@@ -91,9 +91,9 @@ export const Title = (sm: SceneManager): Scene => {
           g.fillStyle = '#d12a3f'; g.fillRect(40, 24, 300, 36); g.font = `800 15px ${FONT}`; g.fillStyle = '#fff'; g.fillText('NEW UPDATE', 56, 48); g.fillStyle = '#ffe14a'; g.fillText(`v${updateInfo.value.latest}`, 168, 48); g.font = `600 12px ${FONT}`; g.fillStyle = '#fff'; g.fillText('U 키로 업데이트', 232, 47)
         }
         ITEMS.forEach(([name, sub], i) => {
-          const d = near(i), ad = Math.abs(d); if (ad > 1.2) return
+          const d = near(i), ad = Math.abs(d); if (ad > 0.62) return
           const ink = pal(i)[2], x = 640 + d * 760
-          g.globalAlpha = m * Math.max(0, 1 - ad * 0.9)
+          g.globalAlpha = m * Math.max(0, 1 - ad * 1.6)
           g.save(); g.translate(x, 300); g.fillStyle = ink; g.strokeStyle = ink; glyph(g, i); g.restore()
           g.textAlign = 'center'; g.fillStyle = ink; g.font = `300 44px ${FONT}`
           const label = name === 'START' ? 'FREE STYLE' : name === 'COLLECTION' ? '*Collection' : name, sp = [...label].join(String.fromCharCode(8202).repeat(3))
