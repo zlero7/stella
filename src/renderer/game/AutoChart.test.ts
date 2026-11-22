@@ -76,3 +76,10 @@ test('옛 알고리즘 번호의 자동 채보만 다시 만들고, 직접 고�
   assert.equal(needsRegen({ hand: true }), false)
   assert.equal(needsRegen({ gen: 0, hand: true }), false)
 })
+
+test('난이도 레벨은 이지<노말<하드<스텔라로 벌어지고 15를 넘지 않는다', async () => {
+  const { spreadLevels } = await import('./AutoChart.ts')
+  assert.deepEqual(spreadLevels([5, 5, 11, 14]), [5, 6, 11, 14])
+  assert.deepEqual(spreadLevels([3, 6, 10, 14]), [3, 6, 10, 14])
+  assert.deepEqual(spreadLevels([14, 15, 15, 15]), [12, 13, 14, 15])
+})

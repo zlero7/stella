@@ -222,6 +222,15 @@ export function levelOf(notes: Note[]) {
   return Math.min(Math.max(Math.round(y0 + ((nps - x0) / (x1 - x0)) * (y1 - y0)), 1), 15)
 }
 
+// 이지→스텔라 순서의 레벨이 같거나 거꾸로 가지 않게 한다 (노트 수는 달라도 밀도가 비슷하면 레벨이 같게 나오기 때문). 위로 밀고, 15를 넘으면 아래를 내린다
+export function spreadLevels(lv: number[]) {
+  const o = [...lv]
+  for (let i = 1; i < o.length; i++) if (o[i] <= o[i - 1]) o[i] = o[i - 1] + 1
+  if (o.length) o[o.length - 1] = Math.min(o[o.length - 1], 15)
+  for (let i = o.length - 2; i >= 0; i--) o[i] = Math.min(o[i], o[i + 1] - 1)
+  return o.map(v => Math.max(v, 1))
+}
+
 export const buildChart = (buf: AudioBuffer, diff: string, highlights?: [number, number][], keys = 4) => chartOf(buf.getChannelData(0), buf.sampleRate, diff, highlights, keys)
 
 // 자동 채보 알고리즘 번호. 채보를 만드는 방식을 바꿀 때마다 올리면, 이전 번호로 만든 채보는 곡 선택 화면에서 새로 만들어진다
