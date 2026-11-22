@@ -3,7 +3,7 @@ import { account, settings } from '../data/Storage'
 import { prof, refreshProfile } from '../data/Profile'
 import { APP_VERSION, updateInfo } from '../data/Update'
 import { profileCard } from '../render/profileCard'
-import { FONT, AMBER, accentFill, chip, drawBg, footer, slant, glow, hit, press, starPath } from '../render/theme'
+import { FONT, AMBER, accentFill, chip, drawBg, footer, slant, glow, hit, press, starPath, stellaSky } from '../render/theme'
 
 const ITEMS: [string, string][] = [['START', '곡 선택'], ['LADDER', '랭크 매치 · 밴픽'], ['VERSUS', '친구와 대결'], ['COLLECTION', '프로필 · DJ CLASS · 꾸미기'], ['ACCOUNT', ''], ['SETTINGS', '환경 설정'], ['EXIT', '종료']] // ACCOUNT의 설명은 로그인 상태에 따라 바뀐다
 const COLORS = ['#ff9f1a', '#ff5c8a', '#4f9bff', '#b9a4ff', '#2ee6c8', '#9aa6b8', '#ff6b4a'] // 모드마다 다른 색 (START, LADDER, VERSUS, COLLECTION, ACCOUNT, SETTINGS, EXIT)
@@ -84,7 +84,7 @@ export const Title = (sm: SceneManager): Scene => {
         const bgg = g.createLinearGradient(0, 0, 0, 720); bgg.addColorStop(0, `rgb(${top})`); bgg.addColorStop(1, `rgb(${bot})`)
         g.globalAlpha = m; g.fillStyle = bgg; g.fillRect(0, 0, 1280, 720)
         g.strokeStyle = 'rgba(255,255,255,.12)'; g.lineWidth = 1 // 가는 사선 무늬
-        g.beginPath(); for (let k = -720; k < 1280; k += 5) { g.moveTo(k, 720); g.lineTo(k + 720, 0) } g.stroke()
+        g.beginPath(); for (let k = -720; k < 1280; k += 5) { g.moveTo(k, 720); g.lineTo(k + 720, 0) } g.stroke(); stellaSky(g)
         hit(940, 2, 300, 64, () => sm.go('collection')); profileCard(g, 940, 2, prof.v); g.textAlign = 'left' // 오른쪽 위 프로필 (곡 선택 화면과 같은 자리): 누르면 컬렉션
         if (updateInfo.value) { // 디맥의 RECENT NOTICE 같은 빨간 꼬리표: 새 버전이 있으면 왼쪽 위에
           hit(40, 24, 300, 36, () => press('u'))
@@ -94,6 +94,7 @@ export const Title = (sm: SceneManager): Scene => {
           const d = near(i), ad = Math.abs(d); if (ad > 0.62) return
           const ink = pal(i)[2], x = 640 + d * 760
           g.globalAlpha = m * Math.max(0, 1 - ad * 1.6)
+          g.save(); g.translate(x + 10, 310); g.fillStyle = '#ffd23a'; g.strokeStyle = '#ffd23a'; glyph(g, i); g.restore() // 로고와 같은 노란 그림자
           g.save(); g.translate(x, 300); g.fillStyle = ink; g.strokeStyle = ink; glyph(g, i); g.restore()
           g.textAlign = 'center'; g.fillStyle = ink; g.font = `300 44px ${FONT}`
           const label = name === 'START' ? 'FREE STYLE' : name === 'COLLECTION' ? '*Collection' : name, sp = [...label].join(String.fromCharCode(8202).repeat(3))

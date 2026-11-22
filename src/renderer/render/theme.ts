@@ -162,6 +162,22 @@ export function drawBg(g: CanvasRenderingContext2D, song?: Song, tone = 0) {
   const art = artOf(song)
   if (art) g.drawImage(art.bg, 0, 0, 1280, 720)
   g.drawImage(art ? (OVER ??= layer(false)) : (SOLID[tone] ??= layer(true, tone)), 0, 0)
+  stellaSky(g)
+}
+// STELLA만의 하늘: 깜빡이는 별 몇 개와 가끔 가로지르는 별똥별 (매 프레임 조금만 그린다)
+export function stellaSky(g: CanvasRenderingContext2D) {
+  const t = performance.now() / 1000
+  for (let i = 0; i < 7; i++) {
+    const a = 0.5 + 0.5 * Math.sin(t * 1.1 + i * 2.3)
+    g.fillStyle = `rgba(255,244,200,${0.15 + 0.6 * a})`; starPath(g, (i * 397 + 90) % 1180 + 50, 90 + (i * 211) % 470, 3 + a * 6); g.fill()
+  }
+  const ph = (t % 7) / 1.1 // 7초마다 1.1초 동안 별똥별 한 줄기
+  if (ph < 1) {
+    const x = 1100 - ph * 760, y = 120 + ph * 300
+    const tr = g.createLinearGradient(x, y, x + 150, y - 60); tr.addColorStop(0, 'rgba(255,230,140,.9)'); tr.addColorStop(1, 'rgba(255,230,140,0)')
+    g.strokeStyle = tr; g.lineWidth = 2.5; g.beginPath(); g.moveTo(x, y); g.lineTo(x + 150, y - 60); g.stroke()
+    g.fillStyle = '#fff6c8'; starPath(g, x, y, 6); g.fill()
+  }
 }
 
 // 원본 비율을 지키며 x,y,w,h를 꽉 채워 그린다 (넘치는 부분은 잘라냄)
@@ -314,7 +330,11 @@ export function header(g: CanvasRenderingContext2D, title: string, sub = '') {
   const bg = g.createLinearGradient(0, 0, 1280, 0); bg.addColorStop(0, 'rgba(14,16,40,.78)'); bg.addColorStop(1, 'rgba(14,16,40,.45)')
   g.fillStyle = bg; g.fillRect(0, 0, 1280, 66)
   g.fillStyle = 'rgba(255,255,255,.7)'; g.fillRect(0, 65, 1280, 1)
-  slant(g, 36, 18, 14, 30, 8); g.fillStyle = '#fff'; g.fill(); slant(g, 56, 18, 8, 30, 8); g.fillStyle = AMBER; g.fill() // 사선 두 줄 표식
+  g.fillStyle = AMBER; starPath(g, 54, 36, 22); g.fill(); g.fillStyle = '#fff'; starPath(g, 50, 32, 22); g.fill() // STELLA 별 표식: 흰 별 뒤에 노란 별이 비껴 있다
+  g.strokeStyle = 'rgba(255,230,150,.45)'; g.fillStyle = 'rgba(255,230,150,.8)'; g.lineWidth = 1 // 오른쪽 별자리
+  const cs = [[1218, 44], [1236, 22], [1252, 38], [1268, 18]]
+  g.beginPath(); cs.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.stroke()
+  for (const [x, y] of cs) { g.fillRect(x - 2, y - 2, 4, 4) }
   g.textAlign = 'left'; g.font = `300 32px ${FONT}`; g.fillStyle = '#fff'; g.fillText(title.split('').join(String.fromCharCode(8202)), 86, 46) // 얇은 글자 (디맥 메뉴 제목)
   if (sub) { const tw = g.measureText(title).width; g.font = `600 13px ${FONT}`; g.fillStyle = 'rgba(235,240,255,.8)'; g.fillText(sub, 86 + tw + 28, 44) }
 }
@@ -348,5 +368,5 @@ export function icon(g: CanvasRenderingContext2D, kind: 'display' | 'game' | 'so
 // 화면 아래 어두운 띠 (디맥처럼 키 안내가 이 위에 놓인다)
 export function footer(g: CanvasRenderingContext2D) {
   const f = g.createLinearGradient(0, 670, 0, 720); f.addColorStop(0, 'rgba(2,5,14,.75)'); f.addColorStop(1, 'rgba(0,2,8,.95)')
-  g.fillStyle = f; g.fillRect(0, 670, 1280, 50); g.fillStyle = 'rgba(34,224,255,.35)'; g.fillRect(0, 670, 1280, 1)
+  g.fillStyle = f; g.fillRect(0, 670, 1280, 50); const fl = g.createLinearGradient(0, 0, 1280, 0); fl.addColorStop(0, 'rgba(34,224,255,.6)'); fl.addColorStop(1, 'rgba(255,194,26,.6)'); g.fillStyle = fl; g.fillRect(0, 670, 1280, 2) // 청록→노랑 선
 }
