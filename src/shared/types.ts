@@ -39,3 +39,11 @@ export interface Api {
   quit(): void // 앱 종료 (window.close()로는 닫히지 않는다)
   update(version: string): Promise<void> // 새 버전 설치 파일을 받아 현재 설치 위에 덮어 깔고(곡·기록 유지) 다시 시작한다. 성공하면 앱이 꺼진다
 }
+
+// 순위 제출·조회에 같이 오가는 플레이 옵션 (순위판은 나누지 않고 표시만 한다). 필드가 없으면 옛 앱의 제출이다
+// j: 판정 강도 0 보통·1 하드·2 맥스 · r: 랜덤 0/1 · m: 미러 0/1 · f: 페이드 0 꺼짐·1 IN·2 OUT
+export interface RankOpts { j: 0 | 1 | 2; r: 0 | 1; m: 0 | 1; f: 0 | 1 | 2 }
+// 점수 제출 본문 (POST /rank/<곡>/<키-난이도>): opt는 없어도 된다
+export interface RankSubmit { score: number; acc: number; mc: number; badge: string; n: number[]; opt?: RankOpts }
+// 결과 응답에 붙는 새 해금 (D2): 이번 판으로 처음 쓸 수 있게 된 플레이트·칭호. 없으면 빈 배열
+export interface Unlocked { plates: { id: string; name: string }[]; titles: { id: string; name: string }[] }
