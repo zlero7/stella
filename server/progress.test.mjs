@@ -80,3 +80,21 @@ test('같은 곡을 같은 날 반복하면 경험치가 줄고, 다음 날에�
   assert.equal(applyPlay(u, 'a/4k-hard', 900000, '', day2), g1) // 다음 날은 전부
   assert.equal(u.plays, 4) // 플레이 수는 그대로 센다
 })
+
+test('레벨 31~100 보상: 레벨이 되면 열리고, 새로 열린 것만 unlocked에 남는다', () => {
+  const lv = n => { let e = 0; for (let l = 1; l < n; l++) e += 100 + 10 * l; return e }
+  const u = { id: 'x', exp: lv(40) - 5 }
+  assert.equal(canEquip(u, 'plate', 'nebula'), false)
+  applyPlay(u, 'a/4k-hard', 1_000_000, 'ALL PERFECT') // +80 exp → 레벨 40
+  assert.deepEqual(u.unlocked.plates, [{ id: 'nebula', name: 'NEBULA' }])
+  assert.deepEqual(u.unlocked.titles.map(t => t.id), ['ap']) // 레벨 35 칭호는 이미 열려 있었고, 올퍼펙트 칭호만 새로 열렸다
+  assert.equal(canEquip(u, 'plate', 'nebula'), true)
+})
+test('unlocked: 이미 열린 것은 다시 안 나오고, 옛 계정(unlocked 없음)도 프로필이 나온다', () => {
+  const u = { id: 'x', exp: 0 }
+  assert.deepEqual(profileView(u).unlocked, { at: 0, plates: [], titles: [] })
+  applyPlay(u, 'a/4k-hard', 0, '')
+  assert.deepEqual(u.unlocked.plates, [])
+  const big = { id: 'y', exp: 1e9 }; applyPlay(big, 'a/4k-hard', 0, '')
+  assert.deepEqual(big.unlocked.plates.map(p => p.id).sort(), [])  // 이 판 전에 이미 다 열려 있었다
+})

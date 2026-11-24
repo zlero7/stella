@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url'
 import { WebSocketServer } from 'ws'
 import { applyPlay, canEquip, levelOf, nickKey, profileView } from './progress.mjs'
 import { createLadder } from './ladder.mjs'
-import { plausible } from './verify.mjs'
+import { cleanOpts, plausible } from './verify.mjs'
 // 앱이 판정 개수를 셀 때 쓰는 채보 정리(cleanChart)를 서버도 같이 써서 노트 총수를 구한다. 불러오지 못하면 총수 대조만 건너뛴다
 let cleanChart, judgeCount
 try { ({ cleanChart, judgeCount } = await import('../src/renderer/game/chartCheck.ts')) } catch (e) { console.error('채보 정리 모듈을 못 불러와 노트 총수 대조를 건너뜁니다:', e.message) }
@@ -251,7 +251,7 @@ function rankApi(req, res, dir, key) {
   if (!user) return json(res, 401, { error: '로그인이 필요합니다' })
   if (spent('rank|' + ipOf(req), 30, 60000)) return json(res, 429, { error: '잠시 후 다시' })
   bump('rank|' + ipOf(req), 60000)
-  readBody(req, 512).then(body => {
+  readBody(req, 1024).then(body => {
     let m; try { m = JSON.parse(body) } catch { return json(res, 400, { error: '형식' }) }
     if (!m || typeof m !== 'object') return json(res, 400, { error: '형식' }) // 본문이 null이거나 너무 커서 비면 여기서 막는다 (예전엔 서버가 죽었다)
     const score = m.score, acc = m.acc, mc = m.mc
@@ -261,7 +261,7 @@ function rankApi(req, res, dir, key) {
     const p = plays.get(user.id)
     if (p?.board !== id || Date.now() - p.at < chartLen(dir, key) * 1000 * MIN_PLAY) return json(res, 409, { error: '곡을 시작한 기록이 없거나 너무 빨리 끝났습니다' })
     plays.delete(user.id)
-    const rec = { uid: user.id, nick: user.nick, score, acc: +acc.toFixed(2), mc, badge: BADGES.includes(m.badge) ? m.badge : '', at: Date.now() }, cur = list.find(r => r.uid === user.id)
+    const rec = { uid: user.id, nick: user.nick, score, acc: +acc.toFixed(2), mc, badge: BADGES.includes(m.badge) ? m.badge : '', opt: cleanOpts(m.opt), at: Date.now() }, cur = list.find(r => r.uid === user.id)
     if (!cur) list.push(rec); else if (score > cur.score) Object.assign(cur, rec)
     list.sort((a, b) => b.score - a.score || a.at - b.at); list.length = Math.min(list.length, TOP)
     applyPlay(user, id, score, rec.badge)

@@ -5,6 +5,15 @@ const COMBO_MAX = 1.5 // 점수의 콤보 배율 상한 (앱의 comboMult와 같
 
 // n: 판정 개수 6칸(PERFECT·GREAT·GOOD·NICE·BAD·MISS). total(그 채보의 판정 총수)을 알면 합이 그 수와 거의 같은지도 본다.
 // 앱이 내려받은 채보가 서버와 조금 다를 수 있어(자동 채보 재생성) 1%(최소 2) 안쪽 차이는 허용한다. 노트를 몇 개만 친 것처럼 꾸민 제출을 막는 용도다
+// 순위에 같이 남기는 플레이 옵션 (src/shared/types.ts의 RankOpts). 없거나 모양이 틀리면 undefined: 옛 앱의 제출은 그대로 받는다
+// 점수가 아니라 표시용이라 다시 계산할 수는 없고, 값 범위만 본다
+export function cleanOpts(o) {
+  if (!o || typeof o !== 'object') return undefined
+  const f = (v, max) => (Number.isInteger(v) && v >= 0 && v <= max ? v : undefined)
+  const j = f(o.j, 2), r = f(o.r, 1), m = f(o.m, 1), fd = f(o.f, 2)
+  return [j, r, m, fd].includes(undefined) ? undefined : { j, r, m, f: fd }
+}
+
 export function plausible({ score, acc, mc, badge, n }, total) {
   if (!Array.isArray(n) || n.length !== 6 || !n.every(x => Number.isInteger(x) && x >= 0 && x <= 99999)) return false
   const sum = n.reduce((a, b) => a + b, 0)

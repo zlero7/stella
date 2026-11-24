@@ -61,7 +61,13 @@ export const PLATES = [
   { id: 'eclipse', name: 'ECLIPSE', need: '레벨 30', ok: s => s.level >= 30 },
   { id: 'galaxy', name: 'GALAXY', need: 'DJ CLASS EXPERT', ok: s => s.cls >= 3 },
   { id: 'crown', name: 'CROWN', need: '래더 GOLD', ok: s => s.lp >= 1200 },
-  { id: 'supernova', name: 'SUPERNOVA', need: '래더 MASTER', ok: s => s.lp >= MASTER_LP }
+  { id: 'supernova', name: 'SUPERNOVA', need: '래더 MASTER', ok: s => s.lp >= MASTER_LP },
+  // 레벨 31~100 보상 (표 끝에 덧붙인다: 기존 id·순서는 그대로)
+  { id: 'nebula', name: 'NEBULA', need: '레벨 40', ok: s => s.level >= 40 },
+  { id: 'pulsar', name: 'PULSAR', need: '레벨 55', ok: s => s.level >= 55 },
+  { id: 'quasar', name: 'QUASAR', need: '레벨 70', ok: s => s.level >= 70 },
+  { id: 'zenith', name: 'ZENITH', need: '레벨 85', ok: s => s.level >= 85 },
+  { id: 'cosmos', name: 'COSMOS', need: '레벨 100', ok: s => s.level >= 100 }
 ]
 export const TITLES = [
   { id: '', name: '(칭호 없음)', need: '', ok: () => true },
@@ -72,12 +78,24 @@ export const TITLES = [
   { id: 'ap', name: '별빛 퍼펙트', need: '올퍼펙트 1회', ok: s => s.aps >= 1 },
   { id: 'duelist', name: '듀얼리스트', need: '래더 10승', ok: s => s.wins >= 10 },
   { id: 'veteran', name: '베테랑', need: '레벨 50', ok: s => s.level >= 50 },
-  { id: 'lord', name: '래더 마스터', need: '래더 MASTER', ok: s => s.lp >= MASTER_LP }
+  { id: 'lord', name: '래더 마스터', need: '래더 MASTER', ok: s => s.lp >= MASTER_LP },
+  { id: 'stargazer', name: '별 헤는 밤', need: '레벨 35', ok: s => s.level >= 35 },
+  { id: 'comet', name: '혜성 사냥꾼', need: '레벨 45', ok: s => s.level >= 45 },
+  { id: 'traveler', name: '은하 여행자', need: '레벨 60', ok: s => s.level >= 60 },
+  { id: 'cluster', name: '성단의 주인', need: '레벨 75', ok: s => s.level >= 75 },
+  { id: 'nightsky', name: '밤하늘의 지배자', need: '레벨 90', ok: s => s.level >= 90 },
+  { id: 'eternal', name: '영원한 스텔라', need: '레벨 100', ok: s => s.level >= 100 }
 ]
 const OWNER = 'zlero' // 제작자 계정은 꾸미기를 전부 쓴다 (클라이언트 render/gear.ts와 같은 아이디)
 const open = (list, u) => { const s = stat(u); return list.map(({ id, name, need, ok }) => ({ id, name, need, on: u.id === OWNER || ok(s) })) }
 export const canEquip = (u, kind, id) => open(kind === 'plate' ? PLATES : TITLES, u).some(x => x.id === id && x.on)
 
+// 켜진 꾸미기 id 목록: 한 판 전후로 비교해 새로 해금된 것을 구한다 (D2: 결과 화면의 NEW 알림)
+const onIds = u => new Set([...open(PLATES, u).filter(x => x.on).map(x => 'p:' + x.id), ...open(TITLES, u).filter(x => x.on).map(x => 't:' + x.id)])
+const noteUnlocked = (u, before, now) => { // u.unlocked = {at, plates, titles}: 가장 최근 판에서 새로 열린 것 (판마다 덮어쓴다, 없으면 빈 목록)
+  const fresh = (list, k) => list.filter(x => !before.has(k + x.id) && onIds(u).has(k + x.id)).map(({ id, name }) => ({ id, name }))
+  u.unlocked = { at: now, plates: fresh(PLATES, 'p:'), titles: fresh(TITLES, 't:') }
+}
 // 래더를 한 판도 안 했으면 티어 대신 UNRANKED (LP는 0에서 시작해 첫 판부터 오른다)
 const tierView = u => {
   const t = tierOf(u.lp ?? 0), placed = (u.wins ?? 0) + (u.losses ?? 0) + (u.draws ?? 0) > 0
@@ -93,7 +111,8 @@ export function profileView(u) {
     lp: u.lp ?? 0, ...tierView(u),
     wins: u.wins ?? 0, losses: u.losses ?? 0, draws: u.draws ?? 0,
     avatar: avatarKey(u), cls: classOf(pts), plate, title, titleName: TITLES.find(t => t.id === title)?.name ?? '',
-    plates: open(PLATES, u), titles: open(TITLES, u)
+    plates: open(PLATES, u), titles: open(TITLES, u),
+    unlocked: u.unlocked ?? { at: 0, plates: [], titles: [] } // 가장 최근 판(래더 포함)으로 새로 열린 꾸미기: at(ms)이 방금이면 결과 화면에 NEW로 보인다
   }
 }
 // 남에게 보이는 줄임 프로필 (랭킹·래더 상대)
@@ -103,6 +122,7 @@ export const publicView = u => { const v = profileView(u); return { nick: v.nick
 // 같은 곡·난이도를 같은 날 다시 치면 경험치는 4분의 1(최소 5)만 준다: 한 곡 반복으로 레벨을 올리지 못하게. 플레이 수·풀콤보·올 퍼펙트·최고 점수는 그대로 쌓인다
 export const REPEAT_EXP = 0.25
 export function applyPlay(u, boardKey, score, badge, now = Date.now()) {
+  const before = onIds(u)
   const day = new Date(now + 9 * 3600e3).toISOString().slice(0, 10) // 한국 시간 기준 하루
   if (u.expDay !== day) { u.expDay = day; u.expBoards = {} }
   const seen = u.expBoards[boardKey] = (u.expBoards[boardKey] ?? 0) + 1
@@ -112,13 +132,16 @@ export function applyPlay(u, boardKey, score, badge, now = Date.now()) {
   if (badge === 'FULL COMBO') u.fcs = (u.fcs ?? 0) + 1
   u.bests ??= {}
   if (!(u.bests[boardKey] >= score)) u.bests[boardKey] = score
+  noteUnlocked(u, before, now)
   return gain
 }
 // 래더 한 판의 결과 (res: 1 이김, 0.5 비김, 0 짐). LP와 전적, 경험치를 바꾸고 LP 변화를 돌려준다
-export function applyLadder(u, oppLp, res) {
+export function applyLadder(u, oppLp, res, now = Date.now()) {
+  const before = onIds(u)
   const d = ladderDelta(u.lp ?? 0, oppLp, res)
   u.lp = Math.max(0, (u.lp ?? 0) + d)
   if (res === 1) u.wins = (u.wins ?? 0) + 1; else if (res === 0) u.losses = (u.losses ?? 0) + 1; else u.draws = (u.draws ?? 0) + 1
   u.exp = (u.exp ?? 0) + ladderExp(res)
+  noteUnlocked(u, before, now)
   return d
 }

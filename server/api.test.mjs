@@ -99,6 +99,23 @@ test('랭킹: 시작 기록이 있어야, 곡 길이의 80%가 지나야, 한 �
   assert.equal((await call(`/rank/${board}`, undefined)).body.length, 1) // 순위는 로그인 없이도 본다
 })
 
+test('랭킹 옵션: opt를 저장해 순위에 같이 내려주고, 옛 제출·잘못된 opt는 opt 없이 받는다', async () => {
+  const board = 'a-b/4k-hard', score = { score: 900000, acc: 99, mc: 2, badge: '' }
+  const play = async body => { await call('/play/start', { board }, tokB); await sleep(450); return call(`/rank/${board}`, body, tokB) }
+  let r = await play({ ...score, opt: { j: 1, r: 1, m: 0, f: 2 } }); assert.equal(r.status, 200)
+  assert.deepEqual(r.body.find(x => x.nick === 'Bob').opt, { j: 1, r: 1, m: 0, f: 2 })
+  assert.equal((await call(`/rank/${board}`)).body.find(x => x.nick === 'Bob').opt.j, 1) // 조회에도 같이
+  r = await play({ ...score, score: 950000, acc: 99, opt: { j: 9, r: 0, m: 0, f: 0 } }); assert.equal(r.status, 200) // 잘못된 값: 거절하지 않고 opt만 뺀다
+  assert.equal(r.body.find(x => x.nick === 'Bob').opt, undefined)
+  assert.equal(r.body.find(x => x.nick === 'Bob').score, 950000)
+  assert.equal(r.body.find(x => x.nick === 'Nova' || x.nick === 'Star').opt, undefined) // 옛 앱(opt 없음)의 기록은 그대로
+})
+
+test('경험치 결과: 프로필에 unlocked가 있다', async () => {
+  const me = await call('/profile/me', undefined, tokB)
+  assert.ok(Array.isArray(me.body.unlocked.plates) && Array.isArray(me.body.unlocked.titles))
+})
+
 test('계정 파일은 덮기 전에 .bak 으로 한 벌 남는다', () => {
   assert.ok(fs.existsSync(path.join(data, 'users.json.bak')))
 })

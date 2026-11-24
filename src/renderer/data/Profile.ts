@@ -8,6 +8,7 @@ export interface Profile {
   lp: number; tier: string; div: number; pt: number; tierLabel: string; wins: number; losses: number; draws: number
   cls: { idx: number; name: string; sub: number; points: number; lo: number; hi: number; label: string }
   avatar: string; plate: string; title: string; titleName: string; plates: Item[]; titles: Item[]
+  unlocked?: { at: number; plates: { id: string; name: string }[]; titles: { id: string; name: string }[] } // 가장 최근 판으로 새로 열린 꾸미기 (at이 방금이면 결과에 NEW로). 옛 서버는 없다
 }
 // 다른 계정으로 바꾸거나 로그아웃하면 이전 사람의 프로필이 잠깐이라도 보이지 않게, 지금 로그인한 계정의 것일 때만 돌려준다
 // 마지막으로 받은 프로필은 이 PC에도 저장해 둔다: 서버가 꺼져 있어도 로그인한 채로 닉네임·레벨이 보인다 (로그인 정보 자체는 따로 저장돼 있다)
@@ -33,5 +34,6 @@ export const ladderResult = (mid: string) => api<LadderResult>(`ladder/result?mi
 export const TIER_COLOR: Record<string, string> = { UNRANKED: '#aab4c8', IRON: '#9aa3b5', BRONZE: '#d08a4a', SILVER: '#d4deef', GOLD: '#ffcf4a', PLATINUM: '#6fe0d0', DIAMOND: '#7ab8ff', MASTER: '#d98cff' }
 export const PLATE_COLOR: Record<string, [string, string]> = {
   default: ['#2b6ee0', '#7ad8ff'], aurora: ['#1fb88a', '#3a7bff'], nova: ['#ff7a59', '#ff5c8a'], eclipse: ['#3b2a78', '#c06bff'],
-  galaxy: ['#1b2b6b', '#7a5bff'], crown: ['#d9a300', '#ffe27a'], supernova: ['#ff3d6e', '#ffb13b']
+  galaxy: ['#1b2b6b', '#7a5bff'], crown: ['#d9a300', '#ffe27a'], supernova: ['#ff3d6e', '#ffb13b'],
+  nebula: ['#2a9d8f', '#e76fc8'], pulsar: ['#1d3cff', '#5cf2ff'], quasar: ['#7a1fd6', '#ff5ca8'], zenith: ['#e8b923', '#fff3b0'], cosmos: ['#0b1030', '#c5a8ff'] // 임시 색: 그림은 디자인 몫
 }
