@@ -1,6 +1,7 @@
 import { PLATE_COLOR, TIER_COLOR, type Profile } from '../data/Profile'
 import { avatarImg } from '../data/Avatar'
 import { account } from '../data/Storage'
+import { plateArt } from './plateArt'
 import { AMBER, FONT, fit, glow, lighten, slant } from './theme'
 
 // 프로필 카드: 디맥 곡 선택 화면 오른쪽 위의 작은 카드(아이콘 · 닉네임 · Lv · 경험치 막대)를 본떴다. 플레이트가 카드 색이 된다. 로그인 전이면 GUEST
@@ -66,7 +67,7 @@ export function profileCard(g: CanvasRenderingContext2D, x: number, y: number, p
   // 플레이트: 카드 왼쪽에서 번지는 색
   g.save(); slant(g, x, y, w, h, big ? 22 : 16); g.clip()
   const pl = g.createLinearGradient(x, 0, x + w, 0); pl.addColorStop(0, c1); pl.addColorStop(0.55, 'rgba(0,0,0,0)')
-  g.globalAlpha = 0.55; g.fillStyle = pl; g.fillRect(x, y, w, h); g.restore()
+  g.globalAlpha = 0.55; g.fillStyle = pl; g.fillRect(x, y, w, h); plateArt(g, p?.plate ?? '', x, y, w * 0.6, h, c1, c2, 0.4); g.restore()
   slant(g, x, y, w, h, big ? 22 : 16); g.strokeStyle = 'rgba(255,255,255,.4)'; g.lineWidth = 1.5; g.stroke()
   // 아이콘(프로필 이미지, 없으면 닉네임 첫 글자)
   const ix = x + (big ? 66 : 44), iy = y + h / 2, ir = big ? 40 : 24

@@ -4,6 +4,7 @@ import { prof } from '../data/Profile'
 import { gearOf } from '../render/gear'
 import { profileCard } from '../render/profileCard'
 import { fetchRank, type RankRow } from '../data/Rank'
+import { optBadges } from '../render/rankBadge'
 import { footer, slant, FONT, CYAN, AMBER, NOTE_COLORS, accentFill, artOf, drawBg, drawCover, ease, fit, glow, hit, marquee, overRect, pill, press, starPath, chip } from '../render/theme'
 import { chartFile, diffName, diffsOf, ensureSong, loadSongs, songUrl } from '../data/Songs'
 import { needsRegen } from '../game/AutoChart'
@@ -340,6 +341,7 @@ export const SongSelect = (sm: SceneManager): Scene => {
           g.textAlign = 'center'; g.font = `800 16px ${FONT}`; g.fillStyle = i < 3 ? '#ffe27a' : '#fff'; g.fillText(String(i + 1), X + 48, y + 27)
           g.textAlign = 'left'; g.font = `700 15px ${FONT}`; g.fillStyle = '#fff'; g.fillText(fit(g, r.nick, 170), X + 80, y + 19)
           g.font = `600 11px ${FONT}`; g.fillStyle = 'rgba(230,240,255,.7)'; g.fillText(`${r.acc.toFixed(2)}%  ·  ${r.mc}콤보${r.lv ? `  ·  Lv ${r.lv}` : ''}`, X + 80, y + 35)
+          optBadges(g, X + W - 150, y + 27, r.opt)
           if (r.badge) { g.font = `800 12px ${FONT}`; g.fillStyle = r.badge === 'ALL PERFECT' ? '#f2b705' : '#7ad8ff'; g.fillText(r.badge === 'ALL PERFECT' ? 'ALL PERFECT' : 'FULL COMBO', X + 330, y + 27) }
           g.textAlign = 'right'; g.font = `800 20px ${FONT}`; g.fillStyle = '#ffd84a'; g.fillText(String(r.score).padStart(7, '0'), X + W - 36, y + 29)
         })

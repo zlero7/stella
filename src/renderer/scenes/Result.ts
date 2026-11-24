@@ -6,7 +6,8 @@ import { account, saveSettings, settings } from '../data/Storage'
 import { getBest, setBest } from '../data/Storage'
 import { sfx } from '../core/Sfx'
 import { fetchRank, submitRank, rankMsg, type RankRow } from '../data/Rank'
-import { prof, refreshProfile } from '../data/Profile'
+import { PLATE_COLOR, prof, refreshProfile } from '../data/Profile'
+import { optBadges } from '../render/rankBadge'
 import { FONT, ICE, AMBER, artOf, chip, drawBg, drawCover, ease as easeId, fit, footer, glow, hit, overRect, slant, starPath } from '../render/theme'
 
 const ease = (x: number) => 1 - (1 - x) ** 3
@@ -20,6 +21,7 @@ export const Result = (sm: SceneManager): Scene => {
   let applied: number | undefined // O 키로 맞춘 뒤의 판정 오프셋
   let d: { song: Song; diff: string; sk: ScoreKeeper; failed?: boolean; practice?: boolean; fromPct?: number }, isNew = false
   let at = 0, slammed = false, chimed = false, prev: number | undefined // 연출 시작 시각 · 소리 낸 적 있는지 · 이전 최고 점수
+  let fresh: { plates: { id: string; name: string }[]; titles: { id: string; name: string }[] } | undefined // 이번 판으로 새로 열린 플레이트·칭호 (서버 응답의 unlocked)
   let gain = 0, lvUp = 0 // 이번 판으로 받은 경험치 · 오른 레벨 (로그인했고 서버가 받아 준 경우)
   let detail = false // Space: 왼쪽 상세정보 패널
   let board: RankRow[] | undefined, loading = false, showBoard = false // 온라인 순위: 서버 응답 · 받는 중 · 오른쪽 카드를 순위로 볼지(Tab)
@@ -30,11 +32,11 @@ export const Result = (sm: SceneManager): Scene => {
       at = performance.now(); slammed = chimed = false
       prev = d.failed || d.practice ? undefined : getBest(d.song.dir, d.diff)?.score
       isNew = d.failed || d.practice ? false : setBest(d.song.dir, d.diff, d.sk) // 체력이 다해 끝난 플레이는 기록하지 않는다
-      board = undefined; loading = true; showBoard = false; detail = false; gain = lvUp = 0
+      board = undefined; loading = true; showBoard = false; detail = false; gain = lvUp = 0; fresh = undefined
       const mine = d, before = prof.v // 받는 동안 화면을 떠났다 돌아와도 이전 응답이 덮지 않게
       ;(d.failed || d.practice ? fetchRank(d.song.dir, d.diff) : submitRank(d.song.dir, d.diff, d.sk)).then(b => {
         if (mine === d) { board = b; loading = false }
-        if (!d.failed && !d.practice && b) void refreshProfile().then(after => { if (mine === d && before && after && after.exp > before.exp) { gain = after.exp - before.exp; lvUp = after.level - before.level } })
+        if (!d.failed && !d.practice && b) void refreshProfile().then(after => { if (mine === d && before && after && after.exp > before.exp) { gain = after.exp - before.exp; lvUp = after.level - before.level; const u = after.unlocked; fresh = u && (u.plates.length || u.titles.length) ? u : undefined } })
       })
     },
     render(g) {
@@ -170,6 +172,13 @@ export const Result = (sm: SceneManager): Scene => {
       if (isNew) { const w = 150; slant(g, 598 + 115, 466, w, 28, 9); g.fillStyle = '#ff9f1a'; g.fill(); g.font = `800 16px ${FONT}`; g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText('NEW RECORD', 713 + w / 2, 486) }
       if (isNew && el - O >= 3.6 && !chimed) { chimed = true; sfx.chime() }
       if (gain) { g.textAlign = 'left'; g.font = `800 14px ${FONT}`; g.fillStyle = '#c9a8ff'; g.fillText(lvUp > 0 ? `EXP +${gain}  ·  LEVEL UP  Lv ${prof.v?.level}` : `EXP +${gain}`, 800, 640) }
+      if (gain && fresh) { // 새로 열린 꾸미기: 플레이트는 색 견본과 함께
+        g.textAlign = 'left'; g.font = `800 13px ${FONT}`; g.fillStyle = AMBER; g.fillText('NEW', 800, 660)
+        let nx = 838; const pl = fresh.plates[0]
+        if (pl) { const [c1, c2] = PLATE_COLOR[pl.id] ?? PLATE_COLOR.default, sg = g.createLinearGradient(nx, 0, nx + 22, 0); sg.addColorStop(0, c1); sg.addColorStop(1, c2); g.fillStyle = sg; g.fillRect(nx, 649, 22, 12); g.strokeStyle = '#fff'; g.lineWidth = 1; g.strokeRect(nx + 0.5, 649.5, 21, 11); nx += 30 }
+        g.font = `700 13px ${FONT}`; g.fillStyle = '#fff'
+        g.fillText(fit(g, [pl && `플레이트 ${pl.name}`, fresh.titles[0] && `칭호 ${fresh.titles[0].name}`].filter(Boolean).join(' · ') + (fresh.plates.length + fresh.titles.length > (pl ? 1 : 0) + (fresh.titles[0] ? 1 : 0) ? ' 외' : ''), 1240 - nx), nx, 660)
+      }
       g.globalAlpha = 1
 
       // 왼쪽 DETAILS (Space): 판정 · 정확도 · 타이밍
@@ -205,7 +214,7 @@ export const Result = (sm: SceneManager): Scene => {
           g.font = `800 14px ${FONT}`; g.fillStyle = i < 3 ? '#ffe27a' : '#fff'; g.textAlign = 'center'; g.fillText(String(i + 1), 1054, y + 22)
           g.textAlign = 'left'; g.font = `700 13px ${FONT}`; g.fillStyle = '#fff'; g.fillText(fit(g, r.nick, r.badge ? 78 : 100), 1072, y + 15)
           if (r.badge) { g.font = `800 11px ${FONT}`; g.fillStyle = r.badge === 'ALL PERFECT' ? '#f2b705' : '#7ad8ff'; g.fillText(r.badge === 'ALL PERFECT' ? 'AP' : 'FC', 1154, y + 14) }
-          g.font = `600 11px ${FONT}`; g.fillStyle = 'rgba(230,240,255,.7)'; g.fillText(`${r.acc.toFixed(2)}%  ·  ${r.mc}콤보${r.lv ? `  ·  Lv ${r.lv}` : ''}`, 1072, y + 28)
+          g.font = `600 11px ${FONT}`; g.fillStyle = 'rgba(230,240,255,.7)'; const bx = optBadges(g, 1262, y + 28, r.opt); g.fillText(fit(g, `${r.acc.toFixed(2)}% · ${r.mc}콤보${r.lv ? ` · Lv ${r.lv}` : ''}`, bx - 1072 - 4), 1072, y + 28)
           g.font = `800 14px ${FONT}`; g.textAlign = 'right'; g.fillStyle = '#ffd84a'; g.fillText(String(r.score), 1262, y + 15)
         })
         g.restore()

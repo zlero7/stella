@@ -1,5 +1,6 @@
 import type { Scene, SceneManager } from '../core/SceneManager'
 import { account } from '../data/Storage'
+import { plateArt } from '../render/plateArt'
 import { PLATE_COLOR, TIER_COLOR, equip, prof, refreshProfile, type Item } from '../data/Profile'
 import { FONT, AMBER, CYAN, ICE, accentFill, card, chip, drawBg, ease, fit, glow, header, hit, meter, overRect, pill, press, slant } from '../render/theme'
 import { gem, profileCard } from '../render/profileCard'
@@ -74,7 +75,7 @@ export const Collection = (sm: SceneManager): Scene => {
         g.fillText('곡·난이도·키 수마다 최고 점수에 난이도(EASY ×0.5 · NORMAL ×0.75 · HARD ×1 · STELLA ×1.25)를 곱해', 865, 430)
         g.fillText('가장 높은 20개 기록을 더한 값입니다. 같은 곡도 난이도가 다르면 따로 셉니다. 온라인 랭킹에 올린 기록이 쌓입니다.', 865, 456)
       } else {
-        const it = items(), cs = cols(), cw = tab === 1 ? 160 : 690, ch = tab === 1 ? 150 : 40, gap = tab === 1 ? 16 : 6
+        const it = items(), cs = cols(), cw = tab === 1 ? 160 : 690, ch = tab === 1 ? (it.length > 8 ? 132 : 150) : 40, gap = tab === 1 ? (it.length > 8 ? 14 : 16) : 6
         const per = tab === 2 ? 8 : it.length, first = tab === 2 ? Math.min(Math.max(0, sel - per + 1), Math.max(0, it.length - per)) : 0 // 칭호가 많으면 카드 안에서 스크롤
         g.textAlign = 'center'; g.font = `800 14px ${FONT}`; g.fillStyle = AMBER
         if (first > 0) g.fillText('▲', 865, 142)
@@ -87,7 +88,7 @@ export const Collection = (sm: SceneManager): Scene => {
           if (tab === 1) {
             const [c1, c2] = PLATE_COLOR[x.id] ?? PLATE_COLOR.default
             g.save(); g.globalAlpha = x.on ? 1 : 0.45
-            g.fillStyle = 'rgba(28,24,22,.92)'; g.fillRect(cx, cy, cw, ch); const gr = g.createLinearGradient(cx, cy, cx + cw, cy + ch); gr.addColorStop(0, c1); gr.addColorStop(1, c2); g.fillStyle = gr; g.fillRect(cx + 14, cy + 34, cw - 28, 40); g.restore()
+            g.fillStyle = 'rgba(28,24,22,.92)'; g.fillRect(cx, cy, cw, ch); const gr = g.createLinearGradient(cx, cy, cx + cw, cy + ch); gr.addColorStop(0, c1); gr.addColorStop(1, c2); g.fillStyle = gr; g.fillRect(cx + 14, cy + 30, cw - 28, 36); plateArt(g, x.id, cx + 14, cy + 30, cw - 28, 36, c1, c2); g.restore()
             // 디맥 보상 카드처럼: 왼쪽 위 꼬리표(사용 중은 금색, 잠김은 회색) · 고른 카드는 금색 테두리
             if (x.on) { if (worn) { g.fillStyle = '#ffb400'; g.fillRect(cx, cy, 70, 22); g.fillStyle = '#12131a'; g.font = `800 12px ${FONT}`; g.textAlign = 'left'; g.fillText('IN USE', cx + 8, cy + 16) } } else { g.fillStyle = 'rgba(180,180,190,.8)'; g.fillRect(cx, cy, 70, 22); g.fillStyle = '#12131a'; g.font = `800 12px ${FONT}`; g.textAlign = 'left'; g.fillText('LOCKED', cx + 8, cy + 16) }
             g.strokeStyle = cur ? '#ffb400' : 'rgba(255,255,255,.25)'; g.lineWidth = cur ? 3 : 1; g.strokeRect(cx + 1, cy + 1, cw - 2, ch - 2)
