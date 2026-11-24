@@ -72,7 +72,10 @@ function sendSong(req, res, dir, file) {
   if (media && req.method !== 'HEAD') { // 계정 하나가 곡 전체를 긁어 가 회선을 막지 못하게: 하루 DL_MAX 바이트까지
     if (overQuota(who.id)) return json(res, 429, { error: '오늘 받을 수 있는 곡 용량을 다 썼습니다. 내일 다시 해 주세요' })
   }
-  res.writeHead(part ? 206 : 200, { ...CORS, 'Content-Type': TYPES[file.split('.').pop().toLowerCase()] ?? 'application/octet-stream', 'Accept-Ranges': 'bytes', ...(media && { 'Cache-Control': 'private, no-store' }), 'Content-Length': b - a + 1, ...(part && { 'Content-Range': `bytes ${a}-${b}/${st.size}` }) })
+  // 표지·채보는 바뀌면 바로 보여야 한다: 캐시 헤더가 없으면 브라우저가 수시간 낡은 표지를 그대로 쓴다. ETag로 안 바뀐 파일은 304만 보낸다
+  const etag = `"${st.size.toString(36)}-${Math.round(st.mtimeMs).toString(36)}"`
+  if (!media && req.headers['if-none-match'] === etag) { res.writeHead(304, { ...CORS, ETag: etag, 'Cache-Control': 'no-cache' }); res.end(); return }
+  res.writeHead(part ? 206 : 200, { ...CORS, 'Content-Type': TYPES[file.split('.').pop().toLowerCase()] ?? 'application/octet-stream', 'Accept-Ranges': 'bytes', ...(media ? { 'Cache-Control': 'private, no-store' } : { ETag: etag, 'Cache-Control': 'no-cache' }), 'Content-Length': b - a + 1, ...(part && { 'Content-Range': `bytes ${a}-${b}/${st.size}` }) })
   if (req.method === 'HEAD') { res.end(); return }
   // 실제로 보낸 만큼만 한도에 센다 (끊고 다시 받는 재시도가 매번 전체 크기로 깎이지 않게). 미리듣기 영상은 한도에 넣지 않는다. 받는 쪽이 끊으면 파일도 같이 닫는다
   const rs = fs.createReadStream(p, { start: a, end: b }); let sent = 0

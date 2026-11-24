@@ -27,7 +27,9 @@ export async function refreshMedia() {
 setInterval(() => void refreshMedia(), 4 * 60 * 1000) // 토큰은 10분 뒤 만료된다
 export const songUrl = (dir: string, file: string) => {
   const remote = remoteDirs.has(dir)
-  return `${remote ? `${serverUrl()}/songs/` : SONG_BASE}${encodeURIComponent(dir)}/${encodeURIComponent(file)}${remote && mediaToken && MEDIA.test(file) ? `?t=${mediaToken}` : ''}`
+  // 표지·채보 주소 끝에 곡 지문(?v=)을 붙인다: Cloudflare가 서버 설정과 상관없이 4시간 캐시를 붙여서, 바뀐 표지가 바로 안 보이던 문제를 막는다
+  const v = remote && !MEDIA.test(file) ? entries.find(e => e.dir === dir)?.v : undefined
+  return `${remote ? `${serverUrl()}/songs/` : SONG_BASE}${encodeURIComponent(dir)}/${encodeURIComponent(file)}${remote && mediaToken && MEDIA.test(file) ? `?t=${mediaToken}` : v ? `?v=${v}` : ''}`
 }
 
 // 미리듣기 시작 지점: meta에 없으면 곡의 30% 지점(보통 앞의 인트로를 지난 부분)
@@ -113,7 +115,7 @@ async function download(s: Song, progress: (p: number) => void, signal: AbortSig
     stop.signal.addEventListener('abort', cut, { once: true })
     let timer = setTimeout(cut, STALL_MS), got = 0
     try {
-      const r = await fetch(`${serverUrl()}/songs/${encodeURIComponent(s.dir)}/${encodeURIComponent(f.name)}`, { signal: ctl.signal, headers: account.token ? { Authorization: `Bearer ${account.token}` } : {} })
+      const r = await fetch(`${serverUrl()}/songs/${encodeURIComponent(s.dir)}/${encodeURIComponent(f.name)}${e.v && !MEDIA.test(f.name) ? `?v=${e.v}` : ''}`, { signal: ctl.signal, headers: account.token ? { Authorization: `Bearer ${account.token}` } : {} })
       if (r.status === 401 || r.status === 429) throw Object.assign(new Error(((await r.json().catch(() => ({}))) as { error?: string }).error ?? '곡을 받을 수 없습니다'), { fatal: true })
       if (r.status === 404) throw Object.assign(new Error(`서버에 ${f.name} 파일이 없습니다`), { fatal: true })
       if (!r.ok || !r.body) throw new Error(`${f.name}: ${r.status}`)
