@@ -40,9 +40,11 @@ test('하이라이트 구간: 겹치면 합치고 시작순으로 정렬한다',
   assert.deepEqual(mergeSpans([]), [])
 })
 
-test('롱노트 틱: 0.2초마다 한 번, 끝 직전 0.05초는 제외, 판정 수는 시작+끝+틱', () => {
-  assert.equal(ticksOf(0.2), 0)
-  assert.equal(ticksOf(1), 4)
+test('롱노트 틱: 0.5초마다 한 번, 끝 직전 0.05초는 제외, 판정 수는 시작+끝+틱', () => {
+  assert.equal(ticksOf(0.5), 0)
+  assert.equal(ticksOf(1), 1)
+  assert.equal(ticksOf(1, 0.2), 4)
   assert.equal(judgeCount({ time: 0, lane: 0 }), 1)
-  assert.equal(judgeCount({ time: 0, lane: 0, duration: 1 }), 6)
+  assert.equal(judgeCount({ time: 0, lane: 0, duration: 1 }), 3)
+  assert.equal(judgeCount({ time: 0, lane: 0, duration: 1 }, 0.2), 6)
 })

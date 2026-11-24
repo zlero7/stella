@@ -22,7 +22,7 @@ const fieldX = (align: number) => [70, (1280 - LANES * LANE_W) / 2, 1280 - LANES
 let FIELD_X = 70, CX = FIELD_X + LANES * LANE_W / 2
 const activeKeys = () => (LANES === 6 ? settings.keys6 : settings.keys)
 const JUDGE_COLORS = ['#7fe3ff', '#7dff9a', '#ffe27a', '#ffb066', '#ff8a8a', '#ff4d6d']
-const PAUSE_ITEMS = ['계속', '10초 전으로', '다시 시작', '설정', '나가기']
+const PAUSE_ITEMS = ['계속', '다시 시작', '설정', '나가기']
 const BEAMS = [0, 150, 300, 450] // 키빔 길이(px): 설정의 끔·짧게·보통·길게
 const beamLen = () => BEAMS[settings.beam] ?? 300
 const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
@@ -57,7 +57,7 @@ const demoNotes = (): Note[] =>
 export const Play = (sm: SceneManager): Scene => {
   const clock = new AudioClock()
   let data: PlayData, song: Song, ns: N[] = [], endTime = 1, dur = 1, sk = new ScoreKeeper(0)
-  let fullNotes: Note[] = [], audioBuf: AudioBuffer | undefined, bestRec: Best | undefined // 리와인드용 전체 노트 · 음원 / 최고 기록(점수 차이 표시)
+  let fullNotes: Note[] = [], audioBuf: AudioBuffer | undefined, bestRec: Best | undefined // 전체 노트 · 음원 / 최고 기록(점수 차이 표시)
   let giveUpAt = -1e9 // 대결 중 Esc를 처음 누른 시각: 2초 안에 한 번 더 눌러야 기권한다
   let practice = false, ready = false, finished = false, paused = false, pSel = 0, token = 0
   // 체력이 다하면 DIE_S초 동안 노트 속도와 소리가 점점 느려지다가 결과 화면으로 넘어간다. dying = 시작한 시각(ms), dyT0 = 그때의 곡 시각
@@ -138,17 +138,6 @@ export const Play = (sm: SceneManager): Scene => {
     n.state = 'done'
   }
 
-  // 리와인드: 10초 전부터 다시 친다. 점수·콤보·체력은 그 지점에서 새로 시작하고, 이 판은 연습으로 취급해 기록·순위·경험치에 반영하지 않는다 (대결 중에는 없다)
-  function rewind() {
-    const t0 = Math.max(0, clock.songTime - 10), rest = fullNotes.filter(n => n.time >= t0 + 0.5)
-    if (!rest.length || data.vs) return
-    ns = rest.map(n => ({ ...n, state: 'wait' as const })).sort((a, b) => a.time - b.time); head = 0
-    sk = new ScoreKeeper(ns.reduce((s, n) => s + judgeCount(n), 0)); practice = true; bestRec = undefined
-    fx.length = 0; down.clear(); dispHp = 100; flash.at = -1e9; dying = 0
-    if (audioBuf) clock.play(audioBuf, 2, t0); else clock.start(2, t0); paused = false; resumeAt = 0
-  }
-
-  // 창을 바꾸면(Alt+Tab 등) 곡이 계속 흐르지 않고 일시정지한다. 대결은 멈출 수 없으므로 제외
   addEventListener('blur', () => { if (ready && !paused && !finished && !dying && !resumeAt && !data.vs) { paused = true; pSel = 0; down.clear(); clock.pause() } })
 
   function leave(name: string, d?: unknown) {
@@ -465,9 +454,8 @@ export const Play = (sm: SceneManager): Scene => {
         else if (e.key === 'ArrowUp') pSel = (pSel + PAUSE_ITEMS.length - 1) % PAUSE_ITEMS.length
         else if (e.key === 'Escape' || (e.key === 'Enter' && pSel === 0)) { paused = false; resumeAt = performance.now() + 3000 } // 곡은 멈춘 채 3초 센 뒤 재개
         else if (e.key === 'Enter') {
-          if (pSel === 1) rewind()
-          else if (pSel === 2) { clock.resume(); sm.go('play', data) }
-          else if (pSel === 3) sm.go('settings', { back: 'play', backData: { ...data, resume: true } }) // 곡은 멈춘 채로 설정을 연다
+          if (pSel === 1) { clock.resume(); sm.go('play', data) }
+          else if (pSel === 2) sm.go('settings', { back: 'play', backData: { ...data, resume: true } }) // 곡은 멈춘 채로 설정을 연다
           else quit()
         }
         return

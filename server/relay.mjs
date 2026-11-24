@@ -236,7 +236,7 @@ const chartLen = (dir, key) => {
     const mt = fs.statSync(f).mtimeMs, c = lenCache.get(f)
     if (c?.mt === mt) return c.len
     const notes = JSON.parse(fs.readFileSync(f, 'utf8')).notes, len = notes.at(-1)?.time ?? 0
-    const lanes = +/^(\d)k-/.exec(key)?.[1] || 4, cl = cleanChart?.(notes, lanes).notes, total = cl && [cl.reduce((n, x) => n + judgeCount(x), 0), cl.reduce((n, x) => n + (x.duration ? 2 : 1), 0)] // [지금 앱: 롱노트 시작·끝·틱, 옛 앱: 시작·끝 두 번]
+    const lanes = +/^(\d)k-/.exec(key)?.[1] || 4, cl = cleanChart?.(notes, lanes).notes, total = cl && [cl.reduce((n, x) => n + judgeCount(x), 0), cl.reduce((n, x) => n + judgeCount(x, 0.2), 0), cl.reduce((n, x) => n + (x.duration ? 2 : 1), 0)] // [지금 앱: 틱 0.5초, 0.10.7~0.11.2: 틱 0.2초, 더 옛 앱: 시작·끝 두 번]
     lenCache.set(f, { mt, len, total }); return len
   } catch { return undefined }
 }
