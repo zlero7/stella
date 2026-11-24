@@ -47,7 +47,7 @@ function songIndex() {
     meta.charts = names.filter(n => CHART.test(n))
     // meta.json은 맨 끝: 앱은 meta.json이 있는 폴더를 "다 받은 곡"으로 본다
     const files = [...new Set([meta.audio, meta.video, meta.cover, meta.bg, ...meta.charts, 'meta.json'])].filter(n => n && names.includes(n) && servable(n))
-    const fl = files.map(name => { const s = fs.statSync(path.join(dir, name)); return { name, size: s.size, mt: AUDIO.includes(name.split('.').pop().toLowerCase()) ? 0 : Math.round(s.mtimeMs) } }) // 영상·음원은 크기만 본다 (다시 만들어 시각만 바뀐 큰 파일 때문에 모두가 다시 받지 않게)
+    let fl; try { fl = files.map(name => { const s = fs.statSync(path.join(dir, name)); return { name, size: s.size, mt: AUDIO.includes(name.split('.').pop().toLowerCase()) ? 0 : Math.round(s.mtimeMs) } }) } catch { continue } // 곡을 다시 만드는 중에 파일이 사라졌으면 이번 목록에서만 뺀다 (목록 전체가 실패하지 않게). 영상·음원은 크기만 본다 (다시 만들어 시각만 바뀐 큰 파일 때문에 모두가 다시 받지 않게)
     // v: 곡 내용의 지문. 앱은 받아 둔 곡의 v가 서버와 다르면 그 곡을 다시 받는다 (채보를 고쳐도 유저에게 전해지게)
     out.push({ dir: d.name, meta, v: crypto.createHash('sha1').update(JSON.stringify(fl)).digest('hex').slice(0, 10), files: fl.map(({ name, size }) => ({ name, size })) })
   }
@@ -78,9 +78,9 @@ function sendSong(req, res, dir, file) {
   res.writeHead(part ? 206 : 200, { ...CORS, 'Content-Type': TYPES[file.split('.').pop().toLowerCase()] ?? 'application/octet-stream', 'Accept-Ranges': 'bytes', ...(media ? { 'Cache-Control': 'private, no-store' } : { ETag: etag, 'Cache-Control': 'no-cache' }), 'Content-Length': b - a + 1, ...(part && { 'Content-Range': `bytes ${a}-${b}/${st.size}` }) })
   if (req.method === 'HEAD') { res.end(); return }
   // 실제로 보낸 만큼만 한도에 센다 (끊고 다시 받는 재시도가 매번 전체 크기로 깎이지 않게). 미리듣기 영상은 한도에 넣지 않는다. 받는 쪽이 끊으면 파일도 같이 닫는다
-  const rs = fs.createReadStream(p, { start: a, end: b }); let sent = 0
-  rs.on('data', c => { sent += c.length })
-  pipeline(rs, res, () => { if (media && file !== 'preview.mp4') addBytes(who.id, sent) })
+  const rs = fs.createReadStream(p, { start: a, end: b })
+  rs.on('data', c => { if (media && file !== 'preview.mp4') addBytes(who.id, c.length) }) // 보내는 도중에 센다: 끝난 뒤에 세면 여러 줄기를 동시에 열어 한도를 넘길 수 있다
+  pipeline(rs, res, () => {})
 }
 
 // 계정: 비밀번호는 솔트를 쳐서 scrypt로만 저장한다 (원문은 저장도 로그도 안 한다). 로그인하면 임의 토큰(32바이트)을 주고, 서버에는 토큰의 sha256만 남긴다.
@@ -92,7 +92,7 @@ const BACKUPS = process.env.STELLA_BACKUP ? path.resolve(process.env.STELLA_BACK
 function loadJson(file) {
   if (!fs.existsSync(file)) return {}
   const name = path.basename(file), tries = [file, file + '.bak']
-  try { for (const d of fs.readdirSync(BACKUPS).filter(d => /^d{4}-dd-dd$/.test(d)).sort().reverse()) tries.push(path.join(BACKUPS, d, name)) } catch { /* 백업 폴더가 아직 없다 */ }
+  try { for (const d of fs.readdirSync(BACKUPS).filter(d => /^\d{4}-\d\d-\d\d$/.test(d)).sort().reverse()) tries.push(path.join(BACKUPS, d, name)) } catch { /* 백업 폴더가 아직 없다 */ }
   for (const f of tries) {
     try { const j = JSON.parse(fs.readFileSync(f, 'utf8')); if (j && typeof j === 'object') { if (f !== file) log(`${name}을(를) 읽지 못해 ${f}에서 되살렸습니다`); return j } } catch { /* 다음 후보 */ }
   }
@@ -275,7 +275,7 @@ const ladder = createLadder({
   pool: () => JSON.parse(songIndex()).filter(s => s.meta.charts?.includes('4k-hard.json') && s.meta.title).map(s => ({ dir: s.dir, diff: 'hard', title: s.meta.title, artist: s.meta.artist ?? '' })),
   save: () => saveUsersSoon(), log
 })
-setInterval(() => ladder.tick(), 2000).unref()
+setInterval(() => { try { ladder.tick() } catch (e) { log('래더 오류', e.message) } }, 2000).unref() // 곡 목록을 못 읽는 등 한 번의 오류가 서버를 끄지 않게
 async function playerApi(req, res, url) {
   const user = userOf(req)
   if (!user) return json(res, 401, { error: '로그인이 필요합니다' })
@@ -376,6 +376,7 @@ wss.on('connection', sock => {
     if (st.peer) { st.peer.send(data, { binary: isBinary }); return } // 이어진 뒤: 그대로 전달
     let m
     try { m = JSON.parse(data.toString()) } catch { sock.terminate(); return }
+    if (!m || typeof m !== 'object') { sock.terminate(); return } // "null" 한 줄로 아래 m.t에서 서버가 죽던 것을 막는다
     if (st.code) return // 방장은 손님이 올 때까지 말이 없어야 한다
     if (st.ladder) { ladder.message(sock, m); return } // 래더 중: 대기열·밴·준비
     if (m.t === 'ladder') { // 래더 입장: 로그인한 계정만 (토큰은 연결 첫 메시지로 받는다)

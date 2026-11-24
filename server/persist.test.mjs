@@ -45,3 +45,25 @@ test('곡 목록은 음원이 있는 폴더만 싣고, ETag가 같으면 304를 
   s.proc.kill(); await s.exited
   fs.rmSync(d.tmp, { recursive: true, force: true })
 })
+
+test('users.json이 깨졌고 .bak도 없으면 날짜 백업 폴더에서 되살린다', async () => {
+  const d = setup(), u = { bob: { id: 'bob', nick: 'Bob', salt: '', hash: '', tokens: [], at: 1 } }
+  fs.writeFileSync(path.join(d.data, 'users.json'), 'garbage')
+  fs.mkdirSync(path.join(d.data, 'backups', '2026-01-02'), { recursive: true }); fs.writeFileSync(path.join(d.data, 'backups', '2026-01-02', 'users.json'), JSON.stringify(u))
+  const s = await start(d)
+  assert.ok(s.port, '백업에서 되살아 서버가 떠야 한다')
+  s.proc.kill(); await s.exited
+  fs.rmSync(d.tmp, { recursive: true, force: true })
+})
+
+test('웹소켓으로 null 같은 JSON을 보내도 서버가 죽지 않는다', async () => {
+  const { WebSocket } = await import('ws')
+  const d = setup(), s = await start(d)
+  const ws = new WebSocket(`ws://127.0.0.1:${s.port}`)
+  await new Promise(ok => ws.on('open', ok)); ws.send('null')
+  await new Promise(ok => ws.on('close', ok))
+  assert.equal(s.proc.exitCode, null)
+  assert.equal((await fetch(`http://127.0.0.1:${s.port}/version`)).status, 200)
+  s.proc.kill(); await s.exited
+  fs.rmSync(d.tmp, { recursive: true, force: true })
+})
