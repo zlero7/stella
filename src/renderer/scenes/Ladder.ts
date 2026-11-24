@@ -4,7 +4,7 @@ import { closeVersus, newLadder, openRelay, relayAddr, send, vs } from '../core/
 import { loadSongs } from '../data/Songs'
 import { account } from '../data/Storage'
 import { PLATE_COLOR, TIER_COLOR, prof, refreshProfile } from '../data/Profile'
-import { FONT, AMBER, CYAN, ICE, accentFill, artOf, chip, drawBg, drawCover, ease, fit, glow, header, hit, pill, press, slant } from '../render/theme'
+import { FONT, AMBER, CYAN, ICE, accentFill, artOf, chip, drawBg, drawCover, ease, fit, glow, header, hit, overRect, pill, press, slant } from '../render/theme'
 import { avatarCircle, gem } from '../render/profileCard'
 
 // 래더 매치: 대기열 → 상대 확정 → 곡 5개 중 3개가 남을 때까지 번갈아 밴 → 남은 3곡을 차례로 쳐서 3판 2선승 (결과는 서버가 판정해 LP가 바뀐다). 디맥 래더처럼 양옆에 두 사람, 가운데에 곡 카드
@@ -58,7 +58,10 @@ export const Ladder = (sm: SceneManager): Scene => {
       if (state === 'err' || state === 'cancel') {
         g.font = `800 28px ${FONT}`; g.fillStyle = '#fff'; g.fillText(err || l?.msg || '', 640, 330)
         g.font = `15px ${FONT}`; g.fillStyle = ICE; g.fillText(account.token ? 'Enter 다시 찾기   ·   Esc 나가기' : 'Enter 로그인하러 가기   ·   Esc 나가기', 640, 376)
-        hit(440, 290, 400, 110, () => press('Enter'))
+        const on = ease('ladBtn', overRect(480, 408, 320, 56))
+        slant(g, 480, 408, 320, 56, 14); g.fillStyle = on > 0.5 ? '#ffd84a' : AMBER; g.fill() // 눌러야 한다는 것이 보이게 (컬렉션의 로그인 버튼과 같은 모양)
+        g.font = `800 20px ${FONT}`; g.fillStyle = '#1a1200'; g.fillText(account.token ? '다시 찾기' : '로그인하러 가기', 640, 443)
+        hit(480, 408, 320, 56, () => press('Enter'))
       } else if (state === 'queue') {
         // 디맥 래더 로비: 얇은 금색 LOBBY 제목, 버튼 모드 카드 4장(고른 것은 주황 테두리), 오른쪽 DETAILS, 아래 큰 매칭 띠
         const s = Math.floor((now - since) / 1000), ORG = '#ffa31a'

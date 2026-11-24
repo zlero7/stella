@@ -200,7 +200,7 @@ export function drawConsoleFront(g: CanvasRenderingContext2D, x: number, fw: num
   g.fillStyle = mix(k0.dark, '#000000', 0.6); lcdP(g, lx, ly, lw, lh); g.fill()
   g.fillStyle = k0.lcd; g.textAlign = 'center'; g.font = `800 28px ${FONT}`
   glow(g, k0.lcd, 8, () => g.fillText(String(p.score).padStart(7, '0'), lx + lw / 2, ly + 35))
-  g.font = `700 9px ${FONT}`; g.fillStyle = mix(k0.lcd, k0.dark, 0.5); g.textAlign = 'left'; g.fillText('S C O R E', lx + 8, ly + 12)
+  g.font = `700 11px ${FONT}`; g.fillStyle = mix(k0.lcd, k0.dark, 0.5); g.textAlign = 'left'; g.fillText('S C O R E', lx + 8, ly + 12)
   g.fillStyle = dotPattern(g); lcdP(g, lx, ly, lw, lh); g.fill()
   g.strokeStyle = mix(k0.mid, k0.light, 0.4); g.lineWidth = 1.5; lcdP(g, lx, ly, lw, lh); g.stroke()
   const cw = (lw - 12) / 3, cy = jy + 156
@@ -213,7 +213,7 @@ export function drawConsoleFront(g: CanvasRenderingContext2D, x: number, fw: num
     const cx = lx + i * (cw + 6), k = g.createLinearGradient(0, cy, 0, cy + 32); k.addColorStop(0, c1); k.addColorStop(1, c2)
     g.fillStyle = k; chipP(g, cx, cy, cw, 32); g.fill()
     g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 1; g.stroke()
-    g.textAlign = 'center'; g.fillStyle = 'rgba(255,255,255,.8)'; g.font = `700 9px ${FONT}`; g.fillText(label.split('').join(' '), cx + cw / 2, cy + 11)
+    g.textAlign = 'center'; g.fillStyle = 'rgba(255,255,255,.8)'; g.font = `700 11px ${FONT}`; g.fillText(label.split('').join(' '), cx + cw / 2, cy + 11)
     g.fillStyle = '#fff'; g.font = `900 17px ${FONT}`; g.fillText(value, cx + cw / 2, cy + 27)
   })
   g.textAlign = 'left'

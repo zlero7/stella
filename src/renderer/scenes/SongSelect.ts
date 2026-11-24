@@ -184,6 +184,8 @@ export const SongSelect = (sm: SceneManager): Scene => {
         g.font = `16px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.7)'
         g.fillText(fmode || query ? 'F7로 보기를 바꾸거나 Esc로 검색을 지워 보세요' : '서버에 연결하지 못했거나 아직 올라온 곡이 없습니다. 인터넷 연결을 확인하고 다시 들어와 주세요', 640, 396)
         g.textAlign = 'left'
+        footer(g); let hx = 24 // 빈 목록에서도 나갈 길이 보이게
+        for (const [k, label] of [['F2', '검색'], ['F7', '필터'], ['F1', '설정'], ['Esc', '뒤로']]) hx = chip(g, hx, 692, k, label, '#fff')
         return
       }
       const cur = song.meta, ds = diffs(), n = songs.length
@@ -265,7 +267,7 @@ export const SongSelect = (sm: SceneManager): Scene => {
         if (!hot) { g.fillStyle = CYAN; g.fillRect(x, y, 3, h) }
         g.font = `800 11px ${FONT}`; g.fillStyle = hot ? '#ffe9e0' : CYAN; g.fillText(lab, x + 10, y + 17)
         g.font = `900 ${hot ? 26 : 16}px ${FONT}`; g.fillStyle = '#fff'; g.fillText(fit(g, val, w - 16), x + 10, y + (hot ? 44 : 42))
-        if (sub) { g.font = `700 9px ${FONT}`; g.fillStyle = '#ffe9e0'; g.fillText(sub, x + 10, y + 54) }
+        if (sub) { g.font = `700 11px ${FONT}`; g.fillStyle = '#ffe9e0'; g.fillText(sub, x + 10, y + 54) }
       })
 
       // 오른쪽: 디맥처럼 세로로 긴 곡 목록. 줄은 얇게(11줄쯤 보인다), 선택한 줄만 주황 띠로 크게 (끝에서 처음으로 이어진다)

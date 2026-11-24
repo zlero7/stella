@@ -336,7 +336,7 @@ export const Play = (sm: SceneManager): Scene => {
       })
       drawConsoleFront(g, FIELD_X, fw, JUDGE_Y, { score: sk.score, scroll: settings.scroll, mult: sk.mult, hp: sk.hp, hpLow: sk.hp <= 25 }, gs)
       if (settings.hudRate && sk.counts.some(n => n)) { // 디맥: 판정 글자 바로 위에 작은 RATE 글자와 정확도
-        g.textAlign = 'right'; g.font = `700 10px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.6)'; g.fillText('RATE', FIELD_X + fw / 2 - 6, JUDGE_Y - 134)
+        g.textAlign = 'right'; g.font = `700 11px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.6)'; g.fillText('RATE', FIELD_X + fw / 2 - 6, JUDGE_Y - 134)
         g.textAlign = 'left'; g.font = `700 15px ${FONT}`; g.fillStyle = sk.accuracy >= 100 ? '#ffe27a' : '#fff'; g.fillText(`${sk.accuracy.toFixed(2)}%`, FIELD_X + fw / 2 + 2, JUDGE_Y - 133)
       }
       g.textAlign = 'left'

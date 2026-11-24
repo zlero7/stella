@@ -96,7 +96,7 @@ export const Result = (sm: SceneManager): Scene => {
         const ring = g.createLinearGradient(cx, cy - R, cx, cy + R); ring.addColorStop(0, fail ? '#ff8a8a' : '#ffbd2e'); ring.addColorStop(1, fail ? '#a33' : '#ff7a8a')
         g.lineWidth = 15; g.lineCap = 'round'; g.strokeStyle = ring; g.beginPath(); g.arc(cx, cy, R, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(aa, 0.9999)); g.stroke(); g.lineCap = 'butt'
       }
-      g.textAlign = 'center'; g.font = `700 16px ${FONT}`; g.fillStyle = '#ff9a9a'; g.fillText(`${(sk.accuracy * cnt).toFixed(2)}%`, cx, cy + R + 28)
+      g.textAlign = 'center'; g.font = `700 16px ${FONT}`; g.fillStyle = '#ff9a9a'; g.fillText(`${(sk.accuracy * cnt).toFixed(2)}%`, fail || sk.badge ? cx - 34 : cx, cy + R + 28)
       if (ep < 1) { g.globalAlpha = 1 - ep; g.font = `300 56px ${FONT}`; g.fillStyle = '#fff'; g.fillText(`${(sk.accuracy * cnt).toFixed(0)}`, cx, cy + 20); g.globalAlpha = 1 }
       if (ep > 0) { // 등급 글자: 커졌다가 쾅 내려앉는다
         g.save(); const es = 1 + 1.6 * (1 - back(ep)); g.globalAlpha = Math.min(ep * 3, 1); g.translate(cx, cy); g.scale(es, es); g.translate(-cx, -cy)
@@ -117,7 +117,7 @@ export const Result = (sm: SceneManager): Scene => {
         if (a <= 0) return
         g.save(); g.globalAlpha = a; g.translate((left ? -30 : 30) * (1 - a), 0)
         g.textAlign = left ? 'left' : 'right'; g.font = `800 24px ${FONT}`; g.fillStyle = col; g.fillText(String(Math.round(num * cnt)), x, y)
-        const w = 96, tx = left ? x : x - w; slant(g, tx, y + 6, w, 20, 8); g.fillStyle = tag; g.fill()
+        g.font = `800 12px ${FONT}`; const w = Math.max(96, Math.ceil(g.measureText(label).width) + 20), tx = left ? x : x - w; slant(g, tx, y + 6, w, 20, 8); g.fillStyle = tag; g.fill()
         g.textAlign = 'center'; g.font = `800 12px ${FONT}`; g.fillStyle = '#fff'; g.fillText(label, tx + w / 2, y + 21)
         g.restore()
       }
@@ -150,7 +150,7 @@ export const Result = (sm: SceneManager): Scene => {
       g.fillStyle = 'rgba(255,255,255,.1)'; g.fillRect(514, 568, 46, 46)
       g.textAlign = 'center'; g.font = `800 22px ${FONT}`; g.fillStyle = '#fff'; g.fillText([...(account.token ? account.nick : 'G')][0]?.toUpperCase() ?? 'G', 537, 598)
       g.textAlign = 'left'; g.font = `700 13px ${FONT}`; g.fillStyle = '#fff'; g.fillText(fit(g, account.token ? account.nick : 'GUEST', 190), 570, 585)
-      if (lv) { g.font = `700 9px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.6)'; g.fillText('LV', 570, 603); g.font = `300 20px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.9)'; g.fillText(`${lv}`, 586, 605) } // 닉네임 · 레벨 · 경험치 막대가 서로 겹치지 않게 세 줄로 나눈다
+      if (lv) { g.font = `700 11px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.6)'; g.fillText('LV', 570, 603); g.font = `300 20px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.9)'; g.fillText(`${lv}`, 586, 605) } // 닉네임 · 레벨 · 경험치 막대가 서로 겹치지 않게 세 줄로 나눈다
       if (pv && pv.need) { g.fillStyle = 'rgba(255,255,255,.2)'; g.fillRect(570, 609, 188, 3); g.fillStyle = '#ffc233'; g.fillRect(570, 609, 188 * Math.min(pv.cur / pv.need, 1), 3) }
       g.globalAlpha = 1
       // 아래 왼쪽: 이전 최고 기록과의 차이 · 오른쪽: 경험치
@@ -178,7 +178,7 @@ export const Result = (sm: SceneManager): Scene => {
         const h = sk.histogram(20, 200), top = Math.max(...h, 1), hx0 = 24, bw = 208 / h.length, base = 480 // 타이밍 오차 분포 (가운데가 정확히 맞춘 곳)
         h.forEach((n, i) => { const ms = Math.abs(i - h.length / 2 + 0.5) * 20; g.fillStyle = ms <= JUDGES[0].win * 1000 ? ICE : ms <= JUDGES[2].win * 1000 ? '#7dff9a' : '#ffb066'; const bh = Math.round((56 * n) / top); if (bh > 0) { g.beginPath(); g.roundRect(hx0 + i * bw + 1, base - bh, bw - 2, bh, 2); g.fill() } })
         g.fillStyle = 'rgba(255,255,255,.7)'; g.fillRect(hx0 + 103, 420, 2, 64)
-        g.font = `600 10px ${FONT}`; g.fillStyle = 'rgba(230,240,255,.7)'; g.fillText('빠름', 24, 498); g.textAlign = 'center'; g.fillText('0', 128, 498); g.textAlign = 'right'; g.fillText('느림', 232, 498); g.textAlign = 'left'
+        g.font = `600 11px ${FONT}`; g.fillStyle = 'rgba(230,240,255,.7)'; g.fillText('빠름', 24, 498); g.textAlign = 'center'; g.fillText('0', 128, 498); g.textAlign = 'right'; g.fillText('느림', 232, 498); g.textAlign = 'left'
         const avg = sk.avgMs, rec = Math.round(avg / 5) * 5 // 판정 오프셋은 5ms 단위. 늦게 쳤으면(avg<0) +, 빨리 쳤으면 -
         g.font = `800 14px ${FONT}`; g.fillStyle = '#fff'; g.fillText(avg ? `평균 ${Math.abs(avg)}ms ${avg > 0 ? 'FAST' : 'SLOW'}` : '평균 오차 0ms', 24, 526)
         g.font = `12px ${FONT}`; g.fillStyle = ICE
@@ -197,8 +197,8 @@ export const Result = (sm: SceneManager): Scene => {
           g.fillStyle = mine ? 'rgba(255,159,26,.35)' : 'rgba(255,255,255,.07)'; g.fillRect(1036, y, 234, 34)
           g.font = `800 14px ${FONT}`; g.fillStyle = i < 3 ? '#ffe27a' : '#fff'; g.textAlign = 'center'; g.fillText(String(i + 1), 1054, y + 22)
           g.textAlign = 'left'; g.font = `700 13px ${FONT}`; g.fillStyle = '#fff'; g.fillText(fit(g, r.nick, r.badge ? 78 : 100), 1072, y + 15)
-          if (r.badge) { g.font = `800 10px ${FONT}`; g.fillStyle = r.badge === 'ALL PERFECT' ? '#f2b705' : '#7ad8ff'; g.fillText(r.badge === 'ALL PERFECT' ? 'AP' : 'FC', 1154, y + 14) }
-          g.font = `600 10px ${FONT}`; g.fillStyle = 'rgba(230,240,255,.7)'; g.fillText(`${r.acc.toFixed(2)}%  ·  ${r.mc}콤보${r.lv ? `  ·  Lv ${r.lv}` : ''}`, 1072, y + 28)
+          if (r.badge) { g.font = `800 11px ${FONT}`; g.fillStyle = r.badge === 'ALL PERFECT' ? '#f2b705' : '#7ad8ff'; g.fillText(r.badge === 'ALL PERFECT' ? 'AP' : 'FC', 1154, y + 14) }
+          g.font = `600 11px ${FONT}`; g.fillStyle = 'rgba(230,240,255,.7)'; g.fillText(`${r.acc.toFixed(2)}%  ·  ${r.mc}콤보${r.lv ? `  ·  Lv ${r.lv}` : ''}`, 1072, y + 28)
           g.font = `800 14px ${FONT}`; g.textAlign = 'right'; g.fillStyle = '#ffd84a'; g.fillText(String(r.score), 1262, y + 15)
         })
         g.restore()
