@@ -17,7 +17,7 @@ export const Calibrate = (sm: SceneManager): Scene => {
     const v = errs.slice(SKIP), m = v.reduce((a, b) => a + b, 0) / Math.max(v.length, 1)
     return { m, sd: Math.sqrt(v.reduce((a, b) => a + (b - m) ** 2, 0) / Math.max(v.length, 1)) }
   }
-  const leave = () => { stop(); sm.go('settings', { back, backData }) }
+  const leave = () => { stop(); if (back === 'intro') sm.go('intro', { step: 1 }); else sm.go('settings', { back, backData }) }
   const beep = (at: number) => {
     const o = ctx!.createOscillator(), g = ctx!.createGain()
     o.frequency.value = 1000; g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(0.35, at + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.06)

@@ -135,7 +135,7 @@ export const Title = (sm: SceneManager): Scene => {
       else if (e.key === 'Escape') open(false)
       else if (e.key === 'Enter') {
         const name = ITEMS[sel][0]
-        if (name === 'START') sm.go('select', { mode: 'play' })
+        if (name === 'START') { if (settings.firstRun) sm.go('intro'); else sm.go('select', { mode: 'play' }) }
         else if (name === 'LADDER') sm.go('ladder')
         else if (name === 'COLLECTION') sm.go('collection')
         else if (name === 'VERSUS') sm.go('vs')

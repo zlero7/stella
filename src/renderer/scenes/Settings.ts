@@ -30,10 +30,10 @@ const CATS: { name: string; items: Item[] }[] = [
     { label: '노트 색상', off: () => !steelSkin(), value: () => steelSkin() ? NOTE_COLORS[settings.noteColor]?.[0] ?? NOTE_COLORS[0][0] : '스틸 스킨에서만', change: d => { if (!steelSkin()) return; settings.noteColor = (settings.noteColor + d + NOTE_COLORS.length) % NOTE_COLORS.length } }
   ] },
   { name: 'GAME', items: [
+    { label: '싱크 보정', go: 'calib', value: () => '처음이라면 여기부터 · 메트로놈으로 측정' },
     { label: '스크롤 속도', value: () => `${settings.scroll.toFixed(1)}  ·  ${visibleMs()}ms`, frac: () => (settings.scroll - 1) / 19, change: d => { settings.scroll = clamp(Math.round((settings.scroll + d * 0.1) * 10) / 10, 1, 20) } },
     { label: '필드 위치', value: () => ALIGNS[settings.align], change: d => { settings.align = clamp(settings.align + d, 0, 2) } },
     { label: 'FAST/SLOW 표시', value: () => (settings.fastSlow ? '켜짐' : '꺼짐'), change: () => { settings.fastSlow = settings.fastSlow ? 0 : 1 } },
-    { label: '싱크 보정', go: 'calib', value: () => '메트로놈으로 측정' },
     { label: '싱크 오프셋', value: () => `${settings.offset > 0 ? '+' : ''}${settings.offset} ms`, change: d => { settings.offset = clamp(settings.offset + d * 5, -300, 300) } },
     { label: '판정 오프셋', value: () => `${settings.judgeOffset > 0 ? '+' : ''}${settings.judgeOffset} ms`, change: d => { settings.judgeOffset = clamp(settings.judgeOffset + d * 5, -100, 100) } }
   ] },
@@ -46,12 +46,12 @@ const CATS: { name: string; items: Item[] }[] = [
   { name: 'HUD', items: [ // 플레이 중 화면에 뜨는 글자를 고르고 높이를 옮긴다
     { label: '콤보 표시', value: () => (settings.hudCombo ? '켜짐' : '꺼짐'), change: () => { settings.hudCombo = settings.hudCombo ? 0 : 1 } },
     { label: '판정 글자', value: () => (settings.hudJudge ? '켜짐' : '꺼짐'), change: () => { settings.hudJudge = settings.hudJudge ? 0 : 1 } },
-    { label: '정확도율 표시', value: () => (settings.hudRate ? '켜짐' : '꺼짐'), change: () => { settings.hudRate = settings.hudRate ? 0 : 1 } },
+    { label: '정확도 표시', value: () => (settings.hudRate ? '켜짐' : '꺼짐'), change: () => { settings.hudRate = settings.hudRate ? 0 : 1 } },
     { label: '점수 차이 표시', value: () => (settings.hudGap ? '켜짐' : '꺼짐'), change: () => { settings.hudGap = settings.hudGap ? 0 : 1 } },
     { label: 'HUD 높이', value: () => `${settings.hudY > 0 ? '+' : ''}${settings.hudY}`, frac: () => (settings.hudY + 100) / 200, change: d => { settings.hudY = clamp(settings.hudY + d * 10, -100, 100) } }
   ] },
   { name: 'SOUND', items: [
-    { label: '볼륨', value: () => `${Math.round(settings.volume * 100)}%`, frac: () => settings.volume, change: d => { settings.volume = clamp(Math.round((settings.volume + d * 0.1) * 10) / 10, 0, 1) } },
+    { label: '전체 음량', value: () => `${Math.round(settings.volume * 100)}%`, frac: () => settings.volume, change: d => { settings.volume = clamp(Math.round((settings.volume + d * 0.1) * 10) / 10, 0, 1) } },
     { label: '곡 음량', value: () => `${Math.round(settings.musicVol * 100)}%`, frac: () => settings.musicVol, change: d => { settings.musicVol = clamp(Math.round((settings.musicVol + d * 0.1) * 10) / 10, 0, 1) } },
     { label: '타격음', value: () => HITS[settings.hit] ?? HITS[1], change: d => { settings.hit = clamp(settings.hit + d, 0, 2) } },
     { label: '효과음', value: () => (settings.sfx ? '켜짐' : '꺼짐'), change: () => { settings.sfx = settings.sfx ? 0 : 1 } },
@@ -75,13 +75,13 @@ const DESC: Record<string, string> = {
   '판정 강도': '하드는 판정 폭이 절반, 맥스는 4분의 1입니다. 더 어렵지만 같은 랭킹에 올라갑니다. 대결과 래더에서는 항상 보통입니다.',
   '콤보 표시': '플레이 중 콤보 숫자를 보여 줍니다.',
   '판정 글자': 'MAX·PERFECT 같은 판정 글자를 판정선 위에 보여 줍니다.',
-  '정확도율 표시': '판정선 위에 지금까지의 평균 정확도를 보여 줍니다.',
+  '정확도 표시': '판정선 위에 지금까지의 평균 정확도를 보여 줍니다.',
   '점수 차이 표시': '내 최고 기록과의 점수 차이를 점수 카드 아래에 보여 줍니다.',
   'HUD 높이': '콤보와 판정 글자의 높이를 옮깁니다. 위로 올리면 노트와 덜 겹칩니다.',
   '미러': '노트의 좌우를 뒤집습니다. 같은 채보도 다른 손 순서로 칠 수 있어 연습에 좋습니다. 랭킹 점수는 그대로 올라갑니다.',
   '싱크 보정': 'Enter를 누르면 메트로놈 소리에 맞춰 키를 눌러 판정 오프셋을 자동으로 맞춥니다. 유선 이어폰을 권장합니다.',
-  '싱크 오프셋': '소리가 화면보다 늦게 들리면 +, 빠르게 들리면 − 로 맞춥니다. (5ms 단위)',
-  '판정 오프셋': '쳤는데 SLOW가 많이 나오면 +, FAST가 많으면 − 로 맞춥니다. 결과 화면의 O 키로 자동 적용할 수도 있습니다.',
+  '싱크 오프셋': '소리와 화면(노트)이 어긋날 때 맞춥니다. 소리가 늦게 들리면 +, 빠르면 − (5ms 단위). 싱크 보정이 자동으로 맞춰 줍니다.',
+  '판정 오프셋': '내가 치는 타이밍의 습관을 맞춥니다. SLOW가 많이 나오면 +, FAST가 많으면 − 로 맞춥니다. 결과 화면의 O 키로 자동 적용할 수도 있습니다.',
   '타격음': '플레이 중 노트를 칠 때 나는 "톡" 소리의 크기입니다. 곡이 안 들리거나 거슬리면 약으로 줄이거나 끄세요.',
   '효과음': '메뉴를 움직이거나 고를 때, 결과 화면에서 나는 소리입니다. 플레이 중 타격음은 위의 "타격음" 항목이 따로 정합니다.',
   '화면 모드': '창모드는 일반 창, 전체화면 창모드는 테두리 없는 창으로 화면을 채우고, 전체화면은 화면 전체를 씁니다. 기본값은 전체화면입니다.',
@@ -93,7 +93,7 @@ const DESC: Record<string, string> = {
   '캐릭터 그림': '플레이 화면 아래 콘솔 양옆에 치비 캐릭터를 보일지 정합니다. 필드를 가운데에 둘 때 둘 다 보입니다.',
   '노트 스킨': '플레이 화면 전체의 꾸밈입니다: 기어 틀·기둥 무늬·필드 무늬·날개·램프·아래 콘솔, 노트 모양, 타격 이펙트까지 스킨마다 다릅니다. (디맥의 노트 스킨) 잠긴 스킨은 미리 볼 수 있지만 조건을 채우기 전에는 스틸로 나옵니다. 조건은 내 프로필 기록(레벨·플레이 수·풀 콤보·올 퍼펙트·대결 승수)으로 정해집니다.',
   '노트 색상': '바깥 레인 노트의 색을 스텔라이브 멤버의 대표 색 중에서 고릅니다. 노트 스킨이 스틸일 때만 바꿀 수 있고, 다른 스킨은 스킨마다 정해진 색을 씁니다.',
-  '볼륨': '모든 소리(곡·타격음·메뉴 효과음)에 걸리는 전체 크기입니다. 값이 작을수록 급격히 작아지니 귀가 아프면 낮추세요.',
+  '전체 음량': '모든 소리(곡·타격음·메뉴 효과음)에 걸리는 전체 크기입니다. 값이 작을수록 급격히 작아지니 귀가 아프면 낮추세요.',
   '곡 음량': '곡과 미리듣기 소리만 따로 키우거나 줄입니다. 타격음이 묻히면 곡 음량을 낮추세요.',
   '효과음 음량': '메뉴를 움직이거나 고를 때, 결과 화면에서 나는 소리만 따로 조절합니다. 타격음은 "타격음" 항목이 정합니다.'
 }

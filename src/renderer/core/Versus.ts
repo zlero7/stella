@@ -70,7 +70,7 @@ export function openRelay(addr: string, first: Msg) {
     ws = s
     s.onopen = () => { opened = true; s.send(JSON.stringify(first)); ok() }
     s.onmessage = e => { if (ws === s) try { void onMsg(JSON.parse(String(e.data)) as Msg) } catch { /* 깨진 메시지는 무시 */ } }
-    s.onclose = () => { if (ws !== s) return; ws = undefined; if (opened) { vs.open = false; vs.closed = true } else fail(new Error('서버에 연결하지 못했습니다 (서버 주소를 확인하세요)')) }
+    s.onclose = () => { if (ws !== s) return; ws = undefined; if (opened) { vs.open = false; vs.closed = true } else fail(new Error('서버에 연결하지 못했습니다. 인터넷 연결을 확인하고 잠시 뒤 다시 시도해 주세요')) }
   })
 }
 

@@ -39,6 +39,7 @@ export const SongSelect = (sm: SceneManager): Scene => {
   let query = '', searching = false, sortMode = 0 // 검색어(제목·가수 포함) · F2로 입력 중인지 · F4 정렬: 0 서버 순서, 1 제목, 2 가수
   let inp: HTMLInputElement | undefined // 한글(IME)도 받으려고 화면 밖 입력칸을 쓴다. 캔버스에는 검색창만 그린다
   const SORTS = ['기본 순서', '제목순', '가수순', '내 점수순', '최근 플레이순']
+  let moreHints = false // F9: 곡 선택 아래 안내 칩 펼치기
   let rankOpen = false, rankKey = '', rankRows: RankRow[] | undefined // F8: 고른 곡·난이도의 온라인 순위 (undefined = 받는 중)
   const FILTERS = ['전체 곡', '즐겨찾기만', '안 쳐 본 곡만']; let fmode = 0 // F6 즐겨찾기 넣고 빼기 · F7 목록 거르기
   const PRACTICE = [0, 0.25, 0.5, 0.75]; let prac = 0 // F5: 연습 시작 위치 (곡의 0·25·50·75%). 0이 아니면 점수·EXP는 기록되지 않는다
@@ -315,9 +316,11 @@ export const SongSelect = (sm: SceneManager): Scene => {
       // 아래 안내
       footer(g)
       {
-        const hints: [string, string][] = [['↑↓', '곡'], ['←→', '난이도'], ['Tab', '가수'], ['F2', '검색'], ['F4', '정렬'], ['1 2', '속도'], ['F3', '4/6키'], ['F5', '연습'], ['F6', '즐겨찾기'], ['F7', '필터'], ['F8', '순위'], ['Enter', '시작'], ['F1', '설정'], ['Esc', '뒤로']]
+        const base: [string, string][] = [['↑↓', '곡'], ['←→', '난이도'], ['Enter', '시작'], ['F2', '검색'], ['Esc', '뒤로'], ['F9', moreHints ? '접기' : '더 보기']] // 처음 보는 사람에게는 소음이라 다섯 개만 항상 보인다
+        const more: [string, string][] = [['Tab', '가수'], ['F4', '정렬'], ['1 2', '속도'], ['F3', '4/6키'], ['F5', '연습'], ['F6', '즐겨찾기'], ['F7', '필터'], ['F8', '순위'], ['F1', '설정']]
         let hx = 24
-        for (const [k, label] of hints) hx = chip(g, hx, 692, k, label, '#fff', k === '↑↓' || k === '←→' ? null : undefined)
+        for (const [k, label] of base) hx = chip(g, hx, 692, k, label, '#fff', k === '↑↓' || k === '←→' ? null : undefined)
+        if (moreHints) { g.fillStyle = 'rgba(6,12,28,.94)'; g.fillRect(0, 650, 1280, 34); g.fillStyle = CYAN; g.fillRect(0, 650, 1280, 1); hx = 24; for (const [k, label] of more) hx = chip(g, hx, 657, k, label, '#fff') }
       }
       { const st = [SORTS[sortMode], FILTERS[fmode]].filter((x, i) => x && !(i === 0 && sortMode === 0) && !(i === 1 && fmode === 0)).join('  ·  '); if (st) { g.font = `700 12px ${FONT}`; g.fillStyle = AMBER; g.textAlign = 'right'; g.fillText(st, 1240, 77); g.textAlign = 'left' } } // 정렬·필터·연습 시작 위치가 기본이 아니면 항상 보인다
       g.font = `700 13px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.75)'; g.textAlign = 'right' // 곡 번호는 아래 오른쪽 구석 (위쪽 띠 오른쪽은 프로필 카드 자리)
@@ -363,6 +366,7 @@ export const SongSelect = (sm: SceneManager): Scene => {
       }
       if (e.key === 'F2') { e.preventDefault(); openSearch(true); return }
       if (e.key === 'F4') { sortMode = (sortMode + 1) % SORTS.length; applyCat(); note = `정렬: ${SORTS[sortMode]}`; noteAt = performance.now() + 1500; return }
+      if (e.key === 'F9') { moreHints = !moreHints; return }
       if (e.key === 'F8') { e.preventDefault(); rankOpen = !rankOpen; rankKey = ''; return }
       if (rankOpen && e.key === 'Escape') { rankOpen = false; return }
       if (e.key === 'Escape' && query) { query = ''; applyCat(); return } // 검색어가 있으면 Esc는 먼저 검색을 지운다

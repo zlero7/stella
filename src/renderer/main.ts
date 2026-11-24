@@ -18,6 +18,7 @@ import { checkUpdate } from './data/Update'
 import { prof, refreshProfile } from './data/Profile'
 import { Ladder } from './scenes/Ladder'
 import { Collection } from './scenes/Collection'
+import { Intro } from './scenes/Intro'
 import { initVersus } from './core/Versus'
 import { clearHits, hitAt, mouse, setDispatch } from './render/theme'
 import { uiSound } from './core/Sfx'
@@ -39,6 +40,7 @@ sm.add('vsresult', VsResult(sm))
 sm.add('account', Account(sm))
 sm.add('ladder', Ladder(sm))
 sm.add('collection', Collection(sm))
+sm.add('intro', Intro(sm))
 initVersus(sm)
 void checkUpdate()
 void verify().then(refreshProfile) // 저장된 로그인이 아직 유효한지 (서버에 못 닿으면 그대로 둔다), 그다음 내 프로필

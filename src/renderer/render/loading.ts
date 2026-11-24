@@ -48,7 +48,7 @@ export function drawLoading(g: CanvasRenderingContext2D, song: Song | undefined,
   // 아래 안내: 곡마다 같은 문구가 나온다
   g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(0, 680, 1280, 40)
   g.textAlign = 'center'; g.font = `500 15px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.88)'
-  const tip = TIPS[([...(song?.dir ?? '')].reduce((n, c) => n + c.charCodeAt(0), 0) + Math.floor(t / 5)) % TIPS.length] // 5초마다 다음 안내로
+  const tip = song?.remote ? '곡 파일은 처음 한 번만 받습니다. 다음부터는 바로 시작됩니다.' : TIPS[([...(song?.dir ?? '')].reduce((n, c) => n + c.charCodeAt(0), 0) + Math.floor(t / 5)) % TIPS.length] // 5초마다 다음 안내로
   const w = g.measureText(tip).width
   g.fillText(tip, 640 + 14, 706)
   g.beginPath(); g.arc(640 - w / 2 - 6, 700, 8, 0, Math.PI * 2); g.fillStyle = 'rgba(255,255,255,.85)'; g.fill()

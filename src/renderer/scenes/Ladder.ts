@@ -131,7 +131,8 @@ export const Ladder = (sm: SceneManager): Scene => {
 
       let kx = 48
       if (state === 'ban' && vs.l?.turn === 'you') { kx = chip(g, kx, 692, '↑ ↓', '고르기', '#fff', null); kx = chip(g, kx, 692, 'Enter', '밴') }
-      chip(g, kx, 692, 'Esc', state === 'queue' || state === 'err' || state === 'cancel' ? '나가기' : '포기')
+      const early = state === 'queue' || state === 'err' || state === 'cancel' || (vs.l?.round === 1 && (state === 'ban' || state === 'prep')) // 첫 판이 시작되기 전: 나가도 LP는 그대로
+      chip(g, kx, 692, 'Esc', early ? '나가기 (LP 변화 없음)' : '기권 (패배 처리)')
     },
     keydown(e) {
       const l = vs.l, state = err ? 'err' : l?.state ?? 'queue'

@@ -7,7 +7,7 @@ import { getBest, setBest } from '../data/Storage'
 import { sfx } from '../core/Sfx'
 import { fetchRank, submitRank, rankMsg, type RankRow } from '../data/Rank'
 import { prof, refreshProfile } from '../data/Profile'
-import { FONT, ICE, AMBER, artOf, chip, drawBg, drawCover, ease as easeId, fit, footer, glow, slant, starPath } from '../render/theme'
+import { FONT, ICE, AMBER, artOf, chip, drawBg, drawCover, ease as easeId, fit, footer, glow, hit, overRect, slant, starPath } from '../render/theme'
 
 const ease = (x: number) => 1 - (1 - x) ** 3
 const back = (x: number) => 1 + 2.2 * (x - 1) ** 3 + 1.2 * (x - 1) ** 2 // 살짝 튕기며 멈춘다
@@ -153,6 +153,13 @@ export const Result = (sm: SceneManager): Scene => {
       if (lv) { g.font = `700 11px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.6)'; g.fillText('LV', 570, 603); g.font = `300 20px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.9)'; g.fillText(`${lv}`, 586, 605) } // 닉네임 · 레벨 · 경험치 막대가 서로 겹치지 않게 세 줄로 나눈다
       if (pv && pv.need) { g.fillStyle = 'rgba(255,255,255,.2)'; g.fillRect(570, 609, 188, 3); g.fillStyle = '#ffc233'; g.fillRect(570, 609, 188 * Math.min(pv.cur / pv.need, 1), 3) }
       g.globalAlpha = 1
+      if (!account.token && !d.practice) { // 로그인 안 했으면 순위·경험치가 남지 않는다: 첫 곡이 끝난 지금이 가장 알리기 좋은 때
+        const on = easeId('resLogin', overRect(790, 568, 300, 46)); g.globalAlpha = chipA
+        slant(g, 790, 568, 300, 46, 10); g.fillStyle = on > 0.5 ? 'rgba(255,194,26,.3)' : 'rgba(255,194,26,.16)'; g.fill(); g.strokeStyle = AMBER; g.lineWidth = 1.5; g.strokeRect(790.75, 568.75, 298.5, 44.5)
+        g.textAlign = 'left'; g.font = `800 13px ${FONT}`; g.fillStyle = AMBER; g.fillText('순위·경험치가 저장되지 않습니다', 804, 586)
+        g.font = `700 12px ${FONT}`; g.fillStyle = '#fff'; g.fillText('L 키 또는 여기를 눌러 로그인', 804, 604)
+        hit(790, 568, 300, 46, () => sm.go('account')); g.globalAlpha = 1
+      }
       // 아래 왼쪽: 이전 최고 기록과의 차이 · 오른쪽: 경험치
       g.globalAlpha = chipA; g.textAlign = 'left'
       // 이전 최고 기록과의 차이: 플레이어 막대 바로 아래 가운데 (점수 옆 눈길이 가는 자리). 처음 치는 곡·난이도는 "첫 기록"
@@ -221,6 +228,7 @@ export const Result = (sm: SceneManager): Scene => {
       else if (e.key === 'Tab') { e.preventDefault(); showBoard = !showBoard }
       else if (e.key === 'Enter') sm.go('play', { song: d.song, diff: d.diff, fromPct: d.fromPct }) // 연습으로 쳤으면 같은 시작 위치로 다시
       else if (e.key === 'Escape') sm.go('select')
+      else if (e.key.toLowerCase() === 'l' && !account.token) sm.go('account')
     }
   }
 }

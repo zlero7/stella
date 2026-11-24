@@ -65,7 +65,7 @@ export const Keys = (sm: SceneManager): Scene => {
         a[sel] = e.code; setKeys(a); binding = false
         return
       }
-      if (e.key === 'Escape') { sm.go('settings', { back, backData, at: n === 6 ? '6키 배치' : '4키 배치' }); return }
+      if (e.key === 'Escape') { if (back === 'intro') sm.go('intro', { step: 0 }); else sm.go('settings', { back, backData, at: n === 6 ? '6키 배치' : '4키 배치' }); return }
       if (e.key === 'ArrowDown') sel = (sel + 1) % n
       else if (e.key === 'ArrowUp') sel = (sel + n - 1) % n
       else if (e.key === 'Tab') { e.preventDefault(); tab(n === 4 ? 6 : 4) }

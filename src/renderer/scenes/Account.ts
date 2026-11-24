@@ -159,6 +159,7 @@ export const Account = (sm: SceneManager): Scene => {
       void t
       g.font = `15px ${FONT}`; g.fillStyle = '#eaf6ff'
       g.fillText(mode === 'nick' ? '랭킹과 래더에 보이는 이름을 바꿉니다 (하루에 한 번)' : mode === 'pass' ? '비밀번호를 바꾸면 다른 기기의 로그인은 풀립니다' : mode === 'login' ? '로그인하면 온라인 랭킹에 기록이 올라갑니다' : '아이디와 비밀번호로 내 계정을 만듭니다', cx, by + 62)
+      if (mode === 'register') { g.font = `700 14px ${FONT}`; g.fillStyle = AMBER; g.fillText('비밀번호를 잊으면 복구할 수 없습니다. 꼭 기억해 두세요', cx, by + 92) }
       g.globalAlpha = 1
       }
 
