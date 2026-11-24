@@ -377,9 +377,7 @@ export const Play = (sm: SceneManager): Scene => {
         const cg = g.createLinearGradient(0, -90, 0, 6); if (ap) { cg.addColorStop(0, '#fff6c2'); cg.addColorStop(1, '#ffb52e') } else if (fc) { cg.addColorStop(0, '#f2fcff'); cg.addColorStop(1, '#8fdcff') } else { cg.addColorStop(0, '#ffffff'); cg.addColorStop(1, '#c4cbd8') }
         g.fillStyle = cg; g.fillText(String(sk.combo), 0, 0); g.globalAlpha = 1; g.restore()
         g.font = `800 15px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.9)'; g.fillText(ap ? 'ALL PERFECT' : fc ? 'FULL COMBO' : 'COMBO', CX, 78)
-        g.font = `900 72px ${FONT}`; g.lineWidth = 7; g.strokeStyle = 'rgba(2,5,12,.85)'; g.strokeText(`x${sk.mult % 1 ? sk.mult.toFixed(2) : sk.mult}`, CX, 262)
-        const mg = g.createLinearGradient(0, 210, 0, 268); mg.addColorStop(0, '#ffe38a'); mg.addColorStop(1, '#e08a00'); g.fillStyle = mg; g.globalAlpha = 0.9; g.fillText(`x${sk.mult % 1 ? sk.mult.toFixed(2) : sk.mult}`, CX, 262); g.globalAlpha = 1
-      }
+      } // 배율(x1.00) 큰 글자는 시야를 가려 뺐다: 배율은 옆 기어의 COMBO 칩에 남아 있다
       const age = performance.now() - flash.at
       if (age < 380 && settings.hudJudge) { // 판정 글자: 정확도(%) 글자(y484) 위에 겹치지 않게 그보다 60px 위에 짧게 떴다 사라진다
         g.globalAlpha = 1 - age / 380
