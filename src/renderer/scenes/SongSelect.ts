@@ -12,6 +12,7 @@ import { account, getRecords, isFav, saveSettings, settings, toggleFav } from '.
 import { pickSong } from '../core/Versus'
 import { rankOf } from '../game/ScoreKeeper'
 import { preview, stopPreview, tickPreview } from '../core/Preview'
+import { aliasOf } from '../data/alias'
 
 const SHOW = 4 // 선택 곡 위아래로 보이는 줄 수
 const DIFF_COLOR: Record<string, string> = { easy: '#2ecc71', normal: '#f1c40f', hard: '#e74c3c', stella: '#a855f7' } // 난이도 이름 대신 칸 색으로 구분
@@ -96,7 +97,7 @@ export const SongSelect = (sm: SceneManager): Scene => {
   // 분류에 맞는 곡만 추리고, 보던 곡이 남아 있으면 그대로 두고 아니면 맨 위로
   const applyCat = (focus = songs[idx]?.dir) => {
     const q = query.trim().toLowerCase()
-    songs = cat === 'ALL' && !q && !fmode ? all : all.filter(s => (cat === 'ALL' || singers(s).includes(cat)) && (fmode === 0 || (fmode === 1 ? isFav(s.dir) : !bestOf(s))) && (!q || [s.meta.title, s.meta.artist, ...singers(s)].join(' ').toLowerCase().includes(q)))
+    songs = cat === 'ALL' && !q && !fmode ? all : all.filter(s => (cat === 'ALL' || singers(s).includes(cat)) && (fmode === 0 || (fmode === 1 ? isFav(s.dir) : !bestOf(s))) && (!q || [s.meta.title, s.meta.artist, ...singers(s), aliasOf(s.meta.title, s.meta.artist)].join(' ').toLowerCase().includes(q)))
     if (sortMode) {
       const byTitle = (a: Song, b: Song) => a.meta.title.localeCompare(b.meta.title, 'ko')
       if (sortMode < 3) songs = [...songs].sort((a, b) => (sortMode === 2 ? a.meta.artist.localeCompare(b.meta.artist, 'ko') : 0) || byTitle(a, b))
