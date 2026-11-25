@@ -98,3 +98,39 @@ test('unlocked: 이미 열린 것은 다시 안 나오고, 옛 계정(unlocked �
   const big = { id: 'y', exp: 1e9 }; applyPlay(big, 'a/4k-hard', 0, '')
   assert.deepEqual(big.unlocked.plates.map(p => p.id).sort(), [])  // 이 판 전에 이미 다 열려 있었다
 })
+
+import { classTop, gradeOf, DAILY_BONUS } from './progress.mjs'
+test('DJ CLASS 기여 목록: 점수×난이도 가중치 상위, 합계와 맞는다', () => {
+  const bests = { 'a/4k-hard': 900000, 'a/4k-easy': 900000, 'b-c/4k-stella': 800000 }
+  const t = classTop(bests)
+  assert.deepEqual(t.map(x => x.k), ['b-c/4k-stella', 'a/4k-hard', 'a/4k-easy'])
+  assert.deepEqual(t.map(x => x.pts), [100, 90, 45])
+  assert.equal(Math.round(t.reduce((s, x) => s + x.pts, 0)), classPoints(bests))
+})
+test('일일 목표: 오늘 서로 다른 곡 3곡을 치면 보너스가 한 번만', () => {
+  const u = {}, day = Date.UTC(2026, 0, 10, 3)
+  const g1 = applyPlay(u, "a/4k-hard", 900000, "", day); applyPlay(u, "a/4k-easy", 900000, "", day + 1000) // 같은 곡 다른 난이도: 아직 1곡
+  assert.equal(profileView(u, day + 2000).daily.have, 1)
+  const g3 = applyPlay(u, 'b/4k-hard', 900000, '', day + 2000)
+  assert.equal(g3, g1) // 2곡째: 보너스 없음
+  assert.equal(profileView(u, day + 3000).daily.claimed, false)
+  const g4 = applyPlay(u, 'c/4k-hard', 900000, '', day + 3000)
+  assert.equal(g4, playExp(900000, '') + DAILY_BONUS) // 3곡째: 보너스
+  assert.equal(profileView(u, day + 4000).daily.claimed, true)
+  const g5 = applyPlay(u, 'd/4k-hard', 900000, '', day + 4000)
+  assert.equal(g5, playExp(900000, '')) // 그날 두 번째 보너스는 없다
+  assert.equal(profileView(u, day + 2 * 86400e3).daily.have, 0) // 다음 날은 처음부터
+})
+test('통계 누계와 업적 진행도', () => {
+  const u = {}, now = Date.UTC(2026, 0, 10, 3)
+  applyPlay(u, 'a/4k-stella', 950000, 'FULL COMBO', now, { n: [8, 1, 1, 0, 0, 0], acc: 96, sec: 100 })
+  applyPlay(u, 'a/6k-hard', 800000, '', now + 1, { n: [5, 2, 1, 1, 0, 1], acc: 81, sec: 5000 })
+  const v = profileView(u, now + 2)
+  assert.deepEqual(v.stats.judged, [13, 3, 2, 1, 0, 1])
+  assert.deepEqual(v.stats.grades, { S: 1, B: 1 })
+  assert.equal(v.stats.playSec, 100 + 1200) // 한 판 시간은 1200초까지만
+  assert.deepEqual(v.stats.favorite, [{ dir: 'a', plays: 2 }])
+  const ach = Object.fromEntries(v.achievements.map(a => [a.id, a]))
+  assert.equal(ach.first.done, true); assert.equal(ach.six.done, true); assert.equal(ach.stella.done, true); assert.equal(ach.plays100.cur, 2); assert.equal(ach.win1.done, false)
+  assert.equal(gradeOf(98.9), 'S'); assert.equal(gradeOf(99), 'S+'); assert.equal(gradeOf(69.9), 'D')
+})

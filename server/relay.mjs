@@ -263,11 +263,12 @@ function rankApi(req, res, dir, key) {
     if (m.n === undefined ? REQUIRE_COUNTS : !plausible({ score, acc, mc, badge: typeof m.badge === 'string' ? m.badge : '', n: m.n }, chartTotal(dir, key))) return json(res, 400, { error: '점수 검증 실패' })
     const p = plays.get(user.id)
     if (p?.board !== id || Date.now() - p.at < chartLen(dir, key) * 1000 * MIN_PLAY) return json(res, 409, { error: '곡을 시작한 기록이 없거나 너무 빨리 끝났습니다' })
+    const startedAt = p.at
     plays.delete(user.id)
     const rec = { uid: user.id, nick: user.nick, score, acc: +acc.toFixed(2), mc, badge: BADGES.includes(m.badge) ? m.badge : '', opt: cleanOpts(m.opt), at: Date.now() }, cur = list.find(r => r.uid === user.id)
     if (!cur) list.push(rec); else if (score > cur.score) Object.assign(cur, rec)
     list.sort((a, b) => b.score - a.score || a.at - b.at); list.length = Math.min(list.length, TOP)
-    applyPlay(user, id, score, rec.badge)
+    applyPlay(user, id, score, rec.badge, Date.now(), { n: m.n, acc, sec: (Date.now() - startedAt) / 1000 })
     saveRanks(); saveUsersSoon(); json(res, 200, top())
   }).catch(e => { log('랭킹 오류', e.message); if (!res.headersSent) json(res, 500, { error: '서버 오류' }) })
 }

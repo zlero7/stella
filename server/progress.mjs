@@ -52,8 +52,42 @@ export function classOf(points) {
   return { idx: i, name: CLASSES[i][0], sub, points, lo, hi: hi ?? 0, label: sub ? `${CLASSES[i][0]} ${['', 'I', 'II', 'III', 'IV'][sub]}` : CLASSES[i][0] } // lo~hi: 이 등급의 점수 범위 (hi가 0이면 마지막 등급)
 }
 
+// DJ CLASS에 들어가는 상위 20개 기록: [{k: '곡폴더/4k-hard', pts}] (컬렉션이 "무엇을 치면 오르는지" 보여 주는 용도)
+export function classTop(bests = {}) {
+  return Object.entries(bests).map(([k, s]) => ({ k, pts: Math.round((s / 10000) * (DIFF_W[k.slice(k.lastIndexOf('-') + 1)] ?? 1) * 10) / 10 })).sort((a, b) => b.pts - a.pts).slice(0, 20)
+}
+const dirOf = k => k.slice(0, k.lastIndexOf('/'))
+export const gradeOf = a => (a >= 99 ? 'S+' : a >= 95 ? 'S' : a >= 90 ? 'A' : a >= 80 ? 'B' : a >= 70 ? 'C' : 'D') // 앱의 rankOf와 같다 (정확도 % 기준)
+
+// ── 일일 목표: 오늘 서로 다른 곡 3곡을 치면 보너스 경험치 (하루 한 번). 같은 곡 반복은 경험치가 줄어드는 것과 짝이다 ──
+export const DAILY_GOAL = 3, DAILY_BONUS = 50
+const dayOf = now => new Date(now + 9 * 3600e3).toISOString().slice(0, 10) // 한국 시간 기준 하루
+
 // ── 꾸미기: 플레이트(프로필 카드 배경)와 칭호. 조건은 서버가 확인한다 ──
-const stat = u => ({ level: levelOf(u.exp ?? 0).level, plays: u.plays ?? 0, fcs: u.fcs ?? 0, aps: u.aps ?? 0, lp: u.lp ?? 0, wins: u.wins ?? 0, cls: classOf(classPoints(u.bests)).idx })
+const stat = u => {
+  const ks = Object.keys(u.bests ?? {})
+  return { level: levelOf(u.exp ?? 0).level, plays: u.plays ?? 0, fcs: u.fcs ?? 0, aps: u.aps ?? 0, lp: u.lp ?? 0, wins: u.wins ?? 0, cls: classOf(classPoints(u.bests)).idx,
+    songs: new Set(ks.map(dirOf)).size, six: ks.some(k => k.includes('/6k-')), stella: ks.some(k => k.endsWith('-stella')) } // 서로 다른 곡 수·6키 기록·STELLA 난이도 기록 (기록이 있으면 쳐 본 것)
+}
+// 업적: 달성 조건과 진행도 (cur/goal). 칭호와 달리 꾸미기를 열지 않고 기록으로만 남는다. 조건은 지금 계정 통계에서 계산하므로 따로 저장하지 않는다
+export const ACHIEVEMENTS = [
+  { id: 'first', name: '첫 걸음', desc: '처음으로 한 곡을 끝까지 친다', goal: 1, cur: s => s.plays },
+  { id: 'plays100', name: '단골 손님', desc: '100판을 친다', goal: 100, cur: s => s.plays },
+  { id: 'plays500', name: '리듬 중독', desc: '500판을 친다', goal: 500, cur: s => s.plays },
+  { id: 'songs30', name: '다양한 취향', desc: '서로 다른 곡 30곡의 기록을 남긴다', goal: 30, cur: s => s.songs },
+  { id: 'songs100', name: '곡 수집가', desc: '서로 다른 곡 100곡의 기록을 남긴다', goal: 100, cur: s => s.songs },
+  { id: 'fc10', name: '콤보 장인', desc: '풀콤보 10회', goal: 10, cur: s => s.fcs },
+  { id: 'fc50', name: '콤보의 달인', desc: '풀콤보 50회', goal: 50, cur: s => s.fcs },
+  { id: 'ap1', name: '완벽한 한 판', desc: '올퍼펙트 1회', goal: 1, cur: s => s.aps },
+  { id: 'ap10', name: '별빛 완벽주의', desc: '올퍼펙트 10회', goal: 10, cur: s => s.aps },
+  { id: 'six', name: '6키 입문', desc: '6키 모드로 한 곡을 친다', goal: 1, cur: s => (s.six ? 1 : 0) },
+  { id: 'stella', name: '스텔라의 문턱', desc: 'STELLA 난이도로 한 곡을 끝까지 친다', goal: 1, cur: s => (s.stella ? 1 : 0) },
+  { id: 'win1', name: '첫 승리', desc: '래더에서 처음 이긴다', goal: 1, cur: s => s.wins },
+  { id: 'win10', name: '승부사', desc: '래더 10승', goal: 10, cur: s => s.wins },
+  { id: 'expert', name: '전문가', desc: 'DJ CLASS EXPERT에 오른다', goal: 3, cur: s => s.cls },
+  { id: 'lv50', name: '베테랑 DJ', desc: '레벨 50에 오른다', goal: 50, cur: s => s.level }
+]
+const achievementsOf = u => { const s = stat(u); return ACHIEVEMENTS.map(({ id, name, desc, goal, cur }) => ({ id, name, desc, goal, cur: Math.min(cur(s), goal), done: cur(s) >= goal })) }
 export const PLATES = [
   { id: 'default', name: 'STELLA', need: '기본', ok: () => true },
   { id: 'aurora', name: 'AURORA', need: '레벨 5', ok: s => s.level >= 5 },
@@ -103,8 +137,10 @@ const tierView = u => {
 }
 // 프로필 이미지 키: "공개번호.올린시각" (없으면 ''). 번호는 로그인 아이디와 따로 만든 무작위 값이라 이미지 주소로 아이디가 새지 않는다
 export const avatarKey = u => (u.pid && u.avatarAt ? `${u.pid}.${u.avatarAt}` : '')
+// 가장 많이 친 곡 5개 (곡 폴더별 판 수 합계)
+const favoriteOf = u => { const m = {}; for (const [k, c] of Object.entries(u.boardPlays ?? {})) m[dirOf(k)] = (m[dirOf(k)] ?? 0) + c; return Object.entries(m).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([dir, plays]) => ({ dir, plays })) }
 // 앱이 그리는 프로필: 레벨·경험치·티어·클래스·꾸미기와 해금 목록
-export function profileView(u) {
+export function profileView(u, now = Date.now()) {
   const lv = levelOf(u.exp ?? 0), pts = classPoints(u.bests), plate = canEquip(u, 'plate', u.plate ?? 'default') ? u.plate ?? 'default' : 'default', title = canEquip(u, 'title', u.title ?? 'rookie') ? u.title ?? 'rookie' : ''
   return {
     id: u.id, nick: u.nick, ...lv, exp: u.exp ?? 0, plays: u.plays ?? 0, fcs: u.fcs ?? 0, aps: u.aps ?? 0,
@@ -112,6 +148,9 @@ export function profileView(u) {
     wins: u.wins ?? 0, losses: u.losses ?? 0, draws: u.draws ?? 0,
     avatar: avatarKey(u), cls: classOf(pts), plate, title, titleName: TITLES.find(t => t.id === title)?.name ?? '',
     plates: open(PLATES, u), titles: open(TITLES, u),
+    top: classTop(u.bests), achievements: achievementsOf(u),
+    stats: { playSec: u.playSec ?? 0, judged: u.judged ?? [0, 0, 0, 0, 0, 0], grades: u.grades ?? {}, songs: stat(u).songs, favorite: favoriteOf(u) },
+    daily: { goal: DAILY_GOAL, bonus: DAILY_BONUS, have: u.expDay === dayOf(now) ? new Set(Object.keys(u.expBoards ?? {}).map(dirOf)).size : 0, claimed: u.dailyDay === dayOf(now) }, // 오늘 친 서로 다른 곡 수와 보너스를 받았는지
     unlocked: u.unlocked ?? { at: 0, plates: [], titles: [] } // 가장 최근 판(래더 포함)으로 새로 열린 꾸미기: at(ms)이 방금이면 결과 화면에 NEW로 보인다
   }
 }
@@ -121,17 +160,24 @@ export const publicView = u => { const v = profileView(u); return { nick: v.nick
 // 한 판의 결과를 계정에 쌓는다: 경험치·플레이 수·풀콤보/올퍼펙트·곡별 최고 점수. 받은 경험치를 돌려준다
 // 같은 곡·난이도를 같은 날 다시 치면 경험치는 4분의 1(최소 5)만 준다: 한 곡 반복으로 레벨을 올리지 못하게. 플레이 수·풀콤보·올 퍼펙트·최고 점수는 그대로 쌓인다
 export const REPEAT_EXP = 0.25
-export function applyPlay(u, boardKey, score, badge, now = Date.now()) {
+// extra = {n: 판정 개수 6칸, acc: 정확도 %, sec: 곡을 시작하고 끝낸 때까지 초}: 통계 탭에 쓰는 누계. 없으면 건너뛴다 (옛 앱은 n을 안 보낸다)
+export function applyPlay(u, boardKey, score, badge, now = Date.now(), extra = {}) {
   const before = onIds(u)
   const day = new Date(now + 9 * 3600e3).toISOString().slice(0, 10) // 한국 시간 기준 하루
   if (u.expDay !== day) { u.expDay = day; u.expBoards = {} }
   const seen = u.expBoards[boardKey] = (u.expBoards[boardKey] ?? 0) + 1
-  const full = playExp(score, badge), gain = seen === 1 ? full : Math.max(5, Math.floor(full * REPEAT_EXP))
+  const full = playExp(score, badge)
+  let gain = seen === 1 ? full : Math.max(5, Math.floor(full * REPEAT_EXP))
+  if (u.dailyDay !== day && new Set(Object.keys(u.expBoards).map(dirOf)).size >= DAILY_GOAL) { u.dailyDay = day; gain += DAILY_BONUS } // 일일 목표: 오늘 서로 다른 곡 3곡
   u.exp = (u.exp ?? 0) + gain; u.plays = (u.plays ?? 0) + 1
   if (badge === 'ALL PERFECT') u.aps = (u.aps ?? 0) + 1
   if (badge === 'FULL COMBO') u.fcs = (u.fcs ?? 0) + 1
   u.bests ??= {}
   if (!(u.bests[boardKey] >= score)) u.bests[boardKey] = score
+  u.boardPlays ??= {}; u.boardPlays[boardKey] = (u.boardPlays[boardKey] ?? 0) + 1
+  if (Array.isArray(extra.n) && extra.n.length === 6) u.judged = extra.n.map((c, i) => (u.judged?.[i] ?? 0) + (Number.isInteger(c) && c >= 0 ? c : 0))
+  if (extra.acc >= 0 && extra.acc <= 100) { u.grades ??= {}; const g = gradeOf(extra.acc); u.grades[g] = (u.grades[g] ?? 0) + 1 }
+  if (extra.sec > 0) u.playSec = (u.playSec ?? 0) + Math.min(Math.round(extra.sec), 1200)
   noteUnlocked(u, before, now)
   return gain
 }
