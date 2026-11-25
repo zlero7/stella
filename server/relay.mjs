@@ -25,8 +25,7 @@ const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a)
 process.on('unhandledRejection', e => log('처리 안 된 오류', e?.message ?? e)) // 요청 하나의 오류가 서버 전체를 끄지 않게
 // 앱이 "새 버전이 있다"를 알리는 데 쓴다: 지금 서버가 있는 저장소의 버전이 최신이다 (릴리스를 만들 때 package.json 버전을 올린다)
 // 공지: 서버 데이터 폴더의 notice.txt 첫 줄(최대 120자)을 앱 시작 화면에 보여 준다. 파일을 고치면 바로 바뀌고, 없거나 비어 있으면 안 보인다
-const noticeText = () => { try { return fs.readFileSync(path.join(DATA, 'notice.txt'), 'utf8').split(/?
-/)[0].trim().slice(0, 120) } catch { return '' } }
+const noticeText = () => { try { return fs.readFileSync(path.join(DATA, 'notice.txt'), 'utf8').split(/\r?\n/)[0].trim().slice(0, 120) } catch { return '' } }
 const APP = { latest: (() => { try { return JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version } catch { return '' } })(), url: 'https://github.com/zlero7/stella/releases/latest' }
 
 // 곡 목록·파일 배포: songs/ 폴더가 모든 유저가 보는 곡 목록의 원본이다. 앱은 /songs/index.json 에 있는 곡만 보여 주고, 고를 때 파일을 받아 간다
