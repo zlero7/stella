@@ -2,8 +2,8 @@
 import { starPath } from './theme'
 
 type G = CanvasRenderingContext2D
-export type FxStyle = 'burst' | 'diamond' | 'rays' | 'petals' | 'leaves' | 'slash' | 'bubbles' | 'bolt' | 'snow' | 'sun' | 'minimal' | 'pixel'
-export const FX_OF: Record<string, FxStyle> = { steel: 'burst', neon: 'diamond', gold: 'rays', sakura: 'petals', forest: 'leaves', crimson: 'slash', ocean: 'bubbles', violet: 'bolt', ice: 'snow', sunset: 'sun', mono: 'minimal', arcade: 'pixel', aurora: 'bubbles', ember: 'slash', royal: 'rays', candy: 'sun' }
+export type FxStyle = 'burst' | 'diamond' | 'rays' | 'petals' | 'leaves' | 'slash' | 'bubbles' | 'bolt' | 'snow' | 'sun' | 'minimal' | 'pixel' | 'stardust' | 'gear' | 'confetti' | 'lotus'
+export const FX_OF: Record<string, FxStyle> = { steel: 'burst', neon: 'diamond', gold: 'rays', sakura: 'petals', forest: 'leaves', crimson: 'slash', ocean: 'bubbles', violet: 'bolt', ice: 'snow', sunset: 'sun', mono: 'minimal', arcade: 'pixel', cosmos: 'stardust', clockwork: 'gear', candy: 'confetti', dancheong: 'lotus' }
 const rnd = (i: number) => ((i * 7919 + 13) % 97) / 97 // 이펙트마다 같은 값이 나오는 고정 난수 (깜빡이지 않게)
 
 // k: 0→1 진행 · big: 크기 배율 · rgb: 판정 색 · ar: 스킨 포인트 색 · lv: 이펙트 세기(1 약, 2 보통)
@@ -99,6 +99,38 @@ export function drawHit(g: G, style: FxStyle, cx: number, cy: number, k: number,
         const px = Math.round((cx + Math.cos(ang) * d) / 4) * 4, py = Math.round((cy + Math.sin(ang) * d * 0.9 + k * 12) / 4) * 4, s = i % 3 ? 4 : 8
         g.fillStyle = c(a, i % 2 ? rgb : ar); g.fillRect(px, py, s, s)
       }
+      break
+    }
+    case 'stardust': { // 네 갈래 별가루가 튀고 얇은 궤도 고리가 퍼진다
+      g.strokeStyle = c(a * 0.7, ar); g.lineWidth = 1.2; g.beginPath(); g.ellipse(cx, cy, (12 + 50 * ease) * big, (4 + 14 * ease) * big, -0.25, 0, 7); g.stroke()
+      const n = lv === 2 ? 9 : 5
+      for (let i = 0; i < n; i++) { const ang = -Math.PI + (i / (n - 1)) * Math.PI, d = (10 + 62 * ease) * big * (0.55 + 0.6 * rnd(i + 1)); g.fillStyle = c(a, i % 2 ? rgb : ar); starPath(g, cx + Math.cos(ang) * d, cy + Math.sin(ang) * d * 0.9, (3 + 6 * rnd(i + 4)) * big * (1 - 0.5 * k)); g.fill() }
+      g.fillStyle = c(a, '255,255,255'); starPath(g, cx, cy, 22 * big * (1 - 0.6 * k)); g.fill()
+      break
+    }
+    case 'gear': { // 톱니 고리가 돌며 퍼지고 증기가 피어오른다
+      const R = (14 + 36 * ease) * big, T = 10
+      g.save(); g.translate(cx, cy); g.rotate(k * 1.6); g.strokeStyle = c(a, rgb); g.lineWidth = 2.4; g.beginPath()
+      for (let i = 0; i < T; i++) { const q = (i / T) * Math.PI * 2, s = Math.PI / T; for (const [u, r] of [[-0.9, R * 0.8], [-0.45, R], [0.45, R], [0.9, R * 0.8]] as const) { const px = Math.cos(q + u * s) * r, py = Math.sin(q + u * s) * r; (i === 0 && u === -0.9) ? g.moveTo(px, py) : g.lineTo(px, py) } }
+      g.closePath(); g.stroke(); g.restore()
+      g.fillStyle = c(a * 0.35, '230,245,240'); for (let i = 0; i < 5; i++) { g.beginPath(); g.arc(cx + (rnd(i) - 0.5) * 46 * big, cy - ease * (10 + 46 * rnd(i + 2)) * big, (4 + 8 * rnd(i + 5)) * big * (0.5 + k), 0, 7); g.fill() }
+      g.fillStyle = c(a, ar); starPath(g, cx, cy, 16 * big * (1 - 0.5 * k)); g.fill()
+      break
+    }
+    case 'confetti': { // 알록달록한 막대 가루가 튀어 올랐다 떨어진다
+      const cols = [rgb, ar, '125,255,224', '255,212,94'], n = lv === 2 ? 16 : 9
+      for (let i = 0; i < n; i++) {
+        const ang = -Math.PI + (i / (n - 1)) * Math.PI, d = (10 + 60 * ease) * big * (0.5 + 0.7 * rnd(i + 1)), px = cx + Math.cos(ang) * d, py = cy + Math.sin(ang) * d * 0.9 + 26 * k * k * big
+        g.save(); g.translate(px, py); g.rotate(rnd(i + 3) * 3.14 + k * 4 * (i % 2 ? 1 : -1)); g.fillStyle = c(a, cols[i % 4]); g.beginPath(); g.roundRect(-5 * big, -1.8 * big, 10 * big, 3.6 * big, 1.8 * big); g.fill(); g.restore()
+      }
+      g.strokeStyle = c(a * 0.7, ar); g.lineWidth = 2; g.beginPath(); g.arc(cx, cy, (8 + 30 * ease) * big, Math.PI, 0); g.stroke()
+      break
+    }
+    case 'lotus': { // 연꽃잎이 활짝 펴지고 금빛 고리가 퍼진다
+      const n = 8, L = (16 + 44 * ease) * big
+      for (let i = 0; i < n; i++) { const ang = -Math.PI + (i / (n - 1)) * Math.PI; g.save(); g.translate(cx, cy); g.rotate(ang); g.fillStyle = c(a * 0.8, i % 2 ? rgb : ar); g.beginPath(); g.moveTo(6 * big, 0); g.quadraticCurveTo(L * 0.5, -L * 0.28, L, 0); g.quadraticCurveTo(L * 0.5, L * 0.28, 6 * big, 0); g.fill(); g.restore() }
+      g.strokeStyle = c(a, ar); g.lineWidth = 2; g.beginPath(); g.ellipse(cx, cy, (10 + 40 * ease) * big, (4 + 12 * ease) * big, 0, 0, 7); g.stroke()
+      g.fillStyle = c(a, ar); g.beginPath(); g.arc(cx, cy, 5 * big * (1 - 0.5 * k), 0, 7); g.fill()
       break
     }
     default: { // 기본: 고리 + 별 반짝임 + 불꽃 알갱이

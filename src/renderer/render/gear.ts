@@ -3,6 +3,7 @@ import { FONT, glow, lighten, starPath } from './theme'
 import type { Profile } from '../data/Profile'
 import { skinSprite } from '../game/noteSkins'
 import { ART, type PathFn } from './skinsArt'
+import { ART2, setLamps } from './skinsArt2'
 const OWNER_ID = 'zlero' // 제작자 계정은 꾸미기를 조건 없이 전부 쓴다
 
 const img = (src: string) => { const i = new Image(); i.src = src; return i }
@@ -30,15 +31,12 @@ export const GEAR_SKINS: GearSkin[] = [
   sk('sunset', '선셋', '래더 10승', p => p.wins >= 10, '#1a0d14', '#6a2a44', '#f08a5d', '#ffb13b', '#ff4f7a', '#fff0d8', '20,6,18', ['#ff4f7a', '#e8872f', '#b45aa8']),
   sk('mono', '모노', '플레이 100번', p => p.plays >= 100, '#0e0e10', '#3a3a3e', '#9a9aa2', '#ffffff', '#bbbbbb', '#f2f2f2', '0,0,0', ['#6a6a70', '#55555a', '#808088']),
   sk('arcade', '레트로 아케이드', '레벨 25', p => p.level >= 25, '#0b0f08', '#2a3a1a', '#a7c23a', '#c8ff3a', '#ff9a1f', '#b8ff5a', '2,8,2', ['#e8601f', '#c9a21f', '#5fa82f']),
-  // 아래 넷은 기존 스킨의 틀·무늬·노트·이펙트 모양에 새 색을 입힌 것 (VARIANT_OF)
-  sk('aurora', '오로라', '레벨 20', p => p.level >= 20, '#06140f', '#1c5a4a', '#6ff0c0', '#7dffd0', '#ff6fb0', '#e6fff6', '2,12,10', ['#ff6fb0', '#3fb8a0', '#8a6cff']),
-  sk('ember', '엠버', '풀 콤보 30번', p => p.fcs >= 30, '#180a04', '#5a2a10', '#e8904a', '#ff8a1f', '#37c8ff', '#ffe8d0', '14,5,2', ['#ff6a1f', '#c9781f', '#a8434f']),
-  sk('royal', '로열 블루', '래더 30승', p => p.wins >= 30, '#080c1c', '#1e2f6a', '#7a9ae8', '#7fa8ff', '#ff5a6e', '#e6eeff', '3,6,20', ['#e0405f', '#4a6fd0', '#2f8fc9']),
-  sk('candy', '캔디', '플레이 200번', p => p.plays >= 200, '#1a1020', '#6a3a8a', '#f0a0e0', '#6ff0d8', '#ff6aa0', '#fff0fb', '18,8,26', ['#ff6aa0', '#6ff0d8', '#b48cff'])
+  sk('cosmos', '코스모스', '레벨 20', p => p.level >= 20, '#05061a', '#1b1f5c', '#8fa6ff', '#9fe8ff', '#ff7ac8', '#e8f0ff', '4,5,22', ['#ff7ac8', '#6f7cff', '#2fc4e8']),
+  sk('clockwork', '태엽 공방', '풀 콤보 30번', p => p.fcs >= 30, '#140d08', '#5a3a1c', '#d9a05a', '#ffc46a', '#6fe0d0', '#ffe8c0', '10,6,3', ['#c2452a', '#d9a05a', '#5a8f7a']),
+  sk('candy', '캔디', '플레이 200번', p => p.plays >= 200, '#1a0d1f', '#7a3f8f', '#ffc2ee', '#ff8ad8', '#7dffe0', '#fff0fb', '22,8,28', ['#ff6aa0', '#7dffe0', '#ffd45e']),
+  sk('dancheong', '단청', '래더 30승', p => p.wins >= 30, '#0a0f0e', '#7a2420', '#e8b63a', '#ffcf5a', '#ff5a4a', '#fff2d0', '6,10,9', ['#c8352f', '#1f8a70', '#2a5fb0'])
 ]
-// 변형 스킨이 틀·무늬·노트·이펙트를 빌려 오는 원래 스킨
-export const VARIANT_OF: Record<string, string> = { aurora: 'ocean', ember: 'crimson', royal: 'gold', candy: 'sunset' }
-for (const [v, b] of Object.entries(VARIANT_OF)) ART[v] = ART[b] // 변형 스킨은 원래 스킨의 그림을 그대로 쓴다 (skinsArt가 먼저 불려 와 ART는 이미 채워져 있다)
+Object.assign(ART, ART2); setLamps(lamps) // 새로 그린 스킨 넷의 그림 (lamps는 아래에 선언돼 있어 호출 시점에 쓴다)
 // 지금 쓸 기어: 고른 번호가 아직 안 풀렸으면 스틸 (프로필이 없으면 스틸만 쓴다)
 export const gearOf = (i: number, p: Profile | undefined) => { const g = GEAR_SKINS[i] ?? GEAR_SKINS[0]; return p && (p.id === OWNER_ID || g.ok(p)) || g === GEAR_SKINS[0] ? g : GEAR_SKINS[0] }
 // 스킨마다 다른 생김새: 기둥 무늬(rail)·필드 바탕 무늬(field)·날개 모양(wing)·콘솔 윗모서리를 깎는 정도(cut)
@@ -53,7 +51,7 @@ const STYLE_OF: Record<string, GearStyle> = {
   ice: { rail: 'ice', field: 'snow', wing: 'angular', cut: 44 }, sunset: { rail: 'stripe', field: 'rays', wing: 'swept', cut: 24 },
   mono: { rail: 'flat', field: 'none', wing: 'none', cut: 24 }, arcade: { rail: 'pixel', field: 'pixels', wing: 'none', cut: 24 }
 }
-const styleOf = (id: string) => STYLE_OF[id] ?? STYLE_OF[VARIANT_OF[id]] ?? STYLE_OF.steel
+const styleOf = (id: string) => STYLE_OF[id] ?? STYLE_OF.steel
 const rnd = (i: number) => ((i * 7919 + 13) % 97) / 97 // 고정 난수 (무늬 위치가 깜빡이지 않게)
 // 두 색을 섞는다 (t=0이면 a, 1이면 b)
 export const mix = (a: string, b: string, t: number) => '#' + [1, 3, 5].map(i => Math.round(parseInt(a.slice(i, i + 2), 16) * (1 - t) + parseInt(b.slice(i, i + 2), 16) * t).toString(16).padStart(2, '0')).join('')
