@@ -363,6 +363,10 @@ export const Play = (sm: SceneManager): Scene => {
         g.textAlign = 'right'; g.font = `800 15px ${FONT}`; g.fillStyle = diff >= 0 ? AMBER : '#ff8a9a'; g.fillText(`${diff >= 0 ? '+' : '-'}${Math.abs(diff).toLocaleString()}`, qx + 20 + qi, ry + 30)
         g.fillStyle = 'rgba(255,255,255,.25)'; g.beginPath(); g.roundRect(qx + 20, ry + 88, qi, 4, 2); g.fill()
         g.fillStyle = p.hp > 50 ? CYAN : p.hp > 25 ? AMBER : '#ff5a6e'; g.beginPath(); g.roundRect(qx + 20, ry + 88, Math.max(qi * p.hp / 100, 0), 4, 2); g.fill()
+        const gx = qx + 20, gy = ry + 99, hw = qi / 2, lead = Math.tanh(diff / 40000) * hw // 점수 차 게이지: 가운데가 동점, 오른쪽 금색이 내가 앞, 왼쪽 붉은색이 뒤 (4만 점 차에서 76%)
+        g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(gx, gy, qi, 6)
+        g.fillStyle = diff >= 0 ? AMBER : '#ff8a9a'; g.fillRect(lead >= 0 ? gx + hw : gx + hw + lead, gy, Math.abs(lead), 6)
+        g.fillStyle = '#fff'; g.fillRect(gx + hw - 1, gy - 2, 2, 10)
         g.textAlign = 'left'
       }
       g.textAlign = 'center'
