@@ -97,7 +97,7 @@ export function skinSprite(id: string, outer: boolean, color: string, scale: num
   let c = cache[key]
   if (!c) {
     c = cache[key] = document.createElement('canvas'); c.width = Math.ceil(92 * k); c.height = Math.ceil(44 * k)
-    const x = c.getContext('2d')!; x.scale(c.width / 92, c.height / 44); (NOTE_SHAPES[id] ?? NOTE_SHAPES.steel)(x, outer, color)
+    const x = c.getContext('2d')!; x.scale(c.width / 92, c.height / 44); (NOTE_SHAPES[id] ?? NOTE_SHAPES[{ aurora: 'ocean', ember: 'crimson', royal: 'gold', candy: 'sunset' }[id] ?? ''] ?? NOTE_SHAPES.steel)(x, outer, color)
   }
   return c
 }

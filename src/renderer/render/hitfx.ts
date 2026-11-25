@@ -3,7 +3,7 @@ import { starPath } from './theme'
 
 type G = CanvasRenderingContext2D
 export type FxStyle = 'burst' | 'diamond' | 'rays' | 'petals' | 'leaves' | 'slash' | 'bubbles' | 'bolt' | 'snow' | 'sun' | 'minimal' | 'pixel'
-export const FX_OF: Record<string, FxStyle> = { steel: 'burst', neon: 'diamond', gold: 'rays', sakura: 'petals', forest: 'leaves', crimson: 'slash', ocean: 'bubbles', violet: 'bolt', ice: 'snow', sunset: 'sun', mono: 'minimal', arcade: 'pixel' }
+export const FX_OF: Record<string, FxStyle> = { steel: 'burst', neon: 'diamond', gold: 'rays', sakura: 'petals', forest: 'leaves', crimson: 'slash', ocean: 'bubbles', violet: 'bolt', ice: 'snow', sunset: 'sun', mono: 'minimal', arcade: 'pixel', aurora: 'bubbles', ember: 'slash', royal: 'rays', candy: 'sun' }
 const rnd = (i: number) => ((i * 7919 + 13) % 97) / 97 // 이펙트마다 같은 값이 나오는 고정 난수 (깜빡이지 않게)
 
 // k: 0→1 진행 · big: 크기 배율 · rgb: 판정 색 · ar: 스킨 포인트 색 · lv: 이펙트 세기(1 약, 2 보통)
