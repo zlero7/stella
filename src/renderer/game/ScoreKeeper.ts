@@ -90,7 +90,7 @@ export class ScoreKeeper {
   }
   get maxCount() { return this.errs.filter(dt => Math.abs(dt) <= MAX_WIN * this.mul).length }
   // UR(Unstable Rate): 입력 오차(ms)의 표준편차 × 10. 평균이 0이어도 흩어져 있으면 높다 (일반적인 리듬게임 정의, 이 게임 고유 기준은 아님)
-  get ur() { const n = this.errs.length; if (n < 2) return 0; const m = this.errs.reduce((a, b) => a + b, 0) / n; return Math.round(10000 * Math.sqrt(this.errs.reduce((a, b) => a + (b - m) ** 2, 0) / n)) / 10 }
+  get ur() { const n = this.errs.length; if (n < 2) return 0; const m = this.errs.reduce((a, b) => a + b, 0) / n; return Math.round(100000 * Math.sqrt(this.errs.reduce((a, b) => a + (b - m) ** 2, 0) / n)) / 10 }
   get avgMs() { return this.errN ? Math.round((1000 * this.errSum) / this.errN) : 0 }
 
   get score() { return this.den ? Math.round(1_000_000 * this.num / this.den) : 0 }
