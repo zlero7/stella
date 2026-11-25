@@ -17,13 +17,12 @@ const poly = (x: Ctx, pts: number[][]) => { x.beginPath(); pts.forEach(([px, py]
 const shine = (x: Ctx, y0: number, y1: number, a = 0.55) => { x.save(); x.clip(); x.fillStyle = vg(x, y0, y1, `rgba(255,255,255,${a})`, 'rgba(255,255,255,0)'); x.fillRect(0, y0, 92, y1 - y0); x.restore() }
 
 export const NOTES12: Record<string, Draw> = {
-  steel(x, o, c) { // 모서리가 깎인 강철 판: 양끝 마개, 가운데 마름모 홈
-    const p = pal(o, c); glow(x, o ? p.col : '#ffffff', 11)
-    rr(x, 11, 12, 70, 20, 5); x.fillStyle = vg(x, 12, 32, p.hi, p.col, p.lo); x.fill(); noGlow(x)
-    x.strokeStyle = o ? p.lo : '#6f86a8'; x.lineWidth = 1.4; x.stroke(); shine(x, 12, 22, 0.7)
-    x.fillStyle = 'rgba(0,0,0,.2)'; x.fillRect(11, 12, 7, 20); x.fillRect(74, 12, 7, 20)
-    x.fillStyle = 'rgba(255,255,255,.55)'; for (const d of [21, 25]) { x.fillRect(d, 15, 1, 14); x.fillRect(92 - d - 1, 15, 1, 14) }
-    poly(x, [[46, 14.5], [56, 22], [46, 29.5], [36, 22]]); x.fillStyle = 'rgba(8,16,30,.55)'; x.fill(); x.strokeStyle = 'rgba(255,255,255,.85)'; x.lineWidth = 1.2; x.stroke()
+  steel(x, o, c) { // 유리 상판 패드: 어두운 강철 몸통에 색 LED 줄, 양끝 볼트
+    const p = pal(o, c), top = o ? '#4a5468' : '#ffffff', bot = o ? '#12151b' : '#a9b6c8'; glow(x, o ? p.col : '#ffffff', 11)
+    rr(x, 11, 9, 70, 26, 6); x.fillStyle = vg(x, 9, 35, top, bot); x.fill(); noGlow(x); x.strokeStyle = o ? p.col : '#8aa2c4'; x.lineWidth = 2; x.stroke(); shine(x, 9, 22, 0.4)
+    glow(x, p.col, 6); rr(x, 19, 27, 54, 3.4, 1.7); x.fillStyle = o ? p.hi : p.col; x.fill(); noGlow(x)
+    x.fillStyle = o ? '#c8d2e0' : '#6f86a8'; dot(x, 17, 22, 2.4); dot(x, 75, 22, 2.4); x.fillStyle = o ? '#10141c' : '#ffffff'; dot(x, 17, 22, 1); dot(x, 75, 22, 1)
+    poly(x, [[46, 12.5], [55, 19], [46, 25.5], [37, 19]]); x.fillStyle = o ? p.col : '#8aa2c4'; x.globalAlpha = 0.85; x.fill(); x.globalAlpha = 1; x.strokeStyle = 'rgba(255,255,255,.8)'; x.lineWidth = 1; x.stroke()
   },
   neon(x, o) { // 아래로 꺾이는 겹 화살: 바깥은 분홍 네온, 안쪽은 하늘색 가는 선
     const p = pal(o, '#ff3ddb'), path = (k: number) => poly(x, [[9 + k, 8 + k * 0.4], [31, 8 + k * 0.4], [46, 29 - k], [61, 8 + k * 0.4], [83 - k, 8 + k * 0.4], [46, 41 - k * 1.6]])
@@ -71,46 +70,42 @@ export const NOTES12: Record<string, Draw> = {
     x.strokeStyle = o ? 'rgba(40,0,10,.7)' : 'rgba(80,100,140,.6)'; x.lineWidth = 1; x.beginPath(); x.moveTo(20, 28); x.quadraticCurveTo(46, 6, 72, 28); x.stroke()
     x.fillStyle = o ? '#2a060e' : '#8aa2c4'; for (const d of [-1, 1]) { poly(x, [[46 + d * 40, 30], [46 + d * 46, 36], [46 + d * 37, 33]]); x.fill() }
   },
-  ocean(x, o) { // 윤기 나는 물방울 세 개와 잔거품
-    const p = pal(o, '#5ee8ff'); glow(x, p.col, 9)
-    for (const [bx, by, r] of [[27, 26, 10], [47, 19, 13], [68, 26, 10], [13, 14, 3.4], [81, 12, 3]] as const) {
-      const rg = x.createRadialGradient(bx - r * 0.3, by - r * 0.35, r * 0.1, bx, by, r); rg.addColorStop(0, 'rgba(255,255,255,.55)'); rg.addColorStop(0.6, o ? 'rgba(94,232,255,.28)' : 'rgba(220,235,255,.3)'); rg.addColorStop(1, o ? 'rgba(20,150,190,.55)' : 'rgba(140,170,210,.5)')
-      x.fillStyle = rg; dot(x, bx, by, r); x.strokeStyle = p.hi; x.lineWidth = 1.5; x.beginPath(); x.arc(bx, by, r, 0, 7); x.stroke()
-    }
-    noGlow(x); x.fillStyle = 'rgba(255,255,255,.9)'; for (const [bx, by, r] of [[27, 26, 10], [47, 19, 13], [68, 26, 10]] as const) { x.beginPath(); x.ellipse(bx - r * 0.35, by - r * 0.4, r * 0.3, r * 0.17, -0.6, 0, 7); x.fill(); dot(x, bx + r * 0.4, by + r * 0.45, r * 0.1) }
+  ocean(x, o) { // 해파리: 숨 쉬는 종 모양 몸, 안쪽 발광점, 늘어진 촉수
+    const p = pal(o, '#5ee8ff'); glow(x, p.col, 12)
+    x.beginPath(); x.moveTo(13, 24); x.bezierCurveTo(13, -4, 79, -4, 79, 24); x.quadraticCurveTo(71, 31, 63, 25); x.quadraticCurveTo(55, 32, 46, 25); x.quadraticCurveTo(37, 32, 29, 25); x.quadraticCurveTo(21, 31, 13, 24); x.closePath()
+    const rg = x.createRadialGradient(46, 12, 2, 46, 18, 38); rg.addColorStop(0, 'rgba(255,255,255,.85)'); rg.addColorStop(0.5, o ? 'rgba(94,232,255,.55)' : 'rgba(220,235,255,.6)'); rg.addColorStop(1, o ? 'rgba(10,110,160,.75)' : 'rgba(120,150,200,.7)'); x.fillStyle = rg; x.fill(); noGlow(x)
+    x.strokeStyle = p.hi; x.lineWidth = 1.6; x.stroke(); x.lineCap = 'round'; x.strokeStyle = o ? 'rgba(160,245,255,.85)' : 'rgba(210,225,250,.9)'; x.lineWidth = 2
+    for (let k = 0; k < 5; k++) { const bx = 22 + k * 12; x.beginPath(); x.moveTo(bx, 28); x.bezierCurveTo(bx + (k % 2 ? 5 : -5), 33, bx + (k % 2 ? -4 : 4), 37, bx + (k % 2 ? 3 : -3), 41); x.stroke() } x.lineCap = 'butt'
+    x.fillStyle = 'rgba(255,255,255,.9)'; for (const [dx, dy, r] of [[34, 14, 2.2], [46, 9, 2.6], [58, 14, 2.2], [46, 18, 1.6]]) dot(x, dx, dy, r); x.beginPath(); x.ellipse(30, 9, 8, 3, -0.5, 0, 7); x.fillStyle = 'rgba(255,255,255,.55)'; x.fill()
   },
-  violet(x, o) { // 번개 한 줄기와 튀는 불꽃, 회로 점
-    const p = pal(o, '#b58cff'); glow(x, p.col, 12)
-    poly(x, [[34, 3], [63, 3], [51, 16.5], [72, 16.5], [35, 41], [43, 24.5], [24, 24.5]]); x.fillStyle = vg(x, 3, 41, p.hi, p.col, p.lo); x.fill(); noGlow(x)
-    x.lineJoin = 'round'; x.strokeStyle = o ? '#2a1458' : '#6f86a8'; x.lineWidth = 1.6; x.stroke(); shine(x, 3, 22, 0.5)
-    poly(x, [[38, 6.5], [55, 6.5], [45, 18], [60, 18], [41, 34], [46, 22], [31, 22]]); x.strokeStyle = 'rgba(255,255,255,.55)'; x.lineWidth = 1; x.stroke()
-    x.strokeStyle = o ? '#ff5a9a' : '#cfe0f5'; x.lineWidth = 1.8; x.lineCap = 'round'; x.beginPath(); x.moveTo(10, 15); x.lineTo(19, 19); x.lineTo(15, 23); x.lineTo(23, 26); x.moveTo(82, 13); x.lineTo(73, 18); x.lineTo(77, 22); x.lineTo(69, 26); x.stroke(); x.lineCap = 'butt'
-    x.fillStyle = o ? '#ff5a9a' : '#ffffff'; for (const [dx, dy] of [[10, 15], [82, 13], [23, 26], [69, 26]]) dot(x, dx, dy, 1.8)
+  violet(x, o) { // 마이크로칩: 핀이 달린 몸통, 빛나는 다이와 회로선
+    const p = pal(o, '#b58cff'), pin = o ? '#d8d0f0' : '#aab6d0'; glow(x, p.col, 11)
+    x.fillStyle = pin; for (let k = 0; k < 6; k++) { x.fillRect(19 + k * 10, 5, 4, 7); x.fillRect(19 + k * 10, 32, 4, 7) } for (const d of [-1, 1]) for (let k = 0; k < 2; k++) x.fillRect(d < 0 ? 8 : 80, 16 + k * 8, 4, 4)
+    rr(x, 12, 10, 68, 24, 3); x.fillStyle = vg(x, 10, 34, o ? '#2a1a5a' : '#f2f5fc', o ? '#0c0620' : '#aab6d0'); x.fill(); noGlow(x); x.strokeStyle = p.col; x.lineWidth = 2; x.stroke()
+    x.strokeStyle = o ? 'rgba(181,140,255,.6)' : 'rgba(110,130,170,.7)'; x.lineWidth = 1.2; x.beginPath(); x.moveTo(36, 22); x.lineTo(24, 22); x.lineTo(24, 14); x.moveTo(56, 22); x.lineTo(68, 22); x.lineTo(68, 30); x.moveTo(46, 30); x.lineTo(46, 31); x.stroke()
+    glow(x, p.col, 8); rr(x, 35, 14, 22, 16, 2); x.fillStyle = vg(x, 14, 30, p.hi, p.col); x.fill(); noGlow(x); x.strokeStyle = o ? '#2a1458' : '#6f86a8'; x.lineWidth = 1; x.stroke()
+    x.fillStyle = o ? '#ff5a9a' : '#ffffff'; dot(x, 20, 15, 1.8); x.fillStyle = 'rgba(255,255,255,.7)'; x.fillRect(39, 17, 14, 2)
   },
-  ice(x, o) { // 면이 살아 있는 눈꽃 결정: 여섯 갈래에 가지, 가운데 육각 심, 양옆 얼음 조각
-    const p = pal(o, '#8fd8ff'); glow(x, p.col, 10); x.lineCap = 'round'
-    x.save(); x.translate(46, 22)
-    for (let i = 0; i < 6; i++) {
-      x.rotate(Math.PI / 3); x.strokeStyle = o ? p.col : '#cfe6ff'; x.lineWidth = 3; x.beginPath(); x.moveTo(0, 0); x.lineTo(20, 0); x.stroke()
-      x.lineWidth = 2; x.beginPath(); x.moveTo(11, 0); x.lineTo(17, -6); x.moveTo(11, 0); x.lineTo(17, 6); x.moveTo(17, 0); x.lineTo(21, -3); x.moveTo(17, 0); x.lineTo(21, 3); x.stroke()
-      x.strokeStyle = '#ffffff'; x.lineWidth = 0.9; x.beginPath(); x.moveTo(3, 0); x.lineTo(19, 0); x.stroke()
-    }
-    x.restore(); noGlow(x); x.lineCap = 'butt'
-    poly(x, Array.from({ length: 6 }, (_, k) => [46 + Math.cos(k * Math.PI / 3) * 7.5, 22 + Math.sin(k * Math.PI / 3) * 7.5])); x.fillStyle = vg(x, 14, 30, '#ffffff', p.col, p.lo); x.fill(); x.strokeStyle = p.lo; x.lineWidth = 1; x.stroke()
-    for (const d of [-1, 1]) { poly(x, [[46 + d * 28, 22], [46 + d * 34, 17], [46 + d * 40, 22], [46 + d * 34, 27]]); x.fillStyle = o ? p.hi : '#ffffff'; x.fill(); x.strokeStyle = p.lo; x.stroke(); x.strokeStyle = 'rgba(255,255,255,.7)'; x.beginPath(); x.moveTo(46 + d * 40, 22); x.lineTo(46 + d * 44, 22); x.stroke() }
+  ice(x, o) { // 얼음 보석: 면이 나뉜 육각, 위 면은 밝고 아래 면은 짙다
+    const p = pal(o, '#8fd8ff'); glow(x, p.col, 12)
+    poly(x, [[10, 22], [25, 7], [67, 7], [82, 22], [67, 37], [25, 37]]); x.fillStyle = vg(x, 7, 37, '#ffffff', p.col, p.lo); x.fill(); noGlow(x); x.lineJoin = 'round'; x.strokeStyle = o ? '#1a4a72' : '#6f86a8'; x.lineWidth = 1.6; x.stroke()
+    poly(x, [[25, 7], [67, 7], [57, 22], [35, 22]]); x.fillStyle = 'rgba(255,255,255,.5)'; x.fill(); poly(x, [[10, 22], [25, 7], [35, 22]]); x.fillStyle = 'rgba(255,255,255,.22)'; x.fill()
+    poly(x, [[35, 22], [57, 22], [67, 37], [25, 37]]); x.fillStyle = o ? 'rgba(10,60,120,.28)' : 'rgba(80,110,160,.25)'; x.fill()
+    x.strokeStyle = 'rgba(255,255,255,.75)'; x.lineWidth = 1; x.beginPath(); x.moveTo(25, 7); x.lineTo(35, 22); x.lineTo(25, 37); x.moveTo(67, 7); x.lineTo(57, 22); x.lineTo(67, 37); x.moveTo(35, 22); x.lineTo(57, 22); x.stroke()
+    x.fillStyle = '#ffffff'; x.beginPath(); x.moveTo(30, 13); x.lineTo(32, 10); x.lineTo(34, 13); x.lineTo(32, 16); x.closePath(); x.fill(); dot(x, 60, 30, 1.4)
   },
-  sunset(x, o) { // 가로 틈이 난 레트로 태양과 뻗는 햇살
-    const p = pal(o, '#ffb13b'); glow(x, p.col, 11)
-    x.fillStyle = p.col; for (let i = 0; i < 16; i++) { const a = (i / 16) * Math.PI * 2, s = i % 2 ? 0.1 : 0.16, L = i % 2 ? 17 : 21; poly(x, [[46 + Math.cos(a - s) * 13, 22 + Math.sin(a - s) * 13], [46 + Math.cos(a) * L, 22 + Math.sin(a) * L], [46 + Math.cos(a + s) * 13, 22 + Math.sin(a + s) * 13]]); x.fill() }
-    x.beginPath(); x.arc(46, 22, 12.5, 0, 7); x.fillStyle = vg(x, 9.5, 34.5, o ? '#fff2a0' : '#ffffff', o ? '#ff8a3a' : '#cfe0f5', o ? '#ff3d8a' : '#8aa2c4'); x.fill(); noGlow(x); x.strokeStyle = p.lo; x.lineWidth = 1.4; x.stroke()
-    x.save(); x.beginPath(); x.arc(46, 22, 12.5, 0, 7); x.clip(); x.fillStyle = o ? 'rgba(60,10,40,.55)' : 'rgba(80,100,140,.5)'; for (let i = 0; i < 4; i++) x.fillRect(33, 23 + i * 3.4, 26, 1 + i * 0.5); x.restore()
-    x.fillStyle = p.col; for (const d of [-1, 1]) for (const k of [0, 1]) { poly(x, [[46 + d * (26 + k * 7), 22], [46 + d * (32 + k * 7), 17], [46 + d * (32 + k * 7), 27]]); x.fill() }
+  sunset(x, o) { // 호박빛 해 원반: 노랑에서 분홍으로 번지고 아래쪽에 가로 틈이 난다
+    const p = pal(o, '#ffb13b'); glow(x, p.col, 13)
+    x.beginPath(); x.ellipse(46, 22, 37, 17, 0, 0, 7); x.fillStyle = vg(x, 5, 39, o ? '#fff2a0' : '#ffffff', o ? '#ff8a3a' : '#cfe0f5', o ? '#ff3d8a' : '#8aa2c4'); x.fill(); noGlow(x); x.strokeStyle = o ? '#7a2a1a' : '#6f86a8'; x.lineWidth = 1.6; x.stroke()
+    x.save(); x.beginPath(); x.ellipse(46, 22, 37, 17, 0, 0, 7); x.clip(); x.fillStyle = o ? 'rgba(50,10,40,.6)' : 'rgba(80,100,140,.55)'; for (let i = 0; i < 5; i++) x.fillRect(8, 22 + i * 3.6, 76, 0.8 + i * 0.55); x.restore()
+    x.fillStyle = 'rgba(255,255,255,.55)'; x.beginPath(); x.ellipse(36, 12, 14, 3.4, -0.3, 0, 7); x.fill()
+    x.fillStyle = p.col; for (const d of [-1, 1]) for (const k of [0, 1]) { poly(x, [[46 + d * (40 + k * 4), 22], [46 + d * (44 + k * 4), 19], [46 + d * (44 + k * 4), 25]]); x.fill() }
   },
-  mono(x, o) { // 윤곽과 줄만 있는 흑백 판: 가운데 흰 블록, 양끝 눈금
-    const k = o ? '#ffffff' : '#9aa3b2'; glow(x, k, 5)
-    x.fillStyle = '#0a0a0c'; x.fillRect(11, 11, 70, 22); x.strokeStyle = k; x.lineWidth = 2.4; x.strokeRect(11, 11, 70, 22); noGlow(x)
-    x.fillStyle = k; x.fillRect(11, 16, 70, 2); x.fillRect(11, 26, 70, 2); x.fillRect(38, 11, 16, 22); x.fillStyle = '#0a0a0c'; x.fillRect(44, 15, 4, 14)
-    x.fillStyle = k; for (const dx of [17, 23, 63, 69]) x.fillRect(dx, 8, 1.5, 3)
+  mono(x, o) { // 피아노 건반 판: 검은 래커(바깥)·상아색(안쪽) 위에 음표
+    const k = o ? '#d8dce8' : '#6a6e7a'; glow(x, o ? '#ffffff' : '#9aa3b2', 5)
+    rr(x, 11, 9, 70, 26, 5); x.fillStyle = o ? vg(x, 9, 35, '#4a4c56', '#000000') : vg(x, 9, 35, '#ffffff', '#d4d8e2'); x.fill(); noGlow(x); x.strokeStyle = k; x.lineWidth = 2; x.stroke(); shine(x, 9, 20, o ? 0.28 : 0.6)
+    x.fillStyle = o ? '#f0f2f8' : '#1a1c22'; x.strokeStyle = x.fillStyle; x.lineWidth = 2; x.beginPath(); x.ellipse(40, 27, 5.4, 3.8, -0.4, 0, 7); x.fill(); x.beginPath(); x.moveTo(44.6, 25.6); x.lineTo(44.6, 11); x.stroke(); x.beginPath(); x.moveTo(44.6, 11); x.bezierCurveTo(51, 13, 54, 18, 51, 23); x.lineWidth = 2.6; x.stroke()
+    x.fillStyle = o ? 'rgba(255,255,255,.35)' : 'rgba(0,0,0,.3)'; for (const dx of [20, 28, 64, 72]) x.fillRect(dx, 12, 1.5, 4)
   },
   arcade(x, o) { // 픽셀 동전: 둥글게 깎은 도트, 위 왼쪽이 밝고 아래 오른쪽이 어둡다. 옆에 반짝이 두 개
     const p = pal(o, '#ffd22e'); glow(x, p.col, 8)

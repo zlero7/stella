@@ -6,6 +6,8 @@ import { ART, type PathFn } from './skinsArt'
 import { ART2, setLamps } from './skinsArt2'
 import { ART3 } from './skinsArt3'
 import { ART4 } from './skinsArt4'
+import { ART5 } from './skinsArt5'
+import { ART6 } from './skinsArt6'
 import { drawAmbient } from './skinsAmbient'
 const OWNER_ID = 'zlero' // 제작자 계정은 꾸미기를 조건 없이 전부 쓴다
 
@@ -39,7 +41,7 @@ export const GEAR_SKINS: GearSkin[] = [
   sk('candy', '캔디', '플레이 200번', p => p.plays >= 200, '#1a0d1f', '#7a3f8f', '#ffc2ee', '#ff8ad8', '#7dffe0', '#fff0fb', '22,8,28', ['#ff6aa0', '#7dffe0', '#ffd45e']),
   sk('dancheong', '단청', '래더 30승', p => p.wins >= 30, '#0a0f0e', '#7a2420', '#e8b63a', '#ffcf5a', '#ff5a4a', '#fff2d0', '6,10,9', ['#c8352f', '#1f8a70', '#2a5fb0'])
 ]
-Object.assign(ART, ART2, ART3, ART4); setLamps(lamps) // 새로 그린 스킨 넷의 그림 (lamps는 아래에 선언돼 있어 호출 시점에 쓴다)
+Object.assign(ART, ART2, ART3, ART4, ART5, ART6); setLamps(lamps) // 새로 그린 스킨 넷의 그림 (lamps는 아래에 선언돼 있어 호출 시점에 쓴다)
 // 지금 쓸 기어: 고른 번호가 아직 안 풀렸으면 스틸 (프로필이 없으면 스틸만 쓴다)
 export const gearOf = (i: number, p: Profile | undefined) => { const g = GEAR_SKINS[i] ?? GEAR_SKINS[0]; return p && (p.id === OWNER_ID || g.ok(p)) || g === GEAR_SKINS[0] ? g : GEAR_SKINS[0] }
 // 스킨마다 다른 생김새: 기둥 무늬(rail)·필드 바탕 무늬(field)·날개 모양(wing)·콘솔 윗모서리를 깎는 정도(cut)
