@@ -4,6 +4,7 @@ import type { Profile } from '../data/Profile'
 import { skinSprite } from '../game/noteSkins'
 import { ART, type PathFn } from './skinsArt'
 import { ART2, setLamps } from './skinsArt2'
+import { drawAmbient } from './skinsAmbient'
 const OWNER_ID = 'zlero' // 제작자 계정은 꾸미기를 조건 없이 전부 쓴다
 
 const img = (src: string) => { const i = new Image(); i.src = src; return i }
@@ -156,12 +157,13 @@ function wing(g: CanvasRenderingContext2D, rx: number, d: number, jy: number, k0
 
 // 필드 판과 양옆 기둥·램프 (노트 아래에 깔린다)
 export function drawGearBack(g: CanvasRenderingContext2D, x: number, fw: number, jy: number, pa: number, lit: Lit, k0: GearSkin) {
-  if (ART[k0.id]) return ART[k0.id].back(g, x, fw, jy, pa, lit, k0) // 스틸 말고는 스킨이 틀을 직접 그린다
+  if (ART[k0.id]) { ART[k0.id].back(g, x, fw, jy, pa, lit, k0); drawAmbient(g, k0, x, fw, jy); return } // 스틸 말고는 스킨이 틀을 직접 그린다
   g.fillStyle = `rgba(${k0.field},${pa})`; g.fillRect(x - 4, 0, fw + 8, 720)
   fieldDecor(g, x, fw, jy, k0, styleOf(k0.id).field)
   rail(g, x - 30, -1, jy, k0); rail(g, x + fw + 4, 1, jy, k0)
   wing(g, x - 30, -1, jy, k0); wing(g, x + fw + 4, 1, jy, k0)
   lamps(g, x - 66, lit, k0); lamps(g, x + fw + 66, lit, k0)
+  drawAmbient(g, k0, x, fw, jy)
 }
 
 // 판정선 아래 콘솔의 몸통·스피커·선반·치비 캐릭터 (노트와 이펙트 위, 건반 아래)
