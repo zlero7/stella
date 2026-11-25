@@ -318,9 +318,12 @@ export const Play = (sm: SceneManager): Scene => {
       if (age < 380) { // 판정 글자: 정확도(%) 글자(y484) 위에 겹치지 않게 그보다 60px 위에 짧게 떴다 사라진다
         g.globalAlpha = 1 - age / 380
         const jn = flash.j === 0 && Math.abs(flash.dt) <= MAX_WIN * sk.mul ? 'MAX' : JUDGES[flash.j].name // PERFECT 중 ±25ms 이내는 MAX
-        g.font = `900 36px ${FONT}`; g.lineJoin = 'round'; g.lineWidth = 5; g.strokeStyle = 'rgba(4,9,24,.85)'; g.strokeText(jn, CX, 424)
+        const pct = `${Math.round(JUDGES[flash.j].weight * 100)}%` // 판정명 뒤에 정확도 반영 비율
+        g.font = `900 36px ${FONT}`; const nw = g.measureText(jn).width; g.font = `800 20px ${FONT}`; const pw = nw + 8 + g.measureText(pct).width; g.textAlign = 'left'
+        g.font = `900 36px ${FONT}`; g.lineJoin = 'round'; g.lineWidth = 5; g.strokeStyle = 'rgba(4,9,24,.85)'; g.strokeText(jn, CX - pw / 2, 424)
         if (flash.j === 0) { const gg = g.createLinearGradient(0, 394, 0, 430); gg.addColorStop(0, '#fff6c2'); gg.addColorStop(0.55, '#ffd04a'); gg.addColorStop(1, '#d98a00'); g.fillStyle = gg } else g.fillStyle = JUDGE_COLORS[flash.j] // PERFECT는 금색
-        g.fillText(jn, CX, 424)
+        g.fillText(jn, CX - pw / 2, 424)
+        g.font = `800 20px ${FONT}`; g.lineWidth = 4; g.strokeText(pct, CX - pw / 2 + nw + 8, 424); g.fillStyle = '#fff'; g.fillText(pct, CX - pw / 2 + nw + 8, 424); g.textAlign = 'center'
         if (settings.fastSlow && flash.j !== MISS && flash.j !== 0) {
           g.font = `700 18px ${FONT}`; g.fillStyle = flash.dt > 0 ? CYAN : AMBER
           g.fillText(flash.dt > 0 ? 'FAST' : 'SLOW', CX, 450)
