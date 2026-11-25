@@ -1,7 +1,7 @@
 import type { Scene, SceneManager } from '../core/SceneManager'
 import { account, settings } from '../data/Storage'
 import { prof, refreshProfile } from '../data/Profile'
-import { APP_VERSION, updateInfo } from '../data/Update'
+import { APP_VERSION, noticeInfo, updateInfo } from '../data/Update'
 import { profileCard } from '../render/profileCard'
 import { FONT, AMBER, accentFill, chip, drawBg, footer, slant, glow, hit, press, starPath, stellaSky } from '../render/theme'
 
@@ -69,6 +69,7 @@ export const Title = (sm: SceneManager): Scene => {
       }
 
       const up = updateInfo.value // 새 버전이 있으면 아래에 안내 (앱에는 자동 업데이트가 없다)
+      if (noticeInfo.value) { g.textAlign = 'center'; g.font = `700 14px ${FONT}`; g.fillStyle = '#33275f'; g.fillText(`NOTICE  ${noticeInfo.value}`, 640, 664); g.textAlign = 'left' } // 서버 공지
       if (up) { g.textAlign = 'center'; g.font = `700 15px ${FONT}`; g.fillStyle = m > 0.5 ? AMBER : '#5b1020'; g.fillText(updMsg || (window.api ? `새 버전 v${up.latest}이 나왔습니다 — U 키를 누르면 지금 업데이트합니다 (현재 v${APP_VERSION})` : `새 버전 v${up.latest}이 나왔습니다 — ${up.url.replace('https://', '')} (현재 v${APP_VERSION})`), 640, 690); g.textAlign = 'left' }
       // 메뉴: 디맥처럼 모드 하나가 화면 가운데에 크게, 좌우 화살표로 넘긴다. 모드마다 색이 다르다
       if (m > 0) {

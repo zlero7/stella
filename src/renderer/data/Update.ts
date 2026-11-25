@@ -14,8 +14,10 @@ export const isNewer = (latest: string, cur: string) => {
 export async function checkUpdate() {
   try {
     const r = await fetch(`${serverUrl()}/version`, { signal: AbortSignal.timeout(6000) })
-    const j = (await r.json()) as { latest?: string; url?: string }
+    const j = (await r.json()) as { latest?: string; url?: string; notice?: string }
+    if (r.ok && typeof j.notice === 'string') noticeInfo.value = j.notice
     if (r.ok && j.latest && isNewer(j.latest, APP_VERSION)) updateInfo.value = { latest: j.latest, url: j.url ?? '' }
   } catch { /* 서버에 못 닿으면 알림 없이 */ }
 }
+export const noticeInfo: { value: string } = { value: '' } // 서버 공지 한 줄 (없으면 빈 문자열)
 export const updateInfo: { value: { latest: string; url: string } | undefined } = { value: undefined }
