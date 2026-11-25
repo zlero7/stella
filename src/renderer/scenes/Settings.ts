@@ -8,6 +8,8 @@ import { GEAR_SKINS, gearOf } from '../render/gear'
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi)
 const ALIGNS = ['왼쪽', '가운데', '오른쪽']
+const HUD_MODES = ['꺼짐', '노트 앞', '노트 뒤'] // HUD 글자를 노트 위에 그릴지(앞), 노트 아래에 그릴지(뒤)
+const off = (v = 0) => `${v > 0 ? '+' : ''}${v}`
 const FX = ['끔', '약', '보통']
 const HITS = FX
 const SCREENS = ['창모드', '전체화면 창모드', '전체화면']
@@ -47,9 +49,11 @@ const CATS: { name: string; items: Item[] }[] = [
     { label: '판정 강도', value: () => ['보통', '하드', '맥스'][settings.judgeMode] ?? '보통', change: d => { settings.judgeMode = clamp(settings.judgeMode + d, 0, 2) } }
   ] },
   { name: 'HUD', items: [ // 플레이 중 화면에 뜨는 글자를 고르고 높이를 옮긴다
-    { label: '콤보 표시', value: () => (settings.hudCombo ? '켜짐' : '꺼짐'), change: () => { settings.hudCombo = settings.hudCombo ? 0 : 1 } },
-    { label: '판정 글자', value: () => (settings.hudJudge ? '켜짐' : '꺼짐'), change: () => { settings.hudJudge = settings.hudJudge ? 0 : 1 } },
-    { label: '정확도 표시', value: () => (settings.hudRate ? '켜짐' : '꺼짐'), change: () => { settings.hudRate = settings.hudRate ? 0 : 1 } },
+    { label: '콤보 표시', value: () => HUD_MODES[settings.hudCombo] ?? '꺼짐', change: d => { settings.hudCombo = clamp(settings.hudCombo + d, 0, 2) } },
+    { label: '콤보 높이', value: () => off(settings.comboY), frac: () => ((settings.comboY ?? 0) + 100) / 200, change: d => { settings.comboY = clamp((settings.comboY ?? 0) + d * 10, -100, 100) } },
+    { label: '판정 글자', value: () => HUD_MODES[settings.hudJudge] ?? '꺼짐', change: d => { settings.hudJudge = clamp(settings.hudJudge + d, 0, 2) } },
+    { label: '판정 높이', value: () => off(settings.judgeY), frac: () => ((settings.judgeY ?? 0) + 100) / 200, change: d => { settings.judgeY = clamp((settings.judgeY ?? 0) + d * 10, -100, 100) } },
+    { label: '정확도 표시', value: () => HUD_MODES[settings.hudRate] ?? '꺼짐', change: d => { settings.hudRate = clamp(settings.hudRate + d, 0, 2) } },
     { label: '점수 차이 표시', value: () => (settings.hudGap ? '켜짐' : '꺼짐'), change: () => { settings.hudGap = settings.hudGap ? 0 : 1 } },
     { label: 'HUD 높이', value: () => `${settings.hudY > 0 ? '+' : ''}${settings.hudY}`, frac: () => (settings.hudY + 100) / 200, change: d => { settings.hudY = clamp(settings.hudY + d * 10, -100, 100) } }
   ] },
@@ -76,10 +80,12 @@ const DESC: Record<string, string> = {
   '랜덤': 'RANDOM은 곡을 시작할 때 레인 순서를 통째로 섞고, HALF RANDOM은 왼쪽 절반과 오른쪽 절반 안에서만 섞고, MAX RANDOM은 노트마다 무작위 레인에 놓습니다. 랭킹 점수는 그대로 올라가고 순위 줄에 R·HR·XR이 붙습니다.',
   '페이드': 'FADE IN은 화면 위쪽 노트를, FADE OUT은 판정선에 가까운 노트를 가립니다. 노트를 외워서 치는 연습에 좋습니다.',
   '판정 강도': '하드는 판정 폭이 절반, 맥스는 4분의 1입니다. 더 어렵지만 같은 랭킹에 올라갑니다. 대결과 래더에서는 항상 보통입니다.',
-  '콤보 표시': '플레이 중 콤보 숫자를 보여 줍니다.',
-  '판정 글자': 'MAX·PERFECT 같은 판정 글자를 판정선 위에 보여 줍니다.',
-  '정확도 표시': '판정선 위에 지금까지의 평균 정확도를 보여 줍니다.',
   '점수 차이 표시': '내 최고 기록과의 점수 차이를 점수 카드 아래에 보여 줍니다.',
+  '콤보 표시': '콤보 숫자를 노트 앞에 그릴지, 뒤에 그릴지, 끌지 정합니다. 뒤로 보내면 노트가 숫자를 가리지 않아 노트가 더 잘 보입니다.',
+  '콤보 높이': '콤보 숫자만 따로 위아래로 옮깁니다. HUD 높이에 더해집니다.',
+  '판정 글자': '판정 글자(PERFECT 등)를 노트 앞에 그릴지, 뒤에 그릴지, 끌지 정합니다.',
+  '판정 높이': '판정 글자만 따로 위아래로 옮깁니다. HUD 높이에 더해집니다.',
+  '정확도 표시': '판정 글자 위의 작은 RATE(정확도)를 노트 앞에 그릴지, 뒤에 그릴지, 끌지 정합니다.',
   'HUD 높이': '콤보와 판정 글자의 높이를 옮깁니다. 위로 올리면 노트와 덜 겹칩니다.',
   '미러': '노트의 좌우를 뒤집습니다. 같은 채보도 다른 손 순서로 칠 수 있어 연습에 좋습니다. 랭킹 점수는 그대로 올라갑니다.',
   '싱크 보정': 'Enter를 누르면 메트로놈 소리에 맞춰 키를 눌러 판정 오프셋을 자동으로 맞춥니다. 유선 이어폰을 권장합니다.',

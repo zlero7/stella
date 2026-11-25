@@ -290,6 +290,48 @@ export const Play = (sm: SceneManager): Scene => {
       if (beamLen()) down.forEach(l => { g.fillStyle = laneGlow![isBlue(l) ? 'o' : 'i']; g.fillRect(FIELD_X + l * LANE_W, JUDGE_Y - beamLen(), LANE_W, beamLen()) })
       g.globalAlpha = 0.35; g.fillStyle = gs.accent; g.fillRect(FIELD_X - 4, JUDGE_Y - 9, fw + 8, 18); g.globalAlpha = 1 // 판정선 번짐: 스킨 포인트 색
       g.fillStyle = lighten(gs.accent, 0.55); g.fillRect(FIELD_X - 4, JUDGE_Y - 2, fw + 8, 4)
+      // HUD 요소는 설정에 따라 노트 앞(1)이나 뒤(2)에 그린다 (0은 끔)
+      const drawRate = () => {
+      if (sk.counts.some(n => n)) { // 디맥: 판정 글자 바로 위에 작은 RATE 글자와 정확도
+        g.textAlign = 'right'; g.font = `700 11px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.6)'; g.fillText('RATE', FIELD_X + fw / 2 - 6, JUDGE_Y - 134)
+        g.textAlign = 'left'; g.font = `700 15px ${FONT}`; g.fillStyle = sk.accuracy >= 100 ? '#ffe27a' : '#fff'; g.fillText(`${sk.accuracy.toFixed(2)}%`, FIELD_X + fw / 2 + 2, JUDGE_Y - 133)
+      }
+      }
+      const drawCombo = () => {
+        g.textAlign = 'center'; g.save(); g.translate(0, settings.hudY + (settings.comboY ?? 0))
+      if (sk.combo > 1) {
+        // 콤보 숫자 색과 글자로 지금 올 퍼펙트(금색)·풀 콤보(하늘색)가 가능한지 알린다 (색만으로 전하지 않는다)
+        const ap = sk.counts.slice(1).every(c => c === 0), fc = sk.counts[MISS] === 0
+        const pop = 1 + 0.18 * Math.max(0, 1 - (performance.now() - flash.at) / 120) // 칠 때마다 살짝 커졌다 돌아온다
+        // 디맥: 필드 위쪽에 아주 큰 반투명 콤보 숫자, 그 아래 금색 큰 배율 글자
+        g.save(); g.translate(CX, 178); g.scale(pop, pop)
+        g.globalAlpha = 0.6; g.font = `900 124px ${FONT}`; g.lineJoin = 'round'; g.lineWidth = 9; g.strokeStyle = 'rgba(2,5,12,.9)'; g.strokeText(String(sk.combo), 0, 0)
+        const cg = g.createLinearGradient(0, -90, 0, 6); if (ap) { cg.addColorStop(0, '#fff6c2'); cg.addColorStop(1, '#ffb52e') } else if (fc) { cg.addColorStop(0, '#f2fcff'); cg.addColorStop(1, '#8fdcff') } else { cg.addColorStop(0, '#ffffff'); cg.addColorStop(1, '#c4cbd8') }
+        g.fillStyle = cg; g.fillText(String(sk.combo), 0, 0); g.globalAlpha = 1; g.restore()
+        g.font = `800 15px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.9)'; g.fillText(ap ? 'ALL PERFECT' : fc ? 'FULL COMBO' : 'COMBO', CX, 78)
+      } // 배율(x1.00) 큰 글자는 시야를 가려 뺐다: 배율은 옆 기어의 COMBO 칩에 남아 있다
+        g.restore(); g.textAlign = 'left'
+      }
+      const drawJudge = () => {
+        g.textAlign = 'center'; g.save(); g.translate(0, settings.hudY + (settings.judgeY ?? 0))
+      const age = performance.now() - flash.at
+      if (age < 380) { // 판정 글자: 정확도(%) 글자(y484) 위에 겹치지 않게 그보다 60px 위에 짧게 떴다 사라진다
+        g.globalAlpha = 1 - age / 380
+        const jn = flash.j === 0 && Math.abs(flash.dt) <= MAX_WIN * sk.mul ? 'MAX' : JUDGES[flash.j].name // PERFECT 중 ±25ms 이내는 MAX
+        g.font = `900 36px ${FONT}`; g.lineJoin = 'round'; g.lineWidth = 5; g.strokeStyle = 'rgba(4,9,24,.85)'; g.strokeText(jn, CX, 424)
+        if (flash.j === 0) { const gg = g.createLinearGradient(0, 394, 0, 430); gg.addColorStop(0, '#fff6c2'); gg.addColorStop(0.55, '#ffd04a'); gg.addColorStop(1, '#d98a00'); g.fillStyle = gg } else g.fillStyle = JUDGE_COLORS[flash.j] // PERFECT는 금색
+        g.fillText(jn, CX, 424)
+        if (settings.fastSlow && flash.j !== MISS && flash.j !== 0) {
+          g.font = `700 18px ${FONT}`; g.fillStyle = flash.dt > 0 ? CYAN : AMBER
+          g.fillText(flash.dt > 0 ? 'FAST' : 'SLOW', CX, 450)
+        }
+        g.globalAlpha = 1
+      }
+        g.restore(); g.textAlign = 'left'
+      }
+      if (settings.hudRate === 2) drawRate()
+      if (settings.hudCombo === 2) drawCombo()
+      if (settings.hudJudge === 2) drawJudge()
       const curPos = posOf(t)
       for (let i = head; i < ns.length; i++) {
         const n = ns[i]
@@ -324,10 +366,7 @@ export const Play = (sm: SceneManager): Scene => {
         g.fillText(keyLabel(k), cx, cy + 6)
       })
       drawConsoleFront(g, FIELD_X, fw, JUDGE_Y, { score: sk.score, scroll: settings.scroll, mult: sk.mult, hp: sk.hp, hpLow: sk.hp <= 25 }, gs)
-      if (settings.hudRate && sk.counts.some(n => n)) { // 디맥: 판정 글자 바로 위에 작은 RATE 글자와 정확도
-        g.textAlign = 'right'; g.font = `700 11px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.6)'; g.fillText('RATE', FIELD_X + fw / 2 - 6, JUDGE_Y - 134)
-        g.textAlign = 'left'; g.font = `700 15px ${FONT}`; g.fillStyle = sk.accuracy >= 100 ? '#ffe27a' : '#fff'; g.fillText(`${sk.accuracy.toFixed(2)}%`, FIELD_X + fw / 2 + 2, JUDGE_Y - 133)
-      }
+      if (settings.hudRate === 1) drawRate()
       g.textAlign = 'left'
       // 체력 게이지: 기어 양옆 틀 안의 세로 막대 두 줄. 가득 → 하늘색, 절반 아래 → 금색, 25% 아래 → 깜빡이는 빨강
       dispHp += (sk.hp - dispHp) * 0.2
@@ -370,32 +409,9 @@ export const Play = (sm: SceneManager): Scene => {
         g.textAlign = 'left'
       }
       g.textAlign = 'center'
-      g.save(); g.translate(0, settings.hudY) // HUD 높이: 콤보·판정 글자를 함께 옮긴다
-      if (sk.combo > 1 && settings.hudCombo) {
-        // 콤보 숫자 색과 글자로 지금 올 퍼펙트(금색)·풀 콤보(하늘색)가 가능한지 알린다 (색만으로 전하지 않는다)
-        const ap = sk.counts.slice(1).every(c => c === 0), fc = sk.counts[MISS] === 0
-        const pop = 1 + 0.18 * Math.max(0, 1 - (performance.now() - flash.at) / 120) // 칠 때마다 살짝 커졌다 돌아온다
-        // 디맥: 필드 위쪽에 아주 큰 반투명 콤보 숫자, 그 아래 금색 큰 배율 글자
-        g.save(); g.translate(CX, 178); g.scale(pop, pop)
-        g.globalAlpha = 0.6; g.font = `900 124px ${FONT}`; g.lineJoin = 'round'; g.lineWidth = 9; g.strokeStyle = 'rgba(2,5,12,.9)'; g.strokeText(String(sk.combo), 0, 0)
-        const cg = g.createLinearGradient(0, -90, 0, 6); if (ap) { cg.addColorStop(0, '#fff6c2'); cg.addColorStop(1, '#ffb52e') } else if (fc) { cg.addColorStop(0, '#f2fcff'); cg.addColorStop(1, '#8fdcff') } else { cg.addColorStop(0, '#ffffff'); cg.addColorStop(1, '#c4cbd8') }
-        g.fillStyle = cg; g.fillText(String(sk.combo), 0, 0); g.globalAlpha = 1; g.restore()
-        g.font = `800 15px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.9)'; g.fillText(ap ? 'ALL PERFECT' : fc ? 'FULL COMBO' : 'COMBO', CX, 78)
-      } // 배율(x1.00) 큰 글자는 시야를 가려 뺐다: 배율은 옆 기어의 COMBO 칩에 남아 있다
-      const age = performance.now() - flash.at
-      if (age < 380 && settings.hudJudge) { // 판정 글자: 정확도(%) 글자(y484) 위에 겹치지 않게 그보다 60px 위에 짧게 떴다 사라진다
-        g.globalAlpha = 1 - age / 380
-        const jn = flash.j === 0 && Math.abs(flash.dt) <= MAX_WIN * sk.mul ? 'MAX' : JUDGES[flash.j].name // PERFECT 중 ±25ms 이내는 MAX
-        g.font = `900 36px ${FONT}`; g.lineJoin = 'round'; g.lineWidth = 5; g.strokeStyle = 'rgba(4,9,24,.85)'; g.strokeText(jn, CX, 424)
-        if (flash.j === 0) { const gg = g.createLinearGradient(0, 394, 0, 430); gg.addColorStop(0, '#fff6c2'); gg.addColorStop(0.55, '#ffd04a'); gg.addColorStop(1, '#d98a00'); g.fillStyle = gg } else g.fillStyle = JUDGE_COLORS[flash.j] // PERFECT는 금색
-        g.fillText(jn, CX, 424)
-        if (settings.fastSlow && flash.j !== MISS && flash.j !== 0) {
-          g.font = `700 18px ${FONT}`; g.fillStyle = flash.dt > 0 ? CYAN : AMBER
-          g.fillText(flash.dt > 0 ? 'FAST' : 'SLOW', CX, 450)
-        }
-        g.globalAlpha = 1
-      }
-      g.restore()
+      if (settings.hudCombo === 1) drawCombo()
+      if (settings.hudJudge === 1) drawJudge()
+      g.textAlign = 'left'
       g.textAlign = 'left'
       // 곡 정보 카드: 필드와 안 겹치는 빈 쪽에 둔다 (가운데=왼쪽 끝, 왼쪽 필드=필드 오른쪽, 오른쪽 필드=점수 카드 옆)
       const px = [FIELD_X + fw + 40, 24, 380][settings.align] ?? 24, pw = settings.align === 1 ? 340 : 400, py = 24, iw = pw - 40
