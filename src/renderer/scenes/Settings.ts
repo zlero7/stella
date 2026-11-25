@@ -140,6 +140,9 @@ const firstOf = (ci: number) => FLAT.findIndex(f => f.ci === ci)
 const CAT_SUB = ['화면 · 플레이 배경', '스크롤 · 판정 · 싱크', '미러 · 랜덤 · 페이드 · 판정 강도', '플레이 중 글자 · 높이', '소리', '키 배치']
 const ICONS = ['display', 'game', 'game', 'display', 'sound', 'control'] as const
 
+// 곡 선택의 이펙터 패널(Space)이 같은 항목을 쓴다: 미러·랜덤·페이드·판정 강도
+export const optionItems = () => CATS.find(c => c.name === 'OPTION')!.items
+
 export const Settings = (sm: SceneManager): Scene => {
   let sel = 0, back = 'title', backData: unknown, since = 0
   const open = (item: Item) => sm.go(item.go!, { back, backData, keys: item.bind })

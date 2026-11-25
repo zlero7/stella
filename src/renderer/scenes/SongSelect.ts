@@ -8,6 +8,7 @@ import { optBadges } from '../render/rankBadge'
 import { footer, slant, FONT, CYAN, AMBER, NOTE_COLORS, accentFill, artOf, drawBg, drawCover, ease, fit, glow, hit, marquee, overRect, pill, press, starPath, chip } from '../render/theme'
 import { chartFile, diffName, diffsOf, ensureSong, loadSongs, serverLevel, songUrl } from '../data/Songs'
 import { needsRegen } from '../game/AutoChart'
+import { optionItems } from './Settings'
 import { account, getRecords, isFav, saveSettings, settings, toggleFav } from '../data/Storage'
 import { pickSong } from '../core/Versus'
 import { rankOf } from '../game/ScoreKeeper'
@@ -42,6 +43,7 @@ export const SongSelect = (sm: SceneManager): Scene => {
   let inp: HTMLInputElement | undefined // 한글(IME)도 받으려고 화면 밖 입력칸을 쓴다. 캔버스에는 검색창만 그린다
   const SORTS = ['기본 순서', '제목순', '가수순', '내 점수순', '최근 플레이순', '레벨 낮은 순', '레벨 높은 순'] // 레벨순은 HARD 기준
   let moreHints = false // F9: 곡 선택 아래 안내 칩 펼치기
+  let fxOpen = false, fxSel = 0 // Space: 이펙터 패널 (설정의 OPTION 항목을 곡 고를 때 바로 바꾼다)
   let rankOpen = false, rankKey = '', rankRows: RankRow[] | undefined // F8: 고른 곡·난이도의 온라인 순위 (undefined = 받는 중)
   const FILTERS = ['전체 곡', '즐겨찾기만', '안 쳐 본 곡만']; let fmode = 0 // F6 즐겨찾기 넣고 빼기 · F7 목록 거르기
   const PRACTICE = [0, 0.25, 0.5, 0.75]; let prac = 0 // F5: 연습 시작 위치 (곡의 0·25·50·75%). 0이 아니면 점수·EXP는 기록되지 않는다
@@ -322,7 +324,7 @@ export const SongSelect = (sm: SceneManager): Scene => {
       footer(g)
       {
         const base: [string, string][] = [['↑↓', '곡'], ['←→', '난이도'], ['Enter', '시작'], ['F2', '검색'], ['Esc', '뒤로'], ['F9', moreHints ? '접기' : '더 보기']] // 처음 보는 사람에게는 소음이라 다섯 개만 항상 보인다
-        const more: [string, string][] = [['Tab', '가수'], ['F4', '정렬'], ['1 2', '속도'], ['F3', '4/6키'], ['F5', '연습'], ['F6', '즐겨찾기'], ['F7', '필터'], ['F8', '순위'], ['F1', '설정']]
+        const more: [string, string][] = [['Space', '이펙터'], ['Tab', '가수'], ['F4', '정렬'], ['1 2', '속도'], ['F3', '4/6키'], ['F5', '연습'], ['F6', '즐겨찾기'], ['F7', '필터'], ['F8', '순위'], ['F1', '설정']]
         let hx = 24
         for (const [k, label] of base) hx = chip(g, hx, 692, k, label, '#fff', k === '↑↓' || k === '←→' ? null : undefined)
         if (moreHints) { g.fillStyle = 'rgba(6,12,28,.94)'; g.fillRect(0, 650, 1280, 34); g.fillStyle = CYAN; g.fillRect(0, 650, 1280, 1); hx = 24; for (const [k, label] of more) hx = chip(g, hx, 657, k, label, '#fff') }
@@ -351,6 +353,19 @@ export const SongSelect = (sm: SceneManager): Scene => {
         })
         g.textAlign = 'left'
       }
+      if (fxOpen) { // 이펙터 패널
+        const X = 380, Y = 170, W = 520, H = 330, items = optionItems()
+        g.fillStyle = 'rgba(0,0,0,.96)'; g.fillRect(X, Y, W, H); g.strokeStyle = 'rgba(255,255,255,.2)'; g.lineWidth = 1; g.strokeRect(X + 0.5, Y + 0.5, W - 1, H - 1)
+        slant(g, X + 24, Y + 18, 190, 34, 10); g.fillStyle = 'rgba(120,128,142,.6)'; g.fill(); g.textAlign = 'center'; g.font = `300 22px ${FONT}`; g.fillStyle = '#fff'; g.fillText('EFFECTOR', X + 24 + 95, Y + 42)
+        g.textAlign = 'right'; g.font = `600 12px ${FONT}`; g.fillStyle = 'rgba(230,240,255,.6)'; g.fillText('←→ 바꾸기 · Space/Esc 닫기', X + W - 20, Y + 41)
+        items.forEach((it, i) => {
+          const y = Y + 70 + i * 56, on = i === fxSel
+          g.fillStyle = on ? 'rgba(255,159,26,.35)' : 'rgba(255,255,255,.07)'; g.fillRect(X + 20, y, W - 40, 48)
+          g.textAlign = 'left'; g.font = `700 17px ${FONT}`; g.fillStyle = '#fff'; g.fillText(it.label, X + 40, y + 30)
+          g.textAlign = 'right'; g.font = `800 17px ${FONT}`; g.fillStyle = on ? '#ffd84a' : '#e6f6ff'; g.fillText(`◀  ${it.value()}  ▶`, X + W - 40, y + 30)
+        })
+        g.textAlign = 'left'
+      }
       if (note && performance.now() < noteAt) { g.font = `800 18px ${FONT}`; const w = g.measureText(note).width + 48; pill(g, 640 - w / 2, 84, w, 40, 'rgba(6,11,28,.92)'); g.fillStyle = AMBER; g.textAlign = 'center'; g.fillText(note, 640, 110); g.textAlign = 'left' }
     },
     wheel(dy) { // 휠로 곡 넘기기
@@ -373,6 +388,15 @@ export const SongSelect = (sm: SceneManager): Scene => {
       if (e.key === 'F2') { e.preventDefault(); openSearch(true); return }
       if (e.key === 'F4') { sortMode = (sortMode + 1) % SORTS.length; applyCat(); note = `정렬: ${SORTS[sortMode]}`; noteAt = performance.now() + 1500; return }
       if (e.key === 'F9') { moreHints = !moreHints; return }
+      if (fxOpen) { // 이펙터 패널이 열려 있으면 키는 여기서만 쓴다
+        const items = optionItems()
+        if (e.key === 'ArrowDown') fxSel = (fxSel + 1) % items.length
+        else if (e.key === 'ArrowUp') fxSel = (fxSel + items.length - 1) % items.length
+        else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { items[fxSel].change?.(e.key === 'ArrowRight' ? 1 : -1); saveSettings() }
+        else if (e.key === ' ' || e.key === 'Escape' || e.key === 'Enter') fxOpen = false
+        e.preventDefault(); return
+      }
+      if (e.key === ' ') { e.preventDefault(); fxOpen = true; fxSel = 0; return }
       if (e.key === 'F8') { e.preventDefault(); rankOpen = !rankOpen; rankKey = ''; return }
       if (rankOpen && e.key === 'Escape') { rankOpen = false; return }
       if (e.key === 'Escape' && query) { query = ''; applyCat(); return } // 검색어가 있으면 Esc는 먼저 검색을 지운다
