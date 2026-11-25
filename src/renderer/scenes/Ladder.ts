@@ -2,21 +2,23 @@ import type { Scene, SceneManager } from '../core/SceneManager'
 import type { Song } from '../../shared/types'
 import { closeVersus, newLadder, openRelay, relayAddr, send, vs } from '../core/Versus'
 import { loadSongs } from '../data/Songs'
-import { account } from '../data/Storage'
+import { account, saveSettings, settings } from '../data/Storage'
 import { PLATE_COLOR, TIER_COLOR, prof, refreshProfile } from '../data/Profile'
 import { FONT, AMBER, CYAN, ICE, accentFill, artOf, chip, drawBg, drawCover, ease, fit, glow, header, hit, overRect, pill, press, slant } from '../render/theme'
 import { avatarCircle, gem } from '../render/profileCard'
 
 // 래더 매치: 대기열 → 상대 확정 → 곡 5개 중 3개가 남을 때까지 번갈아 밴 → 남은 3곡을 차례로 쳐서 3판 2선승 (결과는 서버가 판정해 LP가 바뀐다). 디맥 래더처럼 양옆에 두 사람, 가운데에 곡 카드
-const KEYS = 4, KEEP = 3 // KEEP: 밴이 끝났을 때 남는 곡 수
+const KEEP = 3 // KEEP: 밴이 끝났을 때 남는 곡 수
 const mmss = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
 
 export const Ladder = (sm: SceneManager): Scene => {
+  let mode: 4 | 6 = 4 // 래더 키 모드: 같은 모드끼리만 짝지어진다 (곡 선택의 4/6키 설정을 따라간다)
+  const setMode = (n: 4 | 6) => { if (n === mode) return; mode = n; settings.keyMode = n; saveSettings(); void join() }
   let since = 0, err = '', focus = 0, sent = -1, byDir = new Map<string, Song>(), started = false
   const leave = (name: string, data?: unknown) => { closeVersus(); sm.go(name, data) }
   async function join() {
     closeVersus(); err = ''; since = performance.now(); focus = 0; sent = -1; started = false
-    try { vs.role = 'host'; await openRelay(relayAddr(), { t: 'ladder', token: account.token }) } catch (e) { err = (e as Error).message }
+    try { vs.role = 'host'; await openRelay(relayAddr(), { t: 'ladder', token: account.token, keys: mode }) } catch (e) { err = (e as Error).message }
   }
   const free = () => (vs.l?.songs ?? []).map((_, i) => i).filter(i => !vs.l!.banned.includes(i))
 
@@ -33,6 +35,7 @@ export const Ladder = (sm: SceneManager): Scene => {
 
   return {
     enter() {
+      mode = settings.keyMode === 6 ? 6 : 4
       byDir = new Map(); void loadSongs().then(l => { byDir = new Map(l.map(s => [s.dir, s])) })
       void refreshProfile()
       if (!account.token) { err = '래더는 로그인이 필요합니다'; return }
@@ -43,7 +46,7 @@ export const Ladder = (sm: SceneManager): Scene => {
       if (!account.token || !l) { if (account.token && !err && (vs.relayErr || vs.closed)) { err = vs.relayErr || '서버와 연결이 끊어졌습니다'; closeVersus() } return }
       if (l.state === 'go' && !started) { // 둘 다 준비됐다: 대결과 같은 방식으로 시작 (두 사람이 같은 채보로)
         const pick = l.songs[l.pick], song = pick && byDir.get(pick.dir)
-        if (song) { started = true; sm.go('play', { song, diff: pick.diff, vs: true, keys: KEYS, ladder: true }) }
+        if (song) { started = true; sm.go('play', { song, diff: pick.diff, vs: true, keys: mode, ladder: true }) }
       }
       if ((l.state === 'queue' || l.state === 'ban' || l.state === 'prep') && (vs.relayErr || vs.closed) && !err) { err = vs.relayErr || '서버와 연결이 끊어졌습니다'; closeVersus() }
       if (l.state === 'ban' && !free().includes(focus)) focus = free()[0] ?? 0
@@ -69,7 +72,8 @@ export const Ladder = (sm: SceneManager): Scene => {
         g.font = `800 15px ${FONT}`; g.fillStyle = '#fff'; g.fillText('SEASON', 60, 196); g.fillStyle = 'rgba(255,255,255,.4)'; g.fillRect(60, 204, 150, 1)
         g.fillStyle = 'rgba(120,100,70,.7)'; g.fillRect(60, 214, 150, 26); g.fillStyle = '#ffe9b0'; g.font = `800 13px ${FONT}`; g.textAlign = 'center'; g.fillText('RANKED', 135, 232)
         ;([4, 5, 6, 8] as const).forEach((n, i) => {
-          const x = 250 + i * 164, y = 170, w = 160, h = 280, on = n === KEYS, cx = x + w / 2
+          const x = 250 + i * 164, y = 170, w = 160, h = 280, on = n === mode, cx = x + w / 2
+          if (n === 4 || n === 6) hit(x, y, w, h, () => setMode(n))
           g.fillStyle = on ? 'rgba(18,18,24,.88)' : 'rgba(12,12,16,.6)'; g.fillRect(x, y, w, h)
           if (on) { g.strokeStyle = ORG; g.lineWidth = 3; g.strokeRect(x + 1.5, y + 1.5, w - 3, h - 3) }
           g.textAlign = 'center'; g.font = `900 54px ${FONT}`; g.fillStyle = on ? '#fff' : 'rgba(255,255,255,.4)'; g.fillText(String(n), cx, y + 62)
@@ -78,10 +82,10 @@ export const Ladder = (sm: SceneManager): Scene => {
             gem(g, cx, y + 160, 54, me?.tierLabel ?? 'UNRANKED')
             g.font = `900 18px ${FONT}`; g.fillStyle = TIER_COLOR[me?.tier ?? 'UNRANKED'] ?? '#fff'; g.fillText(me?.tierLabel ?? 'UNRANKED', cx, y + 244)
             g.font = `700 13px ${FONT}`; g.fillStyle = '#fff'; g.fillText(`${me?.lp ?? 0} LP`, cx, y + 264)
-          } else { g.font = `700 14px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.45)'; g.fillText('준비 중', cx, y + 172) }
+          } else { g.font = `700 14px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.45)'; g.fillText(n === 4 || n === 6 ? '← → 로 바꾸기' : '준비 중', cx, y + 172) }
         })
         g.textAlign = 'left'; g.font = `800 15px ${FONT}`; g.fillStyle = '#fff'; g.fillText('DETAILS', 930, 196); g.fillStyle = 'rgba(255,255,255,.4)'; g.fillRect(930, 204, 290, 1)
-        g.fillStyle = 'rgba(120,100,70,.7)'; g.fillRect(930, 214, 290, 26); g.fillStyle = '#ffe9b0'; g.font = `800 13px ${FONT}`; g.textAlign = 'center'; g.fillText(`${KEYS} BUTTON`, 1075, 232)
+        g.fillStyle = 'rgba(120,100,70,.7)'; g.fillRect(930, 214, 290, 26); g.fillStyle = '#ffe9b0'; g.font = `800 13px ${FONT}`; g.textAlign = 'center'; g.fillText(`${mode} BUTTON`, 1075, 232)
         ;([['GAMES', me ? me.wins + me.losses + me.draws : 0], ['WINS', me?.wins ?? 0], ['LEVEL', me?.level ?? 1], ['LP', me?.lp ?? 0]] as const).forEach(([k, v], i) => {
           g.textAlign = 'left'; g.font = `800 11px ${FONT}`; g.fillStyle = '#ffc455'; g.fillText(k, 934, 270 + i * 44); g.font = `300 26px ${FONT}`; g.fillStyle = '#fff'; g.fillText(String(v), 934, 294 + i * 44)
         })
@@ -110,7 +114,7 @@ export const Ladder = (sm: SceneManager): Scene => {
           const sg = byDir.get(s.dir), im = sg && artOf(sg)?.img
           g.fillStyle = '#16161c'; g.fillRect(x, y + 34, cw, cw)
           if (im) drawCover(g, im, im.width, im.height, x, y + 34, cw, cw)
-          g.fillStyle = 'rgba(8,60,70,.92)'; g.fillRect(x, y + 34 + cw - 26, cw, 26); g.textAlign = 'left'; g.font = `900 15px ${FONT}`; g.fillStyle = '#fff'; g.fillText(`${KEYS}B`, x + 8, y + 34 + cw - 8)
+          g.fillStyle = 'rgba(8,60,70,.92)'; g.fillRect(x, y + 34 + cw - 26, cw, 26); g.textAlign = 'left'; g.font = `900 15px ${FONT}`; g.fillStyle = '#fff'; g.fillText(`${mode}B`, x + 8, y + 34 + cw - 8)
           g.textAlign = 'right'; g.font = `800 13px ${FONT}`; g.fillStyle = '#ffd45e'; g.fillText('HARD', x + cw - 8, y + 34 + cw - 8)
           g.textAlign = 'left'; g.font = `800 16px ${FONT}`; g.fillStyle = '#fff'; g.fillText(fit(g, s.title, cw), x, y + 22)
           g.font = `13px ${FONT}`; g.fillStyle = ICE; g.fillText(fit(g, s.artist, cw), x, y + 34 + cw + 22)
@@ -130,6 +134,7 @@ export const Ladder = (sm: SceneManager): Scene => {
       }
 
       let kx = 48
+      if (state === 'queue') kx = chip(g, kx, 692, '← →', '4K / 6K 바꾸기', '#fff', null)
       if (state === 'ban' && vs.l?.turn === 'you') { kx = chip(g, kx, 692, '↑ ↓', '고르기', '#fff', null); kx = chip(g, kx, 692, 'Enter', '밴') }
       const early = state === 'queue' || state === 'err' || state === 'cancel' || (vs.l?.round === 1 && (state === 'ban' || state === 'prep')) // 첫 판이 시작되기 전: 나가도 LP는 그대로
       chip(g, kx, 692, 'Esc', early ? '나가기 (LP 변화 없음)' : '기권 (패배 처리)')
@@ -138,6 +143,7 @@ export const Ladder = (sm: SceneManager): Scene => {
       const l = vs.l, state = err ? 'err' : l?.state ?? 'queue'
       if (e.key === 'Escape') { leave('title'); return }
       if (state === 'err' || state === 'cancel') { if (e.key === 'Enter') { if (account.token) void join(); else leave('account') } return }
+      if (state === 'queue' && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) { setMode(mode === 4 ? 6 : 4); return } // 키 모드를 바꾸면 그 모드의 대기열로 다시 들어간다
       if (state !== 'ban' || l!.turn !== 'you') return
       const fr = free(), at = Math.max(0, fr.indexOf(focus))
       if (e.key === 'ArrowDown') focus = fr[(at + 1) % fr.length]

@@ -277,8 +277,8 @@ function rankApi(req, res, dir, key) {
 
 // 프로필(레벨·티어·DJ CLASS·꾸미기)과 래더 결과 API. 모두 로그인(Bearer 토큰)이 필요하다
 const ladder = createLadder({
-  len: (dir, diff) => chartLen(dir, '4k-' + diff) ?? 0,
-  pool: () => JSON.parse(songIndex()).filter(s => s.meta.charts?.includes('4k-hard.json') && s.meta.title).map(s => ({ dir: s.dir, diff: 'hard', title: s.meta.title, artist: s.meta.artist ?? '' })),
+  len: (dir, diff, keys = 4) => chartLen(dir, `${keys}k-${diff}`) ?? 0,
+  pool: (keys = 4) => JSON.parse(songIndex()).filter(s => s.meta.charts?.includes(`${keys}k-hard.json`) && s.meta.title).map(s => ({ dir: s.dir, diff: 'hard', title: s.meta.title, artist: s.meta.artist ?? '' })),
   save: () => saveUsersSoon(), log
 })
 setInterval(() => { try { ladder.tick() } catch (e) { log('래더 오류', e.message) } }, 2000).unref() // 곡 목록을 못 읽는 등 한 번의 오류가 서버를 끄지 않게
@@ -388,7 +388,7 @@ wss.on('connection', sock => {
     if (m.t === 'ladder') { // 래더 입장: 로그인한 계정만 (토큰은 연결 첫 메시지로 받는다)
       const u = userByToken(typeof m.token === 'string' ? m.token : '')
       if (!u) { send(sock, { t: 'r_err', msg: '로그인이 필요합니다' }); sock.close(); return }
-      ladder.join(sock, u)
+      ladder.join(sock, u, m.keys === 6 ? 6 : 4)
     } else if (m.t === 'host') {
       if (rooms.size >= MAX_ROOMS) { send(sock, { t: 'r_err', msg: '서버가 가득 찼습니다' }); sock.close(); return }
       st.code = newCode(); rooms.set(st.code, sock)

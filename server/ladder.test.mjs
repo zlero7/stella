@@ -208,3 +208,21 @@ test('치는 중에 나가도 판이 끝나기 전에 다시 래더를 할 수 �
   assert.ok(last(a2, 'l_wait'), '이미 래더 중인 계정이라는 오류 없이 대기열에 들어간다')
   assert.equal(last(a2, 'r_err'), undefined)
 })
+
+test('4K와 6K는 따로 짝지어지고, 6K 매치는 6키로 시작한다', () => {
+  assert.equal(findPair([{ user: user('a'), since: 0, keys: 4 }, { user: user('b'), since: 0, keys: 6 }], 1e6), undefined) // 모드가 다르면 안 붙는다
+  assert.ok(findPair([{ user: user('a'), since: 0, keys: 6 }, { user: user('b'), since: 0, keys: 6 }], 0))
+  const pools = []
+  let t = 1000
+  const L = createLadder({ pool: k => { pools.push(k); return songs }, save() {}, now: () => t, roundGap: 0 })
+  const a = sock(), b = sock(), c = sock()
+  L.join(a, user('a'), 6); L.join(c, user('c'), 4) // 4K 사람은 6K 사람과 안 붙는다
+  assert.equal(last(a, 'l_match'), undefined)
+  L.join(b, user('b'), 6)
+  const m = last(a, 'l_match')
+  assert.equal(m.keys, 6); assert.equal(last(c, 'l_match'), undefined)
+  assert.deepEqual(pools, [6]) // 곡 목록도 6키 채보가 있는 곡으로
+  const first = m.turn === 'you' ? a : b, second = first === a ? b : a
+  for (let i = 0; i < POOL - KEEP; i++) L.message(i % 2 ? second : first, { t: 'l_ban', idx: i })
+  assert.equal(last(a, 'l_start').keys, 6)
+})
