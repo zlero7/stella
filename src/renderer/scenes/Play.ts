@@ -138,7 +138,7 @@ export const Play = (sm: SceneManager): Scene => {
     n.state = 'done'
   }
 
-  addEventListener('blur', () => { if (ready && !paused && !finished && !dying && !resumeAt && !data.vs) { paused = true; pSel = 0; down.clear(); clock.pause() } })
+  addEventListener('blur', () => { if (ready && !paused && !finished && !dying && !resumeAt && !data.vs) { paused = true; sk.pauses++; pSel = 0; down.clear(); clock.pause() } })
 
   function leave(name: string, d?: unknown) {
     token++; finished = true; clock.stop(); clock.resume(); dropVideo()
@@ -461,7 +461,7 @@ export const Play = (sm: SceneManager): Scene => {
       if (dying) return // 실패 연출 중에는 일시정지 불가
       if (e.key === 'F5' && !data.vs) { e.preventDefault(); sm.go('play', data); return } // 빠른 재시작: 일시정지 메뉴를 거치지 않고 처음부터 (대결·래더는 제외)
       if (data.vs && e.key === 'Escape') { if (performance.now() - giveUpAt < 2000) sk.hp = 0; else giveUpAt = performance.now(); return } // 대결 중에는 멈출 수 없다: Esc를 두 번 누르면 기권(실패 처리)
-      if (e.key === 'Escape') { paused = true; resumeAt = 0; pSel = 0; down.clear(); clock.pause(); return }
+      if (e.key === 'Escape') { paused = true; sk.pauses++; resumeAt = 0; pSel = 0; down.clear(); clock.pause(); return }
       if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { // 플레이 중 스크롤 속도 조절: 한 번에 0.1, 꾹 누르면 이어서 바뀐다 (디맥과 같은 단위)
         settings.scroll = Math.min(Math.max(Math.round((settings.scroll + (e.key === 'ArrowUp' ? 0.1 : -0.1)) * 10) / 10, 1), 20)
         saveSettings(); speedAt = performance.now(); return

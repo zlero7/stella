@@ -46,6 +46,7 @@ export class ScoreKeeper {
   combo = 0
   maxCombo = 0
   hp = 100 // 체력. 0이 되면 실패
+  pauses = 0 // 이 판에서 일시정지한 횟수 (점수는 안 깎고 기록에 '일시정지함' 표시만 붙는다)
   private sum = 0
   private lossAt = -1 // 마지막으로 체력이 깎인 노트 시각과 그 시각에 깎인 합
   private lossSum = 0

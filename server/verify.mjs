@@ -11,7 +11,8 @@ export function cleanOpts(o) {
   if (!o || typeof o !== 'object') return undefined
   const f = (v, max) => (Number.isInteger(v) && v >= 0 && v <= max ? v : undefined)
   const j = f(o.j, 2), r = f(o.r, 1), m = f(o.m, 1), fd = f(o.f, 2)
-  return [j, r, m, fd].includes(undefined) ? undefined : { j, r, m, f: fd }
+  const p = o.p === undefined ? 0 : f(o.p, 1) // 일시정지 표시: 옛 앱은 안 보낸다
+  return [j, r, m, fd, p].includes(undefined) ? undefined : { j, r, m, f: fd, ...(p ? { p } : {}) }
 }
 
 export function plausible({ score, acc, mc, badge, n }, total) {

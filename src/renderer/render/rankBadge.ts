@@ -9,6 +9,7 @@ export function optBadges(g: CanvasRenderingContext2D, rightX: number, baseY: nu
   if (opt?.r) list.push(['R', '#7ad8ff'])
   if (opt?.m) list.push(['MI', '#b79bff'])
   if (opt?.f) list.push([opt.f === 1 ? 'FI' : 'FO', '#7dff9a'])
+  if (opt?.p) list.push(['PA', '#ffd84a']) // 일시정지함
   g.save(); g.font = `800 11px ${FONT}`; g.textAlign = 'center'
   let x = rightX
   for (const [t, c] of list.reverse()) {

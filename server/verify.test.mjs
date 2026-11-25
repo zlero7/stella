@@ -39,5 +39,7 @@ import { cleanOpts } from './verify.mjs'
 test('순위 옵션: 범위 안의 정수만 받고, 없거나 틀리면 undefined', () => {
   assert.deepEqual(cleanOpts({ j: 2, r: 1, m: 0, f: 2 }), { j: 2, r: 1, m: 0, f: 2 })
   assert.deepEqual(cleanOpts({ j: 0, r: 0, m: 0, f: 0, x: 1 }), { j: 0, r: 0, m: 0, f: 0 }) // 모르는 칸은 버린다
+  assert.deepEqual(cleanOpts({ j: 0, r: 0, m: 0, f: 0, p: 1 }), { j: 0, r: 0, m: 0, f: 0, p: 1 }) // 일시정지 표시
+  assert.equal(cleanOpts({ j: 0, r: 0, m: 0, f: 0, p: 2 }), undefined)
   for (const bad of [undefined, null, 5, 'x', {}, { j: 3, r: 0, m: 0, f: 0 }, { j: 0, r: 2, m: 0, f: 0 }, { j: 0, r: 0, m: 0, f: -1 }, { j: 0.5, r: 0, m: 0, f: 0 }, { j: '1', r: 0, m: 0, f: 0 }]) assert.equal(cleanOpts(bad), undefined, JSON.stringify(bad))
 })
