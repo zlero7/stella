@@ -319,14 +319,14 @@ export const Play = (sm: SceneManager): Scene => {
         g.globalAlpha = 1 - age / 380
         const jn = flash.j === 0 && Math.abs(flash.dt) <= MAX_WIN * sk.mul ? 'MAX' : JUDGES[flash.j].name // PERFECT 중 ±25ms 이내는 MAX
         const pct = `${Math.round(JUDGES[flash.j].weight * 100)}%` // 판정명 뒤에 정확도 반영 비율
-        g.font = `900 36px ${FONT}`; const nw = g.measureText(jn).width; g.font = `800 20px ${FONT}`; const pw = nw + 8 + g.measureText(pct).width; g.textAlign = 'left'
-        g.font = `900 36px ${FONT}`; g.lineJoin = 'round'; g.lineWidth = 5; g.strokeStyle = 'rgba(4,9,24,.85)'; g.strokeText(jn, CX - pw / 2, 424)
-        if (flash.j === 0) { const gg = g.createLinearGradient(0, 394, 0, 430); gg.addColorStop(0, '#fff6c2'); gg.addColorStop(0.55, '#ffd04a'); gg.addColorStop(1, '#d98a00'); g.fillStyle = gg } else g.fillStyle = JUDGE_COLORS[flash.j] // PERFECT는 금색
-        g.fillText(jn, CX - pw / 2, 424)
-        g.font = `800 20px ${FONT}`; g.lineWidth = 4; g.strokeText(pct, CX - pw / 2 + nw + 8, 424); g.fillStyle = '#fff'; g.fillText(pct, CX - pw / 2 + nw + 8, 424); g.textAlign = 'center'
+        g.font = `900 30px ${FONT}`; const nw = g.measureText(jn).width; const pw = nw + 8 + g.measureText(pct).width; g.textAlign = 'left' // 디맥: MAX 100% 처럼 이름과 %가 같은 크기
+        g.lineJoin = 'round'; g.lineWidth = 5; g.strokeStyle = 'rgba(4,9,24,.85)'; g.strokeText(jn, CX - pw / 2, 438)
+        if (flash.j === 0) { const gg = g.createLinearGradient(0, 412, 0, 442); gg.addColorStop(0, '#fff6c2'); gg.addColorStop(0.55, '#ffd04a'); gg.addColorStop(1, '#d98a00'); g.fillStyle = gg } else g.fillStyle = JUDGE_COLORS[flash.j] // PERFECT는 금색
+        g.fillText(jn, CX - pw / 2, 438)
+        g.strokeText(pct, CX - pw / 2 + nw + 8, 438); g.fillText(pct, CX - pw / 2 + nw + 8, 438); g.textAlign = 'center'
         if (settings.fastSlow && flash.j !== MISS && flash.j !== 0) {
           g.font = `700 18px ${FONT}`; g.fillStyle = flash.dt > 0 ? CYAN : AMBER
-          g.fillText(flash.dt > 0 ? 'FAST' : 'SLOW', CX, 450)
+          g.fillText(flash.dt > 0 ? 'FAST' : 'SLOW', CX, 462)
         }
         g.globalAlpha = 1
       }
