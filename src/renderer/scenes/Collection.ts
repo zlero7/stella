@@ -5,6 +5,7 @@ import { PLATE_COLOR, TIER_COLOR, equip, prof, refreshProfile, type Item } from 
 import { FONT, AMBER, CYAN, ICE, accentFill, card, chip, drawBg, ease, fit, glow, header, hit, meter, overRect, pill, press, slant } from '../render/theme'
 import { gem, profileCard } from '../render/profileCard'
 import { drawAchieve, drawStats, drawTop } from './collectionTabs'
+import { loadSongs } from '../data/Songs'
 
 // 컬렉션: 디맥의 COLLECTION처럼 내 프로필을 보고 꾸민다. 탭 — DJ CLASS(등급·전적) · PLATE(카드 색) · TITLE(칭호). 해금은 서버가 정한다
 const TABS = ['DJ CLASS', 'PLATE', 'TITLE', 'STATS', 'ACHIEVE'] as const
@@ -26,7 +27,8 @@ export const Collection = (sm: SceneManager): Scene => {
   }
 
   return {
-    enter() { msg = ''; busy = false; if (account.token) void refreshProfile().then(() => setTab(0)); else setTab(0) },
+    enter() { msg = ''; busy = false; void loadSongs(); // 곡 이름 표시용: 곡 선택을 거치지 않고 와도 서버 곡 목록을 받아 둔다
+     if (account.token) void refreshProfile().then(() => setTab(0)); else setTab(0) },
     render(g) {
       drawBg(g, undefined, 3)
       const p = prof.v
