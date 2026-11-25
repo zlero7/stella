@@ -10,6 +10,7 @@ import { Result } from './scenes/Result'
 import { Settings } from './scenes/Settings'
 import { saveSettings, settings } from './data/Storage'
 import { Calibrate } from './scenes/Calibrate'
+import { applyCvd } from './render/cvd'
 import { Tutorial } from './scenes/Tutorial'
 import { Lobby } from './scenes/Lobby'
 import { VsResult } from './scenes/VsResult'
@@ -26,6 +27,7 @@ import { uiSound } from './core/Sfx'
 import { drawPointer, pointerDown, pointerLeave, pointerMove } from './render/pointer'
 
 const cv = document.getElementById('c') as HTMLCanvasElement
+applyCvd(cv)
 const g = cv.getContext('2d', { alpha: false })! // 불투명 캔버스: 합성 비용 감소
 const sm = new SceneManager()
 sm.add('title', Title(sm))

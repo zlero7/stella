@@ -1,6 +1,7 @@
 import type { Scene, SceneManager } from '../core/SceneManager'
 import { FONT, CYAN, ICE, NAVY, NOTE_COLORS, accentFill, card, chevron, chip, drawBg, fit, glow, header, hit, icon, optRow, pill, press, segBar, slant, ease, overRect } from '../render/theme'
 import { settings, saveSettings, keyLabel } from '../data/Storage'
+import { CVD_NAMES, applyCvd } from '../render/cvd'
 import { prof } from '../data/Profile'
 import { skinSprite } from '../game/noteSkins'
 import { GEAR_SKINS, gearOf } from '../render/gear'
@@ -25,6 +26,7 @@ const CATS: { name: string; items: Item[] }[] = [
     { label: '레인 불투명도', value: () => `${settings.panelA}%`, frac: () => (settings.panelA - 50) / 45, change: d => { settings.panelA = clamp(settings.panelA + d * 5, 50, 95) } },
     { label: '키빔 길이', value: () => ['끔', '짧게', '보통', '길게'][settings.beam] ?? '보통', change: d => { settings.beam = clamp(settings.beam + d, 0, 3) } },
     { label: '이펙트', value: () => FX[settings.fx] ?? FX[2], change: d => { settings.fx = clamp(settings.fx + d, 0, 2) } },
+    { label: '색각 보정', value: () => CVD_NAMES[settings.cvd ?? 0], change: d => { settings.cvd = clamp((settings.cvd ?? 0) + d, 0, 3); applyCvd(document.getElementById('c')!) } },
     { label: '캐릭터 그림', value: () => (settings.char ? '켜짐' : '꺼짐'), change: () => { settings.char = settings.char ? 0 : 1 } },
     { label: '노트 스킨', value: () => { const s = GEAR_SKINS[settings.gearSkin] ?? GEAR_SKINS[0]; return gearOf(settings.gearSkin, prof.v) === s ? s.name : `${s.name} · 잠김 (${s.need})` }, change: d => { settings.gearSkin = (settings.gearSkin + d + GEAR_SKINS.length) % GEAR_SKINS.length } },
     { label: '노트 색상', off: () => !steelSkin(), value: () => steelSkin() ? NOTE_COLORS[settings.noteColor]?.[0] ?? NOTE_COLORS[0][0] : '스틸 스킨에서만', change: d => { if (!steelSkin()) return; settings.noteColor = (settings.noteColor + d + NOTE_COLORS.length) % NOTE_COLORS.length } }
@@ -91,6 +93,7 @@ const DESC: Record<string, string> = {
   '레인 불투명도': '노트 레인 패널의 불투명도입니다. 높을수록 배경이 덜 비칩니다.',
   '키빔 길이': '건반을 누를 때 레인에 올라오는 빛줄기의 길이입니다. 끄면 노트가 더 잘 보입니다.',
   '이펙트': '판정 이펙트의 세기입니다. 끔 / 약 / 보통 중에서 고릅니다.',
+  '색각 보정': '색을 구분하기 어려울 때 화면 색을 바꿔 줍니다. 적색약·녹색약·청색약 중에서 고르세요. 표준 근사식이라 사람마다 느낌이 다를 수 있습니다.',
   '캐릭터 그림': '플레이 화면 아래 콘솔 양옆에 치비 캐릭터를 보일지 정합니다. 필드를 가운데에 둘 때 둘 다 보입니다.',
   '노트 스킨': '플레이 화면 전체의 꾸밈입니다: 기어 틀·기둥 무늬·필드 무늬·날개·램프·아래 콘솔, 노트 모양, 타격 이펙트까지 스킨마다 다릅니다. (디맥의 노트 스킨) 잠긴 스킨은 미리 볼 수 있지만 조건을 채우기 전에는 스틸로 나옵니다. 조건은 내 프로필 기록(레벨·플레이 수·풀 콤보·올 퍼펙트·대결 승수)으로 정해집니다.',
   '노트 색상': '바깥 레인 노트의 색을 스텔라이브 멤버의 대표 색 중에서 고릅니다. 노트 스킨이 스틸일 때만 바꿀 수 있고, 다른 스킨은 스킨마다 정해진 색을 씁니다.',
