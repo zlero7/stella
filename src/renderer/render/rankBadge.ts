@@ -6,7 +6,7 @@ import { FONT } from './theme'
 export function optBadges(g: CanvasRenderingContext2D, rightX: number, baseY: number, opt?: RankOpts) {
   const list: [string, string][] = []
   if (opt?.j === 1) list.push(['H', '#ff9a4a']); else if (opt?.j === 2) list.push(['MX', '#ff4d6d'])
-  if (opt?.r) list.push(['R', '#7ad8ff'])
+  if (opt?.r) list.push([['', 'R', 'HR', 'XR'][opt.r] ?? 'R', '#7ad8ff'])
   if (opt?.m) list.push(['MI', '#b79bff'])
   if (opt?.f) list.push([opt.f === 1 ? 'FI' : 'FO', '#7dff9a'])
   if (opt?.p) list.push(['PA', '#ffd84a']) // 일시정지함

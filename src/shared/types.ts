@@ -41,8 +41,8 @@ export interface Api {
 }
 
 // 순위 제출·조회에 같이 오가는 플레이 옵션 (순위판은 나누지 않고 표시만 한다). 필드가 없으면 옛 앱의 제출이다
-// j: 판정 강도 0 보통·1 하드·2 맥스 · r: 랜덤 0/1 · m: 미러 0/1 · f: 페이드 0 꺼짐·1 IN·2 OUT
-export interface RankOpts { j: 0 | 1 | 2; r: 0 | 1; m: 0 | 1; f: 0 | 1 | 2; p?: 0 | 1 } // p: 일시정지한 판 (옛 기록은 없다)
+// j: 판정 강도 0 보통·1 하드·2 맥스 · r: 랜덤 0 끔·1 RANDOM·2 HALF·3 MAX · m: 미러 0/1 · f: 페이드 0 꺼짐·1 IN·2 OUT
+export interface RankOpts { j: 0 | 1 | 2; r: 0 | 1 | 2 | 3; m: 0 | 1; f: 0 | 1 | 2; p?: 0 | 1 } // p: 일시정지한 판 (옛 기록은 없다)
 // 점수 제출 본문 (POST /rank/<곡>/<키-난이도>): opt는 없어도 된다
 export interface RankSubmit { score: number; acc: number; mc: number; badge: string; n: number[]; opt?: RankOpts }
 // 결과 응답에 붙는 새 해금 (D2): 이번 판으로 처음 쓸 수 있게 된 플레이트·칭호. 없으면 빈 배열

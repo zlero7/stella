@@ -42,7 +42,7 @@ const CATS: { name: string; items: Item[] }[] = [
   ] },
   { name: 'OPTION', items: [ // 디맥의 이펙터처럼 노트 배치·보이는 방식·판정 폭을 바꾼다
     { label: '미러', value: () => (settings.mirror ? '켜짐' : '꺼짐'), change: () => { settings.mirror = settings.mirror ? 0 : 1 } },
-    { label: '랜덤', value: () => (settings.random ? '켜짐' : '꺼짐'), change: () => { settings.random = settings.random ? 0 : 1 } },
+    { label: '랜덤', value: () => ['꺼짐', 'RANDOM', 'HALF RANDOM', 'MAX RANDOM'][settings.random] ?? '꺼짐', change: d => { settings.random = clamp(settings.random + d, 0, 3) } },
     { label: '페이드', value: () => ['꺼짐', 'FADE IN', 'FADE OUT'][settings.fade] ?? '꺼짐', change: d => { settings.fade = clamp(settings.fade + d, 0, 2) } },
     { label: '판정 강도', value: () => ['보통', '하드', '맥스'][settings.judgeMode] ?? '보통', change: d => { settings.judgeMode = clamp(settings.judgeMode + d, 0, 2) } }
   ] },
@@ -73,7 +73,7 @@ const DESC: Record<string, string> = {
   '스크롤 속도': '노트가 내려오는 속도입니다. 오른쪽 미리보기의 노트 가시 시간이 짧을수록 빠릅니다. 플레이 중에도 위아래 키로 바꿀 수 있습니다.',
   '필드 위치': '플레이 화면에서 노트 필드를 왼쪽, 가운데, 오른쪽 중 어디에 둘지 정합니다.',
   'FAST/SLOW 표시': '판정할 때마다 빠르게(FAST) 또는 느리게(SLOW) 쳤는지 글자로 보여 줍니다.',
-  '랜덤': '곡을 시작할 때마다 레인 순서를 무작위로 섞습니다. 같은 곡도 매번 다른 손 순서가 됩니다. 랭킹 점수는 그대로 올라갑니다.',
+  '랜덤': 'RANDOM은 곡을 시작할 때 레인 순서를 통째로 섞고, HALF RANDOM은 왼쪽 절반과 오른쪽 절반 안에서만 섞고, MAX RANDOM은 노트마다 무작위 레인에 놓습니다. 랭킹 점수는 그대로 올라가고 순위 줄에 R·HR·XR이 붙습니다.',
   '페이드': 'FADE IN은 화면 위쪽 노트를, FADE OUT은 판정선에 가까운 노트를 가립니다. 노트를 외워서 치는 연습에 좋습니다.',
   '판정 강도': '하드는 판정 폭이 절반, 맥스는 4분의 1입니다. 더 어렵지만 같은 랭킹에 올라갑니다. 대결과 래더에서는 항상 보통입니다.',
   '콤보 표시': '플레이 중 콤보 숫자를 보여 줍니다.',

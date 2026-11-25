@@ -26,7 +26,7 @@ export const fetchRank = (dir: string, diff: string, keys = settings.keyMode) =>
   fetch(url(dir, diff, keys), { signal: AbortSignal.timeout(6000) }).then(ok).catch(() => undefined)
 
 // 이 판의 옵션: 판정 강도는 판을 시작할 때 굳은 값(sk.mul)에서, 나머지는 지금 설정에서 (결과 화면은 판 직후라 같다)
-export const optsOf = (sk: ScoreKeeper): RankOpts => ({ j: ([1, 0.5, 0.25].indexOf(sk.mul) as -1 | 0 | 1 | 2) < 0 ? 0 : ([1, 0.5, 0.25].indexOf(sk.mul) as 0 | 1 | 2), r: settings.random ? 1 : 0, m: settings.mirror ? 1 : 0, f: (settings.fade === 1 || settings.fade === 2 ? settings.fade : 0), ...(sk.pauses ? { p: 1 as const } : {}) })
+export const optsOf = (sk: ScoreKeeper): RankOpts => ({ j: ([1, 0.5, 0.25].indexOf(sk.mul) as -1 | 0 | 1 | 2) < 0 ? 0 : ([1, 0.5, 0.25].indexOf(sk.mul) as 0 | 1 | 2), r: (Math.min(Math.max(settings.random | 0, 0), 3)) as 0 | 1 | 2 | 3, m: settings.mirror ? 1 : 0, f: (settings.fade === 1 || settings.fade === 2 ? settings.fade : 0), ...(sk.pauses ? { p: 1 as const } : {}) })
 
 export const submitRank = (dir: string, diff: string, sk: ScoreKeeper, keys = settings.keyMode) =>
   !account.token ? fetchRank(dir, diff, keys) : fetch(url(dir, diff, keys), {

@@ -3,6 +3,7 @@ import type { Chart, Note, Song } from '../../shared/types'
 import { AudioClock } from '../core/AudioClock'
 import { HIT_WIN, JUDGES, MAX_WIN, MISS, ScoreKeeper, judgeMul, judgeOf, pickTarget } from '../game/ScoreKeeper'
 import { buildChart } from '../game/AutoChart'
+import { randomize } from '../game/randomize'
 import { HOLD_TICK, cleanChart, judgeCount, posAt, speedTable, ticksOf } from '../game/chartCheck'
 import { chartFile, diffName } from '../data/Songs'
 import { getBest, keyLabel, saveSettings, settings, type Best } from '../data/Storage'
@@ -179,10 +180,9 @@ export const Play = (sm: SceneManager): Scene => {
     const from = data.from ?? (data.fromPct ? Math.floor((buf?.duration ?? 0) * data.fromPct) : undefined) // 연습: 곡의 몇 %부터
     practice = from !== undefined
     spd = speedTable(chart?.speeds)
-    const perm = Array.from({ length: LANES }, (_, i) => i) // 랜덤: 곡을 시작할 때 한 번 섞고, 리와인드해도 같은 배치
-    if (settings.random && !data.vs) for (let i = LANES - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[perm[i], perm[j]] = [perm[j], perm[i]] }
+    const rmode = data.vs ? 0 : Math.min(Math.max(settings.random | 0, 0), 3) // 랜덤 변형: 곡을 시작할 때 한 번 섞는다 (대결·래더는 끔)
     judgeMul.v = data.vs ? 1 : [1, 0.5, 0.25][settings.judgeMode] ?? 1 // 대결·래더는 모두 같은 판정으로
-    fullNotes = cleanChart(chart?.notes ?? demoNotes(), LANES).notes.map(n => settings.random && !data.vs ? { ...n, lane: perm[n.lane] } : settings.mirror ? { ...n, lane: LANES - 1 - n.lane } : n) // 랜덤 · 미러: 좌우 반전
+    { const cn = cleanChart(chart?.notes ?? demoNotes(), LANES).notes; fullNotes = rmode ? randomize(cn, LANES, rmode) : settings.mirror ? cn.map(n => ({ ...n, lane: LANES - 1 - n.lane })) : cn } // 랜덤이 미러보다 먼저 (둘 다 켜면 랜덤만)
     const notes = fullNotes.filter(n => from === undefined || n.time >= from + 0.5)
     bestRec = !data.vs && from === undefined ? getBest(song.dir, data.diff) : undefined // 점수 차이는 내 최고 기록과 비교
     ns = notes.map(n => ({ ...n, state: 'wait' as const })).sort((a, b) => a.time - b.time)
