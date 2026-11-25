@@ -132,3 +132,10 @@ test('맥스 판정에서는 MAX 폭도 같은 비율로 좁아져 PERFECT 수�
 test('등급: 클리어한 최하는 D, F는 실패 전용', () => {
   assert.equal(rankOf(69.9), 'D'); assert.equal(rankOf(70), 'C'); assert.equal(rankOf(99), 'S+')
 })
+
+test('UR: 오차의 표준편차 × 10 (ms), 입력이 2개 미만이면 0', () => {
+  const s = new ScoreKeeper(4)
+  assert.equal(s.ur, 0)
+  s.press(0.01); s.press(-0.01); s.press(0.01); s.press(-0.01) // ±10ms → 표준편차 10ms
+  assert.equal(s.ur, 100)
+})

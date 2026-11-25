@@ -196,7 +196,7 @@ export const Result = (sm: SceneManager): Scene => {
         g.fillStyle = 'rgba(255,255,255,.7)'; g.fillRect(hx0 + 103, 420, 2, 64)
         g.font = `600 11px ${FONT}`; g.fillStyle = 'rgba(230,240,255,.7)'; g.fillText('빠름', 24, 498); g.textAlign = 'center'; g.fillText('0', 128, 498); g.textAlign = 'right'; g.fillText('느림', 232, 498); g.textAlign = 'left'
         const avg = sk.avgMs, rec = Math.round(avg / 5) * 5 // 판정 오프셋은 5ms 단위. 늦게 쳤으면(avg<0) +, 빨리 쳤으면 -
-        g.font = `800 14px ${FONT}`; g.fillStyle = '#fff'; g.fillText(avg ? `평균 ${Math.abs(avg)}ms ${avg > 0 ? 'FAST' : 'SLOW'}` : '평균 오차 0ms', 24, 526)
+        g.font = `800 14px ${FONT}`; g.fillStyle = '#fff'; g.fillText(avg ? `평균 ${Math.abs(avg)}ms ${avg > 0 ? 'FAST' : 'SLOW'}` : '평균 오차 0ms', 24, 526); if (sk.ur) { g.textAlign = 'right'; g.fillText(`UR ${sk.ur.toFixed(1)}`, 232, 526); g.textAlign = 'left' }
         g.font = `12px ${FONT}`; g.fillStyle = ICE
         g.fillText(applied !== undefined ? `오프셋 ${applied > 0 ? '+' : ''}${applied}ms로 맞춤` : rec ? `O 키: 오프셋 ${-rec > 0 ? '+' : ''}${-rec} 조정` : '판정 오프셋은 그대로 좋습니다', 24, 550)
         g.restore()
