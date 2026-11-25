@@ -193,8 +193,8 @@ const dotPattern = (g: CanvasRenderingContext2D) => {
 
 export const keyArt = (id: string) => ART[id]?.key // 스틸이 아니면 건반도 스킨이 그린다
 const rr6: PathFn = (g, x, y, w, h) => { g.beginPath(); g.roundRect(x, y, w, h, 6) }
-export interface Panel { score: number; scroll: number; mult: number; hp: number; hpLow: boolean }
-// 건반 아래: 점수 LCD와 칩 세 개(속도·콤보 배율·체력). 건반은 Play가 그린다
+export interface Panel { score: number; scroll: number; rate: number; hp: number; hpLow: boolean }
+// 건반 아래: 점수 LCD와 칩 세 개(속도·정확도·체력). 건반은 Play가 그린다
 export function drawConsoleFront(g: CanvasRenderingContext2D, x: number, fw: number, jy: number, p: Panel, k0: GearSkin) {
   const lx = x + 10, lw = fw - 20, ly = jy + 104, lh = 44, lcdP = ART[k0.id]?.lcd ?? rr6, chipP = ART[k0.id]?.chip ?? rr6
   g.fillStyle = mix(k0.dark, '#000000', 0.6); lcdP(g, lx, ly, lw, lh); g.fill()
@@ -206,7 +206,7 @@ export function drawConsoleFront(g: CanvasRenderingContext2D, x: number, fw: num
   const cw = (lw - 12) / 3, cy = jy + 156
   const chips: [string, string, string, string][] = [
     ['SPEED', p.scroll.toFixed(1), k0.chips[0], mix(k0.chips[0], '#000000', 0.4)],
-    ['COMBO', `x${p.mult.toFixed(2)}`, k0.chips[1], mix(k0.chips[1], '#000000', 0.4)],
+    ['RATE', `${p.rate.toFixed(1)}%`, k0.chips[1], mix(k0.chips[1], '#000000', 0.4)],
     ['HP', `${Math.round(p.hp)}%`, p.hpLow ? k0.warn : k0.chips[2], mix(p.hpLow ? k0.warn : k0.chips[2], '#000000', 0.4)]
   ]
   chips.forEach(([label, value, c1, c2], i) => {

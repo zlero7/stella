@@ -12,8 +12,8 @@ import { applyPlay, canEquip, levelOf, nickKey, profileView } from './progress.m
 import { createLadder } from './ladder.mjs'
 import { cleanOpts, plausible } from './verify.mjs'
 // 앱이 판정 개수를 셀 때 쓰는 채보 정리(cleanChart)를 서버도 같이 써서 노트 총수를 구한다. 불러오지 못하면 총수 대조만 건너뛴다
-let cleanChart, judgeCount
-try { ({ cleanChart, judgeCount } = await import('../src/renderer/game/chartCheck.ts')) } catch (e) { console.error('채보 정리 모듈을 못 불러와 노트 총수 대조를 건너뜁니다:', e.message) }
+let cleanChart, judgeCount, OLD_TICKS
+try { ({ cleanChart, judgeCount, OLD_TICKS } = await import('../src/renderer/game/chartCheck.ts')) } catch (e) { console.error('채보 정리 모듈을 못 불러와 노트 총수 대조를 건너뜁니다:', e.message) }
 
 const PORT = Number(process.env.PORT) || 9777
 const MAX_ROOMS = 200, WAIT_MS = 10 * 60 * 1000 // 짝이 안 맞는 방은 10분 뒤에 닫는다
@@ -239,7 +239,7 @@ const chartLen = (dir, key) => {
     const mt = fs.statSync(f).mtimeMs, c = lenCache.get(f)
     if (c?.mt === mt) return c.len
     const notes = JSON.parse(fs.readFileSync(f, 'utf8')).notes, len = notes.at(-1)?.time ?? 0
-    const lanes = +/^(\d)k-/.exec(key)?.[1] || 4, cl = cleanChart?.(notes, lanes).notes, total = cl && [cl.reduce((n, x) => n + judgeCount(x), 0), cl.reduce((n, x) => n + judgeCount(x, 0.2), 0), cl.reduce((n, x) => n + (x.duration ? 2 : 1), 0)] // [지금 앱: 틱 0.5초, 0.10.7~0.11.2: 틱 0.2초, 더 옛 앱: 시작·끝 두 번]
+    const lanes = +/^(\d)k-/.exec(key)?.[1] || 4, cl = cleanChart?.(notes, lanes).notes, total = cl && [cl.reduce((n, x) => n + judgeCount(x), 0), ...OLD_TICKS.map(tk => cl.reduce((n, x) => n + judgeCount(x, tk), 0))] // [지금 앱과 0.10.7 전 앱: 시작·끝 두 번, 0.11.3~0.11.7: 틱 0.5초, 0.10.7~0.11.2: 틱 0.2초]
     lenCache.set(f, { mt, len, total }); return len
   } catch { return undefined }
 }

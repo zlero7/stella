@@ -33,9 +33,6 @@ export function pickTarget<N extends { lane: number; time: number; state: string
   return first && near && first !== near && t - first.time > JUDGES[1].win * judgeMul.v ? near : first
 }
 
-// 콤보 배율: 콤보가 쌓일수록 노트 하나의 점수가 커진다 (400콤보에서 1.5배로 멈춤). 끊기면 처음부터
-export const comboMult = (combo: number) => 1 + 0.5 * Math.min(combo, 400) / 400
-
 const CHORD_LOSS = 8 // 같은 시각에 놓친 동타가 한 번에 깎는 체력의 상한 (3중동타를 놓쳐도 -15가 아니라 -8)
 
 // 정확도(%) → 등급
@@ -51,19 +48,16 @@ export class ScoreKeeper {
   private lossSum = 0
   readonly mul = judgeMul.v // 이 판의 판정 강도 (MAX 개수를 세는 폭에도 쓴다)
   readonly total: number // 전체 판정 수 (롱노트는 시작·끝 각각)
-  private num = 0 // 콤보 배율을 곱한 판정 점수의 합
   private n = 0 // 지금까지 판정한 수
   readonly pace: number[] = [] // 판정 수가 전체의 5%씩 쌓일 때마다의 점수 (최고 기록과 실시간으로 비교하려고 기록에 같이 남긴다)
-  private den = 0 // 전부 PERFECT일 때의 합 (이게 100만점)
 
-  constructor(total: number) { this.total = total; for (let c = 1; c <= total; c++) this.den += comboMult(c) }
+  constructor(total: number) { this.total = total }
 
   // at = 그 노트의 시각(초). 같은 시각에 여러 개가 깎이면 합계를 CHORD_LOSS로 제한한다
-  // tick: 롱노트를 잡고 있는 동안의 판정 — 체력은 변하지 않는다
-  add(j: number, at = -1, tick = false) {
+  add(j: number, at = -1) {
     this.counts[j]++
     this.sum += JUDGES[j].weight
-    let d: number = tick ? 0 : JUDGES[j].hp
+    let d: number = JUDGES[j].hp
     if (d < 0 && at >= 0) {
       if (Math.abs(at - this.lossAt) < 0.02) d = -Math.min(-d, Math.max(CHORD_LOSS - this.lossSum, 0)), this.lossSum -= d
       else this.lossAt = at, this.lossSum = -d
@@ -71,7 +65,6 @@ export class ScoreKeeper {
     this.hp = Math.min(Math.max(this.hp + d, 0), 100)
     if (j === MISS) this.combo = 0
     else this.maxCombo = Math.max(this.maxCombo, ++this.combo)
-    this.num += JUDGES[j].weight * comboMult(this.combo)
     this.n++
     while (this.total > 0 && this.pace.length < 20 && this.n * 20 >= this.total * (this.pace.length + 1)) this.pace.push(this.score)
   }
@@ -91,8 +84,8 @@ export class ScoreKeeper {
   get maxCount() { return this.errs.filter(dt => Math.abs(dt) <= MAX_WIN * this.mul).length }
   get avgMs() { return this.errN ? Math.round((1000 * this.errSum) / this.errN) : 0 }
 
-  get score() { return this.den ? Math.round(1_000_000 * this.num / this.den) : 0 }
-  get mult() { return comboMult(this.combo) }
+  // 점수 = 100만 × 판정 가중치 합 / 전체 판정 수 (디맥처럼 콤보는 점수에 안 들어간다. 끝까지 치면 정확도% × 10,000)
+  get score() { return this.total ? Math.round(1_000_000 * this.sum / this.total) : 0 }
   // 지금까지 친 판정의 평균 (곡이 끝나면 전체 평균과 같다)
   get accuracy() {
     const judged = this.counts.reduce((a, b) => a + b, 0)
