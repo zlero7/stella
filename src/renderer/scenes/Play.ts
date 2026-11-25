@@ -3,7 +3,7 @@ import type { Chart, Note, Song } from '../../shared/types'
 import { AudioClock } from '../core/AudioClock'
 import { HIT_WIN, JUDGES, MAX_WIN, MISS, ScoreKeeper, judgeMul, judgeOf, pickTarget } from '../game/ScoreKeeper'
 import { buildChart } from '../game/AutoChart'
-import { cleanChart, judgeCount, posAt, speedTable } from '../game/chartCheck'
+import { HOLD_TICK, cleanChart, judgeCount, posAt, speedTable, ticksOf } from '../game/chartCheck'
 import { chartFile, diffName } from '../data/Songs'
 import { getBest, keyLabel, saveSettings, settings, type Best } from '../data/Storage'
 import { sfx } from '../core/Sfx'
@@ -29,8 +29,7 @@ const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).
 const isBlue =(lane: number) => lane === 0 || lane === LANES - 1
 
 // wait: 아직 안 침 / hold: 롱노트 누르는 중 / done: 처리 끝
-interface N extends Note { state: 'wait' | 'hold' | 'done'; j?: number } // j: 롱노트 시작 판정 (끝 판정이 이어받는다)
-const HOLD_END_WIN = 0.25 // 롱노트 끝 이만큼(초) 안에서 떼면(또는 끝까지 누르고 있으면) 시작 판정을 이어받고, 더 일찍 떼면 Miss
+interface N extends Note { state: 'wait' | 'hold' | 'done'; tk?: number } // tk: 이미 나온 홀드 틱 수
 // vs: 대결 중 (키 수는 방장이 정한 keys, 채보도 방장이 보낸 것)
 export interface PlayData { song: Song; diff: string; from?: number; fromPct?: number; vs?: boolean; keys?: number; ladder?: boolean }
 
@@ -121,14 +120,21 @@ export const Play = (sm: SceneManager): Scene => {
     if (j === MISS) return // 하드·맥스에서 좁아진 판정 폭 밖의 입력은 무시 (노트는 남는다). 이미 지난 노트는 update()가 Miss 처리
     judge(j, dt, lane, n.time); sk.press(dt); sfx.hit()
     n.state = n.duration ? 'hold' : 'done'
-    n.j = j
+  }
+
+  // 잡고 있는 롱노트의 틱 중 지금까지 와야 할 것을 PERFECT로 올린다
+  function dueTicks(n: N, t: number) {
+    const due = Math.min(ticksOf(n.duration), Math.floor((t - n.time) / HOLD_TICK))
+    while ((n.tk ?? 0) < due) { n.tk = (n.tk ?? 0) + 1; sk.add(0, -1, true) }
   }
 
   function release(lane: number, t: number) {
     const n = ns.find(n => n.lane === lane && n.state === 'hold')
     if (!n) return
     const dt = n.time + n.duration! - t
-    judge(dt > HOLD_END_WIN ? MISS : n.j ?? 0, 0, lane, n.time + n.duration!) // 끝 근처에서 떼면 시작 판정을 이어받고, 일찍 떼면 Miss
+    dueTicks(n, t)
+    for (let k = n.tk ?? 0; dt > HIT_WIN && k < ticksOf(n.duration); k++) sk.add(MISS, -1, true) // 일찍 떼면 남은 틱은 Miss (체력은 안 깎는다)
+    judge(dt > HIT_WIN ? MISS : judgeOf(dt), dt, lane, n.time + n.duration!) // 일찍 떼면 끝 판정 Miss
     n.state = 'done'
   }
 
@@ -239,10 +245,11 @@ export const Play = (sm: SceneManager): Scene => {
         const n = ns[i]
         if (n.time - t > 1) break // 아직 1초 넘게 남은 노트부터는 판정할 게 없다
         if (n.state === 'wait' && t - n.time > HIT_WIN) {
-          judge(MISS, 0, -1, n.time); if (n.duration) judge(MISS, 0, -1, n.time + n.duration) // 롱노트는 시작을 놓치면 끝도 Miss
+          judge(MISS, 0, -1, n.time); if (n.duration) { for (let k = 0; k < ticksOf(n.duration); k++) sk.add(MISS, -1, true); judge(MISS, 0, -1, n.time + n.duration) } // 롱노트는 시작을 놓치면 틱·끝도 Miss
           n.state = 'done'
         } else if (n.state === 'hold') {
-          if (t >= n.time + n.duration!) { judge(n.j ?? 0, 0, n.lane, n.time + n.duration!); n.state = 'done' } // 끝까지 누르고 있으면 떼지 않아도 시작 판정을 이어받는다 (더 눌러도 감점 없음)
+          dueTicks(n, t)
+          if (t >= n.time + n.duration!) { judge(0, 0, n.lane, n.time + n.duration!); n.state = 'done' } // 끝까지 유지하면 떼지 않아도 끝 판정 Perfect
         }
       }
       if (sk.failed) { dying = performance.now(); dyT0 = t; down.clear(); clock.slowStop(DIE_S); return }
@@ -276,7 +283,7 @@ export const Play = (sm: SceneManager): Scene => {
       const gs = gearOf(settings.gearSkin, prof.v)
       drawGearBack(g, FIELD_X, fw, JUDGE_Y, settings.panelA / 100, lit, gs)
       g.save(); g.font = `900 30px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.06)'; g.textAlign = 'center'
-      for (const [sx, dir] of [[FIELD_X + 20, -1], [FIELD_X + fw - 20, 1]] as const) { g.save(); g.translate(sx, 340); g.rotate(dir * Math.PI / 2); g.fillText('S T E L L A', 0, 10); g.restore() }
+      for (const [sx, dir] of [[FIELD_X + 20, -1], [FIELD_X + fw - 20, 1]] as const) { g.save(); g.translate(sx, 340); g.rotate(dir * Math.PI / 2); g.fillText('C O M B O   X ' + sk.mult.toFixed(2), 0, 10); g.restore() }
       g.restore()
       g.fillStyle = 'rgba(255,255,255,.07)'
       for (let l = 1; l < LANES; l++) g.fillRect(FIELD_X + l * LANE_W, 0, 1, 720)
@@ -316,7 +323,7 @@ export const Play = (sm: SceneManager): Scene => {
         g.font = `900 ${keyLabel(k).length > 2 ? 12 : 18}px ${FONT}`; g.fillStyle = on ? '#061224' : gs.accent; g.textAlign = 'center'
         g.fillText(keyLabel(k), cx, cy + 6)
       })
-      drawConsoleFront(g, FIELD_X, fw, JUDGE_Y, { score: sk.score, scroll: settings.scroll, rate: sk.accuracy, hp: sk.hp, hpLow: sk.hp <= 25 }, gs)
+      drawConsoleFront(g, FIELD_X, fw, JUDGE_Y, { score: sk.score, scroll: settings.scroll, mult: sk.mult, hp: sk.hp, hpLow: sk.hp <= 25 }, gs)
       if (settings.hudRate && sk.counts.some(n => n)) { // 디맥: 판정 글자 바로 위에 작은 RATE 글자와 정확도
         g.textAlign = 'right'; g.font = `700 11px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.6)'; g.fillText('RATE', FIELD_X + fw / 2 - 6, JUDGE_Y - 134)
         g.textAlign = 'left'; g.font = `700 15px ${FONT}`; g.fillStyle = sk.accuracy >= 100 ? '#ffe27a' : '#fff'; g.fillText(`${sk.accuracy.toFixed(2)}%`, FIELD_X + fw / 2 + 2, JUDGE_Y - 133)
@@ -370,7 +377,7 @@ export const Play = (sm: SceneManager): Scene => {
         const cg = g.createLinearGradient(0, -90, 0, 6); if (ap) { cg.addColorStop(0, '#fff6c2'); cg.addColorStop(1, '#ffb52e') } else if (fc) { cg.addColorStop(0, '#f2fcff'); cg.addColorStop(1, '#8fdcff') } else { cg.addColorStop(0, '#ffffff'); cg.addColorStop(1, '#c4cbd8') }
         g.fillStyle = cg; g.fillText(String(sk.combo), 0, 0); g.globalAlpha = 1; g.restore()
         g.font = `800 15px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.9)'; g.fillText(ap ? 'ALL PERFECT' : fc ? 'FULL COMBO' : 'COMBO', CX, 78)
-      } // 점수에 콤보 배율이 없어져 배율 글자도 없다 (v0.11.8~)
+      } // 배율(x1.00) 큰 글자는 시야를 가려 뺐다: 배율은 옆 기어의 COMBO 칩에 남아 있다
       const age = performance.now() - flash.at
       if (age < 380 && settings.hudJudge) { // 판정 글자: 정확도(%) 글자(y484) 위에 겹치지 않게 그보다 60px 위에 짧게 떴다 사라진다
         g.globalAlpha = 1 - age / 380

@@ -41,12 +41,10 @@ test('하이라이트 구간: 겹치면 합치고 시작순으로 정렬한다',
 })
 
 test('롱노트 틱: 0.5초마다 한 번, 끝 직전 0.05초는 제외, 판정 수는 시작+끝+틱', () => {
-  assert.equal(ticksOf(1), 0) // 지금은 롱노트에 틱이 없다
-  assert.equal(ticksOf(0.5, 0.5), 0)
-  assert.equal(ticksOf(1, 0.5), 1) // 0.11.3~0.11.7
-  assert.equal(ticksOf(1, 0.2), 4) // 0.10.7~0.11.2
+  assert.equal(ticksOf(0.5), 0)
+  assert.equal(ticksOf(1), 1)
+  assert.equal(ticksOf(1, 0.2), 4)
   assert.equal(judgeCount({ time: 0, lane: 0 }), 1)
-  assert.equal(judgeCount({ time: 0, lane: 0, duration: 1 }), 2) // 시작·끝
-  assert.equal(judgeCount({ time: 0, lane: 0, duration: 1 }, 0.5), 3)
+  assert.equal(judgeCount({ time: 0, lane: 0, duration: 1 }), 3)
   assert.equal(judgeCount({ time: 0, lane: 0, duration: 1 }, 0.2), 6)
 })

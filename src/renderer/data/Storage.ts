@@ -28,11 +28,6 @@ export const keyLabel = (k: string) => k.replace(/^(Key|Digit)/, '').replace('Sp
 export interface Best { score: number; accuracy: number; maxCombo: number; badge?: string; at?: number; pace?: number[] } // badge: 'ALL PERFECT' | 'FULL COMBO' | ''
 const records = read<Record<string, Best[]>>('rg.records', {})
 const old = read<Record<string, Best>>('rg.best', {}) // 예전 버전의 곡당 1개짜리 기록
-// 점수식이 바뀌었다(v0.11.8: 콤보 배율 삭제, 점수 = 정확도% × 10,000). 예전 기록은 정확도로 새 점수를 다시 매기고, 최고 기록과 비교하는 pace도 같은 비율로 줄인다
-if (read('rg.scoreV', { v: 1 }).v < 2) {
-  for (const l of Object.values(records)) for (const b of l) { const sc = Math.round(b.accuracy * 10000), k = b.score ? sc / b.score : 1; if (b.pace) b.pace = b.pace.map(p => Math.round(p * k)); b.score = sc; l.sort((x, y) => y.score - x.score) }
-  write('rg.records', records); write('rg.scoreV', { v: 2 })
-}
 // 기록 이름: 4키는 예전 그대로(곡/난이도), 6키는 곡/6k-난이도
 const recKey = (dir: string, diff: string) => (settings.keyMode === 6 ? `${dir}/6k-${diff}` : `${dir}/${diff}`)
 export const getRecords = (dir: string, diff: string): Best[] => { const k = recKey(dir, diff); return records[k] ?? (old[k] ? [old[k]] : []) }

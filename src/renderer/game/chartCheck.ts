@@ -30,12 +30,10 @@ export function cleanChart(notes: Note[], lanes = 4): { notes: Note[]; fixed: st
   return { notes: res, fixed }
 }
 
-// 롱노트 누르는 동안의 틱 판정은 없앴다(Infinity): 롱노트는 시작·끝 두 판정뿐이라 점수·정확도에서 유리하지 않다.
-// v0.10.7~0.11.2는 0.2초, v0.11.3~0.11.7은 0.5초 간격이었다. 서버는 옛 앱의 총수도 받아 준다 (OLD_TICKS)
-export const HOLD_TICK = Infinity
-export const OLD_TICKS = [0.5, 0.2]
+// 롱노트를 누르고 있는 동안 HOLD_TICK초마다 PERFECT 한 번 (콤보·점수가 쌓인다). 끝 판정 직전 0.05초는 제외
+export const HOLD_TICK = 0.5 // v0.10.7~0.11.2는 0.2초였다 (롱노트가 점수에서 너무 유리해 줄였다). 서버는 옛 간격의 총수도 받아 준다
 export const ticksOf = (duration = 0, tick = HOLD_TICK) => Math.max(0, Math.floor((duration - 0.05) / tick))
-// 노트 하나가 만드는 판정 수: 시작 1 + (롱노트면 끝 1 + 옛 앱의 틱)
+// 노트 하나가 만드는 판정 수: 시작 1 + (롱노트면 끝 1 + 틱)
 export const judgeCount = (n: Note, tick = HOLD_TICK) => 1 + (n.duration ? 1 + ticksOf(n.duration, tick) : 0)
 
 // 변속 표: 노트의 화면 위치는 "속도를 시간에 대해 쌓은 거리"로 정한다 (판정은 시간 그대로라 변속해도 안 흔들린다). 배율은 0.25~4로 제한
