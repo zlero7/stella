@@ -73,14 +73,14 @@ export const Play = (sm: SceneManager): Scene => {
   let chartOffset = 0 // 채보 자체의 오프셋(초). 설정에서 싱크 오프셋을 바꾸고 돌아오면 다시 합친다
   let dispHp = 100 // 체력바에 보이는 값 (실제 체력을 부드럽게 따라간다)
   let head = 0 // 처리가 끝난 앞쪽 노트는 건너뛰기 위한 시작 위치
-  let flash = { j: 0, dt: 0, at: -1e9 }
+  let flash = { j: 0, dt: 0, at: -1e9, gain: 0 } // gain: 그 판정으로 오른 점수
   const down = new Set<number>()
   const laneOf = (e: KeyboardEvent) => activeKeys().indexOf(e.code)
 
   // 칠 때 효과: 판정선에서 빛기둥·고리·별·불꽃이 터진다. 판정이 좋을수록 크고 밝다 (MISS는 없음)
   const fx: { lane: number; at: number; j: number }[] = []
   const judge = (j: number, dt = 0, lane = -1, at = -1) => {
-    sk.add(j, at); flash = { j, dt, at: performance.now() }
+    const s0 = sk.score; sk.add(j, at); flash = { j, dt, at: performance.now(), gain: sk.score - s0 }
     if (lane >= 0 && j !== MISS) { fx.push({ lane, at: performance.now(), j }); if (fx.length > 32) fx.shift() }
   }
   function drawFx(g: CanvasRenderingContext2D, t: number) {
@@ -324,6 +324,7 @@ export const Play = (sm: SceneManager): Scene => {
         if (flash.j === 0) { const gg = g.createLinearGradient(0, 412, 0, 442); gg.addColorStop(0, '#fff6c2'); gg.addColorStop(0.55, '#ffd04a'); gg.addColorStop(1, '#d98a00'); g.fillStyle = gg } else g.fillStyle = JUDGE_COLORS[flash.j] // PERFECT는 금색
         g.fillText(jn, CX - pw / 2, 438)
         g.strokeText(pct, CX - pw / 2 + nw + 8, 438); g.fillText(pct, CX - pw / 2 + nw + 8, 438); g.textAlign = 'center'
+        if (flash.gain > 0) { g.font = `700 13px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.85)'; g.fillText(`+${flash.gain}`, CX, 410) } // 디맥: 판정 글자 위에 그 노트로 오른 점수
         if (settings.fastSlow && flash.j !== MISS && flash.j !== 0) {
           g.font = `700 18px ${FONT}`; g.fillStyle = flash.dt > 0 ? CYAN : AMBER
           g.fillText(flash.dt > 0 ? 'FAST' : 'SLOW', CX, 462)
