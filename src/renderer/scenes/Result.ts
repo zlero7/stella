@@ -188,7 +188,7 @@ export const Result = (sm: SceneManager): Scene => {
         g.fillStyle = 'rgba(0,0,0,.84)'; g.fillRect(0, 140, 254, 454); g.strokeStyle = 'rgba(255,255,255,.18)'; g.lineWidth = 1; g.strokeRect(0.5, 140.5, 253, 453)
         slant(g, 40, 160, 168, 34, 10); g.fillStyle = 'rgba(120,128,142,.6)'; g.fill(); g.textAlign = 'center'; g.font = `300 26px ${FONT}`; g.fillStyle = '#fff'; g.fillText('DETAILS', 124, 186)
         g.textAlign = 'left'
-        JUDGES.forEach((j, i) => { const y = 226 + i * 24; g.font = `800 13px ${FONT}`; g.fillStyle = COLORS[i]; g.fillText(j.name, 24, y); g.font = `600 11px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.5)'; g.fillText(`${Math.round(j.weight * 100)}%`, 100, y); g.textAlign = 'right'; g.font = `800 15px ${FONT}`; g.fillStyle = '#ffd84a'; g.fillText(String(c[i]) + (i === 0 && sk.maxCount ? `  (MAX ${sk.maxCount})` : ''), 232, y); g.textAlign = 'left' })
+        JUDGES.forEach((j, i) => { const y = 226 + i * 24; g.font = `800 13px ${FONT}`; g.fillStyle = COLORS[i]; g.fillText(j.name, 24, y); g.textAlign = 'right'; g.font = `800 15px ${FONT}`; g.fillStyle = '#ffd84a'; g.fillText(String(c[i]) + (i === 0 && sk.maxCount ? `  (MAX ${sk.maxCount})` : ''), 232, y); g.textAlign = 'left' })
         g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(24, 376, 208, 1)
         g.font = `800 13px ${FONT}`; g.fillStyle = '#ff9a7a'; g.fillText('RATE', 24, 400); g.fillStyle = '#ffd84a'; g.font = `800 15px ${FONT}`; g.textAlign = 'right'; g.fillText(`${sk.accuracy.toFixed(2)}%`, 232, 400); g.textAlign = 'left'
         const h = sk.histogram(20, 200), top = Math.max(...h, 1), hx0 = 24, bw = 208 / h.length, base = 480 // 타이밍 오차 분포 (가운데가 정확히 맞춘 곳)
