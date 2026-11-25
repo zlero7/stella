@@ -15,7 +15,6 @@ const rr = (x: Ctx, a: number, b: number, w: number, h: number, r: number) => { 
 const poly = (x: Ctx, pts: number[][]) => { x.beginPath(); pts.forEach(([px, py], i) => (i ? x.lineTo(px, py) : x.moveTo(px, py))); x.closePath() }
 // 지금 그려 둔 윤곽 위쪽 절반에 하얀 광택을 얹는다 (윤곽은 clip으로 쓰이고 지워진다)
 const shine = (x: Ctx, y0: number, y1: number, a = 0.55) => { x.save(); x.clip(); x.fillStyle = vg(x, y0, y1, `rgba(255,255,255,${a})`, 'rgba(255,255,255,0)'); x.fillRect(0, y0, 92, y1 - y0); x.restore() }
-const INVADER = ['..#.....#..', '...#...#...', '..#######..', '.##.###.##.', '###########', '#.#######.#', '#.#.....#.#', '...##.##...']
 
 export const NOTES12: Record<string, Draw> = {
   steel(x, o, c) { // 모서리가 깎인 강철 판: 양끝 마개, 가운데 마름모 홈
@@ -113,10 +112,14 @@ export const NOTES12: Record<string, Draw> = {
     x.fillStyle = k; x.fillRect(11, 16, 70, 2); x.fillRect(11, 26, 70, 2); x.fillRect(38, 11, 16, 22); x.fillStyle = '#0a0a0c'; x.fillRect(44, 15, 4, 14)
     x.fillStyle = k; for (const dx of [17, 23, 63, 69]) x.fillRect(dx, 8, 1.5, 3)
   },
-  arcade(x, o) { // 그림자와 하이라이트가 있는 도트 인베이더
-    const p = pal(o, '#7dff7a'); x.fillStyle = 'rgba(0,0,0,.5)'
-    INVADER.forEach((row, ry) => [...row].forEach((ch, rx) => { if (ch === '#') x.fillRect(24 + rx * 4 + 2, 6 + ry * 4 + 2, 4, 4) }))
-    glow(x, p.col, 7); INVADER.forEach((row, ry) => [...row].forEach((ch, rx) => { if (ch === '#') { x.fillStyle = ry < 3 ? p.hi : ry < 6 ? p.col : mix(p.col, p.lo, 0.5); x.fillRect(24 + rx * 4, 6 + ry * 4, 4, 4) } })); noGlow(x)
-    x.fillStyle = '#041004'; x.fillRect(32, 14, 4, 4); x.fillRect(56, 14, 4, 4); x.fillStyle = 'rgba(255,255,255,.8)'; x.fillRect(32, 14, 2, 2); x.fillRect(56, 14, 2, 2)
+  arcade(x, o) { // 픽셀 동전: 둥글게 깎은 도트, 위 왼쪽이 밝고 아래 오른쪽이 어둡다. 옆에 반짝이 두 개
+    const p = pal(o, '#ffd22e'); glow(x, p.col, 8)
+    for (let ry = 0; ry < 10; ry++) for (let rx = 0; rx < 10; rx++) {
+      const dx = rx - 4.5, dy = ry - 4.5, r = Math.hypot(dx, dy); if (r > 4.9) continue
+      const lit = (-dx - dy) / 9, edge = r > 4.0, slot = Math.abs(dx) < 0.8 && Math.abs(dy) < 2.6
+      x.fillStyle = edge ? p.lo : slot ? p.hi : lit > 0.18 ? p.hi : lit < -0.25 ? mix(p.col, p.lo, 0.5) : p.col; x.fillRect(26 + rx * 4, 2 + ry * 4, 4, 4)
+    }
+    noGlow(x); x.fillStyle = 'rgba(255,255,255,.95)'; for (const [sx, sy] of [[12, 14], [74, 24]]) { x.fillRect(sx - 1, sy - 5, 3, 11); x.fillRect(sx - 5, sy - 1, 11, 3) }
+    x.fillStyle = p.hi; x.fillRect(30, 8, 4, 2); x.fillRect(30, 8, 2, 4)
   }
 }

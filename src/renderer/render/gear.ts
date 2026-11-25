@@ -4,6 +4,8 @@ import type { Profile } from '../data/Profile'
 import { skinSprite } from '../game/noteSkins'
 import { ART, type PathFn } from './skinsArt'
 import { ART2, setLamps } from './skinsArt2'
+import { ART3 } from './skinsArt3'
+import { ART4 } from './skinsArt4'
 import { drawAmbient } from './skinsAmbient'
 const OWNER_ID = 'zlero' // 제작자 계정은 꾸미기를 조건 없이 전부 쓴다
 
@@ -26,18 +28,18 @@ export const GEAR_SKINS: GearSkin[] = [
   sk('sakura', '사쿠라', '래더 1승', p => p.wins >= 1, '#2a1e26', '#8a5a72', '#f2bfd3', '#ff8fb8', '#ff4f7a', '#fff0f6', '40,20,32', ['#ff4f7a', '#ffa14f', '#e0709a']),
   sk('forest', '포레스트', '플레이 50번', p => p.plays >= 50, '#0e1a12', '#2d5238', '#6fae7a', '#9cff6a', '#ff7a3d', '#eaffe0', '3,12,6', ['#d8553a', '#b8a238', '#4bb36a']),
   sk('crimson', '크림슨', '풀 콤보 10번', p => p.fcs >= 10, '#160a0c', '#4a1a22', '#a8434f', '#ff3b52', '#ffb13b', '#ffe3e6', '14,3,6', ['#ff3b52', '#c9781f', '#a8434f']),
-  sk('ocean', '오션', '레벨 12', p => p.level >= 12, '#07141c', '#1d4b5e', '#55a8c2', '#5ee8ff', '#ff6f7a', '#e0fbff', '2,10,18', ['#e0506a', '#2f9fb8', '#27b3a1']),
+  sk('ocean', '오션', '레벨 12', p => p.level >= 12, '#04121a', '#0e4a5e', '#5ee8ff', '#5ee8ff', '#ff6f7a', '#e0fbff', '2,10,18', ['#e0506a', '#2f9fb8', '#27b3a1']),
   sk('violet', '사이버 바이올렛', '올 퍼펙트 3번', p => p.aps >= 3, '#0d0a18', '#34286a', '#8a74e8', '#b58cff', '#ff5a9a', '#efe6ff', '8,4,20', ['#ff5a9a', '#8a74e8', '#5a8cff']),
   sk('ice', '아이스', '레벨 16', p => p.level >= 16, '#1e2a38', '#7d93ad', '#dbe8f5', '#7ad8ff', '#ff6a88', '#f4fbff', '14,26,44', ['#e0506a', '#4f9bd6', '#3ab3c9']),
-  sk('sunset', '선셋', '래더 10승', p => p.wins >= 10, '#1a0d14', '#6a2a44', '#f08a5d', '#ffb13b', '#ff4f7a', '#fff0d8', '20,6,18', ['#ff4f7a', '#e8872f', '#b45aa8']),
+  sk('sunset', '선셋', '래더 10승', p => p.wins >= 10, '#140a1c', '#6a2a4a', '#ff9a5a', '#ffb13b', '#ff4f7a', '#fff0d8', '24,8,28', ['#ff4f7a', '#e8872f', '#b45aa8']),
   sk('mono', '모노', '플레이 100번', p => p.plays >= 100, '#0e0e10', '#3a3a3e', '#9a9aa2', '#ffffff', '#bbbbbb', '#f2f2f2', '0,0,0', ['#6a6a70', '#55555a', '#808088']),
-  sk('arcade', '레트로 아케이드', '레벨 25', p => p.level >= 25, '#0b0f08', '#2a3a1a', '#a7c23a', '#c8ff3a', '#ff9a1f', '#b8ff5a', '2,8,2', ['#e8601f', '#c9a21f', '#5fa82f']),
+  sk('arcade', '레트로 아케이드', '레벨 25', p => p.level >= 25, '#0a0a1e', '#2a1f5a', '#ff5ad0', '#ffd22e', '#ff3b3b', '#ffe27a', '4,4,24', ['#ff3b3b', '#ffd22e', '#37a8ff']),
   sk('cosmos', '코스모스', '레벨 20', p => p.level >= 20, '#05061a', '#1b1f5c', '#8fa6ff', '#9fe8ff', '#ff7ac8', '#e8f0ff', '4,5,22', ['#ff7ac8', '#6f7cff', '#2fc4e8']),
   sk('clockwork', '태엽 공방', '풀 콤보 30번', p => p.fcs >= 30, '#140d08', '#5a3a1c', '#d9a05a', '#ffc46a', '#6fe0d0', '#ffe8c0', '10,6,3', ['#c2452a', '#d9a05a', '#5a8f7a']),
   sk('candy', '캔디', '플레이 200번', p => p.plays >= 200, '#1a0d1f', '#7a3f8f', '#ffc2ee', '#ff8ad8', '#7dffe0', '#fff0fb', '22,8,28', ['#ff6aa0', '#7dffe0', '#ffd45e']),
   sk('dancheong', '단청', '래더 30승', p => p.wins >= 30, '#0a0f0e', '#7a2420', '#e8b63a', '#ffcf5a', '#ff5a4a', '#fff2d0', '6,10,9', ['#c8352f', '#1f8a70', '#2a5fb0'])
 ]
-Object.assign(ART, ART2); setLamps(lamps) // 새로 그린 스킨 넷의 그림 (lamps는 아래에 선언돼 있어 호출 시점에 쓴다)
+Object.assign(ART, ART2, ART3, ART4); setLamps(lamps) // 새로 그린 스킨 넷의 그림 (lamps는 아래에 선언돼 있어 호출 시점에 쓴다)
 // 지금 쓸 기어: 고른 번호가 아직 안 풀렸으면 스틸 (프로필이 없으면 스틸만 쓴다)
 export const gearOf = (i: number, p: Profile | undefined) => { const g = GEAR_SKINS[i] ?? GEAR_SKINS[0]; return p && (p.id === OWNER_ID || g.ok(p)) || g === GEAR_SKINS[0] ? g : GEAR_SKINS[0] }
 // 스킨마다 다른 생김새: 기둥 무늬(rail)·필드 바탕 무늬(field)·날개 모양(wing)·콘솔 윗모서리를 깎는 정도(cut)

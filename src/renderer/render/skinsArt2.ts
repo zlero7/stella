@@ -5,20 +5,20 @@ import { mix, type GearSkin, type Lit } from './gear'
 import type { Art, PathFn } from './skinsArt'
 
 type G = CanvasRenderingContext2D
-const rnd = (i: number) => ((i * 7919 + 13) % 97) / 97
-const poly = (g: G, pts: number[][]) => { g.beginPath(); pts.forEach(([px, py], i) => (i ? g.lineTo(px, py) : g.moveTo(px, py))); g.closePath() }
-const vg = (g: G, y0: number, y1: number, ...c: string[]) => { const k = g.createLinearGradient(0, y0, 0, y1); c.forEach((s, i) => k.addColorStop(i / (c.length - 1), s)); return k }
-const hg = (g: G, x0: number, x1: number, ...c: string[]) => { const k = g.createLinearGradient(x0, 0, x1, 0); c.forEach((s, i) => k.addColorStop(i / (c.length - 1), s)); return k }
-const lab = (g: G, x: number, y: number, w: number, h: number, t: string, color: string) => { g.font = `900 ${t.length > 2 ? 15 : 26}px ${FONT}`; g.textAlign = 'center'; g.fillStyle = color; g.fillText(t, x + w / 2, y + h / 2 + (t.length > 2 ? 5 : 9)); g.textAlign = 'left' }
+export const rnd = (i: number) => ((i * 7919 + 13) % 97) / 97
+export const poly = (g: G, pts: number[][]) => { g.beginPath(); pts.forEach(([px, py], i) => (i ? g.lineTo(px, py) : g.moveTo(px, py))); g.closePath() }
+export const vg = (g: G, y0: number, y1: number, ...c: string[]) => { const k = g.createLinearGradient(0, y0, 0, y1); c.forEach((s, i) => k.addColorStop(i / (c.length - 1), s)); return k }
+export const hg = (g: G, x0: number, x1: number, ...c: string[]) => { const k = g.createLinearGradient(x0, 0, x1, 0); c.forEach((s, i) => k.addColorStop(i / (c.length - 1), s)); return k }
+export const lab = (g: G, x: number, y: number, w: number, h: number, t: string, color: string) => { g.font = `900 ${t.length > 2 ? 15 : 26}px ${FONT}`; g.textAlign = 'center'; g.fillStyle = color; g.fillText(t, x + w / 2, y + h / 2 + (t.length > 2 ? 5 : 9)); g.textAlign = 'left' }
 const pill: PathFn = (g, x, y, w, h) => { g.beginPath(); g.roundRect(x, y, w, h, h / 2) }
-const rr = (r: number): PathFn => (g, x, y, w, h) => { g.beginPath(); g.roundRect(x, y, w, h, r) }
-const fieldFill = (g: G, x: number, fw: number, pa: number, k0: GearSkin) => { g.fillStyle = `rgba(${k0.field},${pa})`; g.fillRect(x - 4, 0, fw + 8, 720) }
-const grooves = (g: G, x: number, fw: number, jy: number, k0: GearSkin) => { g.fillStyle = mix(k0.dark, '#000000', 0.6); g.fillRect(x - 22, 90, 10, jy - 90); g.fillRect(x + fw + 12, 90, 10, jy - 90) } // 체력 게이지 홈 (게이지는 Play가 그린다)
-const sides = (x: number, fw: number) => [[-1, x - 30], [1, x + fw + 4]] as const
-const body = (g: G, k0: GearSkin, top: number, edge: string, lw = 1.5) => { g.fillStyle = vg(g, top, 720, mix(k0.mid, k0.dark, 0.35), mix(k0.dark, k0.mid, 0.2), mix(k0.dark, '#000000', 0.4)); g.fill(); g.strokeStyle = edge; g.lineWidth = lw; g.stroke() }
-const dot = (g: G, x: number, y: number, r: number) => { g.beginPath(); g.arc(x, y, r, 0, 7); g.fill() }
+export const rr = (r: number): PathFn => (g, x, y, w, h) => { g.beginPath(); g.roundRect(x, y, w, h, r) }
+export const fieldFill = (g: G, x: number, fw: number, pa: number, k0: GearSkin) => { g.fillStyle = `rgba(${k0.field},${pa})`; g.fillRect(x - 4, 0, fw + 8, 720) }
+export const grooves = (g: G, x: number, fw: number, jy: number, k0: GearSkin) => { g.fillStyle = mix(k0.dark, '#000000', 0.6); g.fillRect(x - 22, 90, 10, jy - 90); g.fillRect(x + fw + 12, 90, 10, jy - 90) } // 체력 게이지 홈 (게이지는 Play가 그린다)
+export const sides = (x: number, fw: number) => [[-1, x - 30], [1, x + fw + 4]] as const
+export const body = (g: G, k0: GearSkin, top: number, edge: string, lw = 1.5) => { g.fillStyle = vg(g, top, 720, mix(k0.mid, k0.dark, 0.35), mix(k0.dark, k0.mid, 0.2), mix(k0.dark, '#000000', 0.4)); g.fill(); g.strokeStyle = edge; g.lineWidth = lw; g.stroke() }
+export const dot = (g: G, x: number, y: number, r: number) => { g.beginPath(); g.arc(x, y, r, 0, 7); g.fill() }
 // 톱니바퀴 윤곽: teeth개의 이빨이 있는 바퀴 (r 바깥 반지름, 이빨 높이 r*0.22)
-const cogPath = (g: G, cx: number, cy: number, r: number, teeth: number, rot: number) => {
+export const cogPath = (g: G, cx: number, cy: number, r: number, teeth: number, rot: number) => {
   g.beginPath(); const ri = r * 0.78
   for (let i = 0; i < teeth; i++) {
     const a = rot + (i / teeth) * Math.PI * 2, s = Math.PI / teeth, p = (u: number, rad: number) => [cx + Math.cos(a + u * s) * rad, cy + Math.sin(a + u * s) * rad]
@@ -29,7 +29,7 @@ const cogPath = (g: G, cx: number, cy: number, r: number, teeth: number, rot: nu
 }
 
 // 필드 안을 흐르는 별들 (번쩍임)
-const stars = (g: G, x0: number, w: number, h: number, n: number, seed: number, a: number) => {
+export const stars = (g: G, x0: number, w: number, h: number, n: number, seed: number, a: number) => {
   const now = performance.now()
   for (let i = 0; i < n; i++) {
     const tw = 0.5 + 0.5 * Math.sin(now / 700 + i * 1.7)
@@ -224,4 +224,4 @@ export const ART2: Record<string, Art> = {
 // 기둥 바깥 램프 자리: gear.ts의 lamps와 같다 (순환 참조를 피해 gear.ts가 넘겨 주는 함수를 쓴다)
 let lampFn: ((g: G, cx: number, lit: Lit, k0: GearSkin) => void) | undefined
 export const setLamps = (f: typeof lampFn) => { lampFn = f }
-function lamps2(g: G, x: number, fw: number, lit: Lit, k0: GearSkin) { lampFn?.(g, x - 66, lit, k0); lampFn?.(g, x + fw + 66, lit, k0) }
+export function lamps2(g: G, x: number, fw: number, lit: Lit, k0: GearSkin) { lampFn?.(g, x - 66, lit, k0); lampFn?.(g, x + fw + 66, lit, k0) }
