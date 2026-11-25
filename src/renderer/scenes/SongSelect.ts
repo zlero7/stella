@@ -6,7 +6,7 @@ import { profileCard } from '../render/profileCard'
 import { fetchRank, type RankRow } from '../data/Rank'
 import { optBadges } from '../render/rankBadge'
 import { footer, slant, FONT, CYAN, AMBER, NOTE_COLORS, accentFill, artOf, drawBg, drawCover, ease, fit, glow, hit, marquee, overRect, pill, press, starPath, chip } from '../render/theme'
-import { chartFile, diffName, diffsOf, ensureSong, loadSongs, songUrl } from '../data/Songs'
+import { chartFile, diffName, diffsOf, ensureSong, loadSongs, serverLevel, songUrl } from '../data/Songs'
 import { needsRegen } from '../game/AutoChart'
 import { account, getRecords, isFav, saveSettings, settings, toggleFav } from '../data/Storage'
 import { pickSong } from '../core/Versus'
@@ -40,7 +40,7 @@ export const SongSelect = (sm: SceneManager): Scene => {
   let worker: Worker | undefined
   let query = '', searching = false, sortMode = 0 // 검색어(제목·가수 포함) · F2로 입력 중인지 · F4 정렬: 0 서버 순서, 1 제목, 2 가수
   let inp: HTMLInputElement | undefined // 한글(IME)도 받으려고 화면 밖 입력칸을 쓴다. 캔버스에는 검색창만 그린다
-  const SORTS = ['기본 순서', '제목순', '가수순', '내 점수순', '최근 플레이순']
+  const SORTS = ['기본 순서', '제목순', '가수순', '내 점수순', '최근 플레이순', '레벨 낮은 순', '레벨 높은 순'] // 레벨순은 HARD 기준
   let moreHints = false // F9: 곡 선택 아래 안내 칩 펼치기
   let rankOpen = false, rankKey = '', rankRows: RankRow[] | undefined // F8: 고른 곡·난이도의 온라인 순위 (undefined = 받는 중)
   const FILTERS = ['전체 곡', '즐겨찾기만', '안 쳐 본 곡만']; let fmode = 0 // F6 즐겨찾기 넣고 빼기 · F7 목록 거르기
@@ -101,7 +101,10 @@ export const SongSelect = (sm: SceneManager): Scene => {
     if (sortMode) {
       const byTitle = (a: Song, b: Song) => a.meta.title.localeCompare(b.meta.title, 'ko')
       if (sortMode < 3) songs = [...songs].sort((a, b) => (sortMode === 2 ? a.meta.artist.localeCompare(b.meta.artist, 'ko') : 0) || byTitle(a, b))
-      else { // 내 점수순(안 쳐 본 곡은 맨 뒤) · 최근 플레이순: 곡마다 한 번만 계산해 둔다
+      else if (sortMode > 4) { // 레벨순: HARD 레벨(서버 목록), 레벨을 모르는 곡은 맨 뒤
+        const lv = (x: Song) => serverLevel(x.dir, 'hard') || (sortMode === 5 ? 99 : -1)
+        songs = [...songs].sort((a, b) => (sortMode === 5 ? lv(a) - lv(b) : lv(b) - lv(a)) || byTitle(a, b))
+      } else { // 내 점수순(안 쳐 본 곡은 맨 뒤) · 최근 플레이순: 곡마다 한 번만 계산해 둔다
         const key = new Map(songs.map(x => [x.dir, sortMode === 3 ? bestOf(x)?.score ?? -1 : Math.max(0, ...diffsOf(x).flatMap(d => getRecords(x.dir, d).map(r => r.at ?? 0)))]))
         songs = [...songs].sort((a, b) => key.get(b.dir)! - key.get(a.dir)! || byTitle(a, b))
       }
@@ -233,13 +236,13 @@ export const SongSelect = (sm: SceneManager): Scene => {
         g.fillStyle = sel ? col : 'rgba(6,9,20,.9)'; if (sel) glow(g, col, 12, () => g.fillRect(x, TY, TW, TH)); else g.fillRect(x, TY, TW, TH)
         g.strokeStyle = col; g.lineWidth = 2; g.strokeRect(x + 1, TY + 1, TW - 2, TH - 2)
         g.font = `800 14px ${FONT}`; g.fillStyle = sel ? '#0a1020' : col; g.fillText(diffName(d), x + 11, TY + 22)
-        g.font = `900 17px ${FONT}`; g.fillStyle = sel ? '#0a1020' : '#fff'; g.textAlign = 'right'; g.fillText(levels[d] ? String(levels[d]) : pending.has(pk(song.dir, d)) ? '…' : '-', x + TW - 10, TY + 23); g.textAlign = 'left'
+        g.font = `900 17px ${FONT}`; g.fillStyle = sel ? '#0a1020' : '#fff'; g.textAlign = 'right'; g.fillText((levels[d] || serverLevel(song.dir, d)) ? String(levels[d] || serverLevel(song.dir, d)) : pending.has(pk(song.dir, d)) ? '…' : '-', x + TW - 10, TY + 23); g.textAlign = 'left'
         const r = getRecords(song.dir, d)[0]
         if (r) { g.fillStyle = sel ? '#0a1020' : col; g.fillRect(x + 4, TY + TH + 3, TW - 8, 3); if (r.badge) drawLamp(g, r.badge, x + TW / 2, TY + TH + 14, 0.45) } // 기록이 있는 난이도는 칸 밑에 선(풀콤보 이상은 램프)
       })
       // 레벨 별: 색이 이어지는 별 열 칸 (디맥의 색색의 레벨 표시)
       {
-        const lv = levels[ds[di]] ?? 0, filled = Math.min(10, Math.round(lv / 1.5)), sy = 454
+        const lv = levels[ds[di]] || serverLevel(song.dir, ds[di]), filled = Math.min(10, Math.round(lv / 1.5)), sy = 454
         g.font = `700 12px ${FONT}`; g.fillStyle = CYAN; g.fillText('LEVEL', PX + 16, sy + 4)
         for (let k = 0; k < 10; k++) { starPath(g, PX + 86 + k * 24, sy, 9); g.fillStyle = k < filled ? `hsl(${335 - k * 14} 92% 62%)` : 'rgba(255,255,255,.16)'; g.fill() }
         g.font = `900 20px ${FONT}`; g.fillStyle = '#fff'; g.textAlign = 'right'; g.fillText(lv ? String(lv) : '-', PX + PW - 16, sy + 7); g.textAlign = 'left'

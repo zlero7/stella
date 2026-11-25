@@ -34,6 +34,8 @@ const CORS = { 'Access-Control-Allow-Origin': '*', 'X-Content-Type-Options': 'no
 const CHART = /^\dk-[\w-]+\.json$/, MEDIA = /^[\w-]+\.(\w+)$/
 const servable = n => n === 'meta.json' || CHART.test(n) || (MEDIA.exec(n) && [...AUDIO, ...IMG].includes(MEDIA.exec(n)[1].toLowerCase()))
 let indexCache = { at: 0, body: '', etag: '' }
+const lvCache = new Map() // 채보 파일 → [수정시각, 레벨]: 목록을 만들 때마다 수천 개를 다시 읽지 않는다
+const levelOfChart = p => { try { const m = fs.statSync(p).mtimeMs, c = lvCache.get(p); if (c && c[0] === m) return c[1]; const lv = +JSON.parse(fs.readFileSync(p, 'utf8')).level || 0; lvCache.set(p, [m, lv]); return lv } catch { return 0 } }
 function songIndex() {
   if (Date.now() - indexCache.at < 30000) return indexCache.body
   const out = []
@@ -49,7 +51,8 @@ function songIndex() {
     const files = [...new Set([meta.audio, meta.video, meta.cover, meta.bg, ...meta.charts, 'meta.json'])].filter(n => n && names.includes(n) && servable(n))
     let fl; try { fl = files.map(name => { const s = fs.statSync(path.join(dir, name)); return { name, size: s.size, mt: AUDIO.includes(name.split('.').pop().toLowerCase()) ? 0 : Math.round(s.mtimeMs) } }) } catch { continue } // 곡을 다시 만드는 중에 파일이 사라졌으면 이번 목록에서만 뺀다 (목록 전체가 실패하지 않게). 영상·음원은 크기만 본다 (다시 만들어 시각만 바뀐 큰 파일 때문에 모두가 다시 받지 않게)
     // v: 곡 내용의 지문. 앱은 받아 둔 곡의 v가 서버와 다르면 그 곡을 다시 받는다 (채보를 고쳐도 유저에게 전해지게)
-    out.push({ dir: d.name, meta, v: crypto.createHash('sha1').update(JSON.stringify(fl)).digest('hex').slice(0, 10), files: fl.map(({ name, size }) => ({ name, size })) })
+    const lv = {}; for (const c of meta.charts) { const l = levelOfChart(path.join(dir, c)); if (l) lv[c.replace(/\.json$/, '')] = l } // 곡 선택의 레벨순 정렬·레벨 표시용 (예: '4k-hard': 9)
+    out.push({ dir: d.name, lv, meta, v: crypto.createHash('sha1').update(JSON.stringify(fl)).digest('hex').slice(0, 10), files: fl.map(({ name, size }) => ({ name, size })) })
   }
   const body = JSON.stringify(out)
   indexCache = { at: Date.now(), body, etag: '"' + crypto.createHash('sha1').update(body).digest('hex').slice(0, 16) + '"' }

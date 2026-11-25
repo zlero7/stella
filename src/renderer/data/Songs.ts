@@ -34,10 +34,12 @@ export const songUrl = (dir: string, file: string) => {
 
 // 미리듣기 시작 지점: meta에 없으면 곡의 30% 지점(보통 앞의 인트로를 지난 부분)
 export const previewStartOf = (start: number | undefined, duration: number) => Math.min(start || duration * 0.3, Math.max(duration - 5, 0))
+// 서버 목록에 실린 난이도별 레벨 (예: '4k-hard'). 곡 선택의 레벨순 정렬과, 채보를 읽기 전 표시에 쓴다
+export const serverLevel = (dir: string, diff: string, keys = settings.keyMode) => entries.find(e => e.dir === dir)?.lv?.[`${keys}k-${diff}`] ?? 0
 export const diffName = (d: string) => d.toUpperCase()
 
 // ---- 서버 곡 목록: 곡은 서버 목록(/songs/index.json)에 있는 것만 보인다. 이 PC에 없는 곡은 고를 때 받아 온다 ----
-interface Entry { dir: string; meta: Song['meta']; v?: string; files: { name: string; size: number }[] }
+interface Entry { dir: string; meta: Song['meta']; v?: string; lv?: Record<string, number>; files: { name: string; size: number }[] }
 // 받아 둔 곡의 서버 지문(v): 서버의 v가 바뀌면(채보를 고치는 등) 그 곡을 다시 받는다. 기록이 없는 예전 곡은 지금 서버 것으로 보고 시작한다
 const VER_KEY = 'stella.songVer'
 const readVers = (): Record<string, string> => { try { return JSON.parse(localStorage.getItem(VER_KEY) ?? '{}') } catch { return {} } }
