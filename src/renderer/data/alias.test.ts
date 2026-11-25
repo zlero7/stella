@@ -15,3 +15,7 @@ test('그린애플도 한글로 찾는다', () => {
   assert.match(aliasOf('CHEERS', 'Mrs. GREEN APPLE'), /그린애플/)
   assert.match(aliasOf('CHEERS', 'Mrs. GREEN APPLE'), /치어스/)
 })
+test('요네즈 켄시도 한글로 찾는다', () => {
+  assert.match(aliasOf('Lemon', 'Kenshi Yonezu'), /요네즈 켄시/)
+  assert.match(aliasOf('Lemon', 'Kenshi Yonezu'), /레몬/)
+})
