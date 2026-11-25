@@ -31,6 +31,7 @@ const CATS: { name: string; items: Item[] }[] = [
   ] },
   { name: 'GAME', items: [
     { label: '싱크 보정', go: 'calib', value: () => '처음이라면 여기부터 · 메트로놈으로 측정' },
+    { label: '튜토리얼', go: 'tutorial', value: () => '단노트 · 롱노트 · 동타 연습 (기록 안 됨)' },
     { label: '스크롤 속도', value: () => `${settings.scroll.toFixed(1)}  ·  ${visibleMs()}ms`, frac: () => (settings.scroll - 1) / 19, change: d => { settings.scroll = clamp(Math.round((settings.scroll + d * 0.1) * 10) / 10, 1, 20) } },
     { label: '필드 위치', value: () => ALIGNS[settings.align], change: d => { settings.align = clamp(settings.align + d, 0, 2) } },
     { label: 'FAST/SLOW 표시', value: () => (settings.fastSlow ? '켜짐' : '꺼짐'), change: () => { settings.fastSlow = settings.fastSlow ? 0 : 1 } },

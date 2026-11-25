@@ -10,6 +10,7 @@ import { Result } from './scenes/Result'
 import { Settings } from './scenes/Settings'
 import { saveSettings, settings } from './data/Storage'
 import { Calibrate } from './scenes/Calibrate'
+import { Tutorial } from './scenes/Tutorial'
 import { Lobby } from './scenes/Lobby'
 import { VsResult } from './scenes/VsResult'
 import { Account } from './scenes/Account'
@@ -35,6 +36,7 @@ sm.add('play', Play(sm))
 sm.add('result', Result(sm))
 sm.add('settings', Settings(sm))
 sm.add('calib', Calibrate(sm))
+sm.add('tutorial', Tutorial(sm))
 sm.add('vs', Lobby(sm))
 sm.add('vsresult', VsResult(sm))
 sm.add('account', Account(sm))
