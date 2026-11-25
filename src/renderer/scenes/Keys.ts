@@ -3,7 +3,8 @@ import { FONT, AMBER, NAVY, accentFill, drawBg, ease, hit, pill, press, chip, he
 import { settings, saveSettings, keyLabel } from '../data/Storage'
 
 // 키 설정: 4K / 6K 탭, 위쪽 키캡 그림, 레인마다 한 줄씩 (ACTION | KEYBOARD). 줄을 고르고 Enter → 새 키를 누르면 바뀐다 (이미 쓰는 키면 서로 자리를 바꾼다)
-const OK = /^(Key|Digit|Space|Semicolon|Quote|Comma|Period|Slash)/
+// 레인 키로 쓸 수 있는 키. ↑↓는 플레이 중 속도 조절이라 뺀다. Tab·Enter·Esc·F키도 메뉴·재시작에 쓰여 뺀다
+const OK = /^(Key[A-Z]|Digit\d|Numpad\d|Space|Semicolon|Quote|Comma|Period|Slash|Backquote|Minus|Equal|Bracket(Left|Right)|Backslash|Shift(Left|Right)|Arrow(Left|Right))$/
 
 export const Keys = (sm: SceneManager): Scene => {
   let n = 4, sel = 0, binding = false, back = 'title', backData: unknown // back·backData: 설정 화면이 돌아갈 곳

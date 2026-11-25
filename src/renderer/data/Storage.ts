@@ -22,7 +22,8 @@ export const saveSettings = () => write('rg.settings', settings)
 export interface Account { token: string; id: string; nick: string }
 export const account: Account = read('rg.account', { token: '', id: '', nick: '' })
 export const saveAccount = () => write('rg.account', account)
-export const keyLabel = (k: string) => k.replace(/^(Key|Digit)/, '').replace('Space', 'SPACE').replace('Semicolon', ';').replace('Quote', "'").replace('Comma', ',').replace('Period', '.').replace('Slash', '/').toUpperCase()
+const KEY_NAMES: Record<string, string> = { ShiftLeft: 'L SHIFT', ShiftRight: 'R SHIFT', ArrowLeft: '←', ArrowRight: '→', Backquote: '`', Minus: '-', Equal: '=', BracketLeft: '[', BracketRight: ']', Backslash: '\\' }
+export const keyLabel = (k: string) => KEY_NAMES[k] ?? k.replace(/^Numpad(\d)$/, 'NUM$1').replace(/^(Key|Digit)/, '').replace('Space', 'SPACE').replace('Semicolon', ';').replace('Quote', "'").replace('Comma', ',').replace('Period', '.').replace('Slash', '/').toUpperCase()
 
 // 곡·난이도마다 점수 상위 10개를 남긴다 (랭킹)
 export interface Best { score: number; accuracy: number; maxCombo: number; badge?: string; at?: number; pace?: number[] } // badge: 'ALL PERFECT' | 'FULL COMBO' | ''
