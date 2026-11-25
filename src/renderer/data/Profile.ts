@@ -8,6 +8,10 @@ export interface Profile {
   lp: number; tier: string; div: number; pt: number; tierLabel: string; wins: number; losses: number; draws: number
   cls: { idx: number; name: string; sub: number; points: number; lo: number; hi: number; label: string }
   avatar: string; plate: string; title: string; titleName: string; plates: Item[]; titles: Item[]
+  top?: { k: string; pts: number }[] // DJ CLASS에 들어가는 상위 20개 기록 (k = 곡폴더/4k-hard)
+  achievements?: { id: string; name: string; desc: string; goal: number; cur: number; done: boolean }[]
+  stats?: { playSec: number; judged: number[]; grades: Record<string, number>; songs: number; favorite: { dir: string; plays: number }[] }
+  daily?: { goal: number; bonus: number; have: number; claimed: boolean } // 일일 목표: 오늘 서로 다른 곡 수와 보너스 수령 여부
   unlocked?: { at: number; plates: { id: string; name: string }[]; titles: { id: string; name: string }[] } // 가장 최근 판으로 새로 열린 꾸미기 (at이 방금이면 결과에 NEW로). 옛 서버는 없다
 }
 // 다른 계정으로 바꾸거나 로그아웃하면 이전 사람의 프로필이 잠깐이라도 보이지 않게, 지금 로그인한 계정의 것일 때만 돌려준다

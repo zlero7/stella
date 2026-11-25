@@ -36,6 +36,7 @@ export const songUrl = (dir: string, file: string) => {
 export const previewStartOf = (start: number | undefined, duration: number) => Math.min(start || duration * 0.3, Math.max(duration - 5, 0))
 // 서버 목록에 실린 난이도별 레벨 (예: '4k-hard'). 곡 선택의 레벨순 정렬과, 채보를 읽기 전 표시에 쓴다
 export const serverLevel = (dir: string, diff: string, keys = settings.keyMode) => entries.find(e => e.dir === dir)?.lv?.[`${keys}k-${diff}`] ?? 0
+export const songTitle = (dir: string) => entries.find(e => e.dir === dir)?.meta.title ?? dir // 서버 목록의 곡 이름 (목록에 없으면 폴더 이름)
 export const diffName = (d: string) => d.toUpperCase()
 
 // ---- 서버 곡 목록: 곡은 서버 목록(/songs/index.json)에 있는 것만 보인다. 이 PC에 없는 곡은 고를 때 받아 온다 ----

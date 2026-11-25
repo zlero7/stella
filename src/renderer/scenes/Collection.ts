@@ -4,9 +4,10 @@ import { plateArt } from '../render/plateArt'
 import { PLATE_COLOR, TIER_COLOR, equip, prof, refreshProfile, type Item } from '../data/Profile'
 import { FONT, AMBER, CYAN, ICE, accentFill, card, chip, drawBg, ease, fit, glow, header, hit, meter, overRect, pill, press, slant } from '../render/theme'
 import { gem, profileCard } from '../render/profileCard'
+import { drawAchieve, drawStats, drawTop } from './collectionTabs'
 
 // 컬렉션: 디맥의 COLLECTION처럼 내 프로필을 보고 꾸민다. 탭 — DJ CLASS(등급·전적) · PLATE(카드 색) · TITLE(칭호). 해금은 서버가 정한다
-const TABS = ['DJ CLASS', 'PLATE', 'TITLE'] as const
+const TABS = ['DJ CLASS', 'PLATE', 'TITLE', 'STATS', 'ACHIEVE'] as const
 
 export const Collection = (sm: SceneManager): Scene => {
   let tab = 0, sel = 0, msg = '', busy = false
@@ -71,9 +72,9 @@ export const Collection = (sm: SceneManager): Scene => {
         meter(g, 600, 330, 530, f)
         g.font = `600 13px ${FONT}`; g.fillStyle = ICE; g.textAlign = 'left'; g.fillText(`${lo}`, 600, 360); g.textAlign = 'right'
         g.fillText(last ? 'MAX' : `NEXT  ${c.hi} PT`, 1130, 360)
-        g.textAlign = 'center'; g.font = `14px ${FONT}`; g.fillStyle = ICE
-        g.fillText('곡·난이도·키 수마다 최고 점수에 난이도(EASY ×0.5 · NORMAL ×0.75 · HARD ×1 · STELLA ×1.25)를 곱해', 865, 430)
-        g.fillText('가장 높은 20개 기록을 더한 값입니다. 같은 곡도 난이도가 다르면 따로 셉니다. 온라인 랭킹에 올린 기록이 쌓입니다.', 865, 456)
+        drawTop(g, p)
+      } else if (tab === 3) { drawStats(g, p)
+      } else if (tab === 4) { drawAchieve(g, p)
       } else {
         const it = items(), cs = cols(), cw = tab === 1 ? 160 : 690, ch = tab === 1 ? (it.length > 8 ? 132 : 150) : 40, gap = tab === 1 ? (it.length > 8 ? 14 : 16) : 6
         const per = tab === 2 ? 8 : it.length, first = tab === 2 ? Math.min(Math.max(0, sel - per + 1), Math.max(0, it.length - per)) : 0 // 칭호가 많으면 카드 안에서 스크롤
