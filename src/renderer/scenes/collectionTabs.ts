@@ -26,6 +26,11 @@ const hm = (s: number) => (s >= 3600 ? `${Math.floor(s / 3600)}시간 ${Math.flo
 
 // STATS 탭: 오늘의 목표 · 플레이 시간 · 판정 누계 · 등급 분포 · 가장 많이 친 곡
 export function drawStats(g: CanvasRenderingContext2D, p: Profile) {
+  g.save(); g.translate(0, 22) // 카드 왼쪽 위 이름표(STATS)와 첫 제목이 겹치지 않게 전체를 조금 내린다
+  drawStatsBody(g, p)
+  g.restore()
+}
+function drawStatsBody(g: CanvasRenderingContext2D, p: Profile) {
   const s = p.stats, d = p.daily, X = 530, RX = 900, head = (t: string, x: number, y: number) => { g.textAlign = 'left'; g.font = `800 14px ${FONT}`; g.fillStyle = CYAN; g.fillText(t, x, y) }
   head('TODAY', X, 150)
   g.textAlign = 'left'
