@@ -196,19 +196,15 @@ const rr6: PathFn = (g, x, y, w, h) => { g.beginPath(); g.roundRect(x, y, w, h, 
 export interface Panel { score: number; scroll: number; mult: number; hp: number; hpLow: boolean }
 // 건반 아래: 점수 LCD와 칩 세 개(속도·콤보 배율·체력). 건반은 Play가 그린다
 export function drawConsoleFront(g: CanvasRenderingContext2D, x: number, fw: number, jy: number, p: Panel, k0: GearSkin) {
-  const lx = x + 10, lw = fw - 20, ly = jy + 104, lh = 44, lcdP = ART[k0.id]?.lcd ?? rr6, chipP = ART[k0.id]?.chip ?? rr6
-  g.fillStyle = mix(k0.dark, '#000000', 0.6); lcdP(g, lx, ly, lw, lh); g.fill()
-  g.fillStyle = k0.lcd; g.textAlign = 'center'; g.font = `800 28px ${FONT}`
-  glow(g, k0.lcd, 8, () => g.fillText(String(p.score).padStart(7, '0'), lx + lw / 2, ly + 35))
-  g.font = `700 11px ${FONT}`; g.fillStyle = mix(k0.lcd, k0.dark, 0.5); g.textAlign = 'left'; g.fillText('S C O R E', lx + 8, ly + 12)
-  g.fillStyle = dotPattern(g); lcdP(g, lx, ly, lw, lh); g.fill()
-  g.strokeStyle = mix(k0.mid, k0.light, 0.4); g.lineWidth = 1.5; lcdP(g, lx, ly, lw, lh); g.stroke()
-  const cw = (lw - 12) / 3, cy = jy + 156
+  const lx = x + 10, lw = fw - 20, chipP = ART[k0.id]?.chip ?? rr6
+  g.fillStyle = mix(k0.lcd, k0.dark, 0.25); g.textAlign = 'right'; g.font = `700 13px ${FONT}` // 디맥: 건반 아래 오른쪽에 작은 점수 글자만
+  g.fillText(String(p.score).padStart(7, '0'), lx + lw, jy + 140)
+  const cw = (lw - 18) / 4, cy = jy + 156
   const chips: [string, string, string, string][] = [
     ['SPEED', p.scroll.toFixed(1), k0.chips[0], mix(k0.chips[0], '#000000', 0.4)],
-    ['COMBO', `x${p.mult.toFixed(2)}`, k0.chips[1], mix(k0.chips[1], '#000000', 0.4)],
-    ['HP', `${Math.round(p.hp)}%`, p.hpLow ? k0.warn : k0.chips[2], mix(p.hpLow ? k0.warn : k0.chips[2], '#000000', 0.4)]
-  ]
+    ['COMBO', `x${p.mult.toFixed(2)}`, k0.chips[1], mix(k0.chips[1], '#000000', 0.4)]
+  ] // 체력은 필드 양옆 세로 막대가 보여 주므로 칩에서 뺐다. 남는 두 칸은 디맥의 이펙터 칸처럼 비워 둔다
+  for (const i of [2, 3]) { g.fillStyle = 'rgba(0,0,0,.35)'; chipP(g, lx + i * (cw + 6), cy, cw, 32); g.fill(); g.strokeStyle = 'rgba(255,255,255,.15)'; g.lineWidth = 1; g.stroke() }
   chips.forEach(([label, value, c1, c2], i) => {
     const cx = lx + i * (cw + 6), k = g.createLinearGradient(0, cy, 0, cy + 32); k.addColorStop(0, c1); k.addColorStop(1, c2)
     g.fillStyle = k; chipP(g, cx, cy, cw, 32); g.fill()

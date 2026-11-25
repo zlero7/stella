@@ -304,11 +304,11 @@ export const Play = (sm: SceneManager): Scene => {
         const ap = sk.counts.slice(1).every(c => c === 0), fc = sk.counts[MISS] === 0
         const pop = 1 + 0.18 * Math.max(0, 1 - (performance.now() - flash.at) / 120) // 칠 때마다 살짝 커졌다 돌아온다
         // 디맥: 필드 위쪽에 아주 큰 반투명 콤보 숫자, 그 아래 금색 큰 배율 글자
-        g.save(); g.translate(CX, 178); g.scale(pop, pop)
-        g.globalAlpha = 0.6; g.font = `900 124px ${FONT}`; g.lineJoin = 'round'; g.lineWidth = 9; g.strokeStyle = 'rgba(2,5,12,.9)'; g.strokeText(String(sk.combo), 0, 0)
+        g.save(); g.translate(CX, 214); g.scale(pop, pop)
+        g.globalAlpha = 0.4; g.font = `900 66px ${FONT}`; g.lineJoin = 'round'; g.lineWidth = 6; g.strokeStyle = 'rgba(2,5,12,.9)'; g.strokeText(String(sk.combo), 0, 0)
         const cg = g.createLinearGradient(0, -90, 0, 6); if (ap) { cg.addColorStop(0, '#fff6c2'); cg.addColorStop(1, '#ffb52e') } else if (fc) { cg.addColorStop(0, '#f2fcff'); cg.addColorStop(1, '#8fdcff') } else { cg.addColorStop(0, '#ffffff'); cg.addColorStop(1, '#c4cbd8') }
         g.fillStyle = cg; g.fillText(String(sk.combo), 0, 0); g.globalAlpha = 1; g.restore()
-        g.font = `800 15px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.9)'; g.fillText(ap ? 'ALL PERFECT' : fc ? 'FULL COMBO' : 'COMBO', CX, 78)
+        g.font = `800 15px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.9)'; g.globalAlpha = 0.6; g.fillText(ap ? 'ALL PERFECT' : fc ? 'FULL COMBO' : 'COMBO', CX, 150); g.globalAlpha = 1 // 필드 위쪽에 작은 COMBO 글자와 흐린 숫자 (디맥)
       } // 배율(x1.00) 큰 글자는 시야를 가려 뺐다: 배율은 옆 기어의 COMBO 칩에 남아 있다
         g.restore(); g.textAlign = 'left'
       }
@@ -316,10 +316,10 @@ export const Play = (sm: SceneManager): Scene => {
         g.textAlign = 'center'; g.save(); g.translate(0, settings.hudY + (settings.judgeY ?? 0))
       const age = performance.now() - flash.at
       if (age < 380) { // 판정 글자: 정확도(%) 글자(y484) 위에 겹치지 않게 그보다 60px 위에 짧게 떴다 사라진다
-        g.globalAlpha = 1 - age / 380
+        g.globalAlpha = 0.75 * (1 - age / 380) // 디맥: 필드 폭의 6할쯤 되는 큰 글자를 반투명하게
         const jn = flash.j === 0 && Math.abs(flash.dt) <= MAX_WIN * sk.mul ? 'MAX' : JUDGES[flash.j].name // PERFECT 중 ±25ms 이내는 MAX
         const pct = `${Math.round(JUDGES[flash.j].weight * 100)}%` // 판정명 뒤에 정확도 반영 비율
-        g.font = `900 30px ${FONT}`; const nw = g.measureText(jn).width; const pw = nw + 8 + g.measureText(pct).width; g.textAlign = 'left' // 디맥: MAX 100% 처럼 이름과 %가 같은 크기
+        g.font = `900 36px ${FONT}`; const nw = g.measureText(jn).width; const pw = nw + 8 + g.measureText(pct).width; g.textAlign = 'left' // 디맥: MAX 100% 처럼 이름과 %가 같은 크기
         g.lineJoin = 'round'; g.lineWidth = 5; g.strokeStyle = 'rgba(4,9,24,.85)'; g.strokeText(jn, CX - pw / 2, 438)
         if (flash.j === 0) { const gg = g.createLinearGradient(0, 412, 0, 442); gg.addColorStop(0, '#fff6c2'); gg.addColorStop(0.55, '#ffd04a'); gg.addColorStop(1, '#d98a00'); g.fillStyle = gg } else g.fillStyle = JUDGE_COLORS[flash.j] // PERFECT는 금색
         g.fillText(jn, CX - pw / 2, 438)
