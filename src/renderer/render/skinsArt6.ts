@@ -115,7 +115,7 @@ export const ART6: Record<string, Art> = {
     consoleBack(g, x, fw, jy, _d, _chibi, k0) {
       const top = jy + 26; g.beginPath(); g.roundRect(x - 78, top, fw + 156, 720 - top + 30, 12); g.fillStyle = vg(g, top, 720, '#2a2c34', '#0a0b0e', '#000000'); g.fill(); g.strokeStyle = '#d8dce8'; g.lineWidth = 2; g.stroke()
       g.fillStyle = 'rgba(255,255,255,.1)'; g.beginPath(); g.moveTo(x - 70, top + 6); g.lineTo(x + 60, top + 6); g.lineTo(x - 10, top + 120); g.lineTo(x - 70, top + 120); g.closePath(); g.fill()
-      g.font = `800 12px ${FONT}`; g.fillStyle = '#e8c860'; g.textAlign = 'center'; g.fillText('S T E L L A', x + fw / 2, top + 20); g.textAlign = 'left'
+      // 폴보드 글자는 건반에 가려져 뺐다
       for (const [kx0, n] of [[x - 74, 3], [x + fw + 8, 3]] as const) for (let i = 0; i < n; i++) { g.fillStyle = vg(g, jy + 34, jy + 92, '#ffffff', '#c8ccd6'); g.fillRect(kx0 + i * 22, jy + 34, 20, 58); g.strokeStyle = '#2a2c34'; g.lineWidth = 1; g.strokeRect(kx0 + i * 22 + 0.5, jy + 34.5, 19, 57) } void k0
     },
     key(g, x, y, w, h, on, blue, label) {

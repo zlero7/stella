@@ -205,24 +205,23 @@ const dotPattern = (g: CanvasRenderingContext2D) => {
 
 export const keyArt = (id: string) => ART[id]?.key // 스틸이 아니면 건반도 스킨이 그린다
 const rr6: PathFn = (g, x, y, w, h) => { g.beginPath(); g.roundRect(x, y, w, h, 6) }
-export interface Panel { score: number; scroll: number; mult: number; hp: number; hpLow: boolean }
-// 건반 아래: 점수 LCD와 칩 세 개(속도·콤보 배율·체력). 건반은 Play가 그린다
+export interface Panel { score: number; scroll: number; mult: number; hp: number; hpLow: boolean; acc: number }
+// 건반 아래: 칩 네 개(속도·콤보 배율·체력·정확도). 점수는 화면 위 큰 글자가 보여 주므로 여기선 뺐다. 건반은 Play가 그린다
 export function drawConsoleFront(g: CanvasRenderingContext2D, x: number, fw: number, jy: number, p: Panel, k0: GearSkin) {
   const lx = x + 10, lw = fw - 20, chipP = ART[k0.id]?.chip ?? rr6
-  g.fillStyle = mix(k0.lcd, k0.dark, 0.25); g.textAlign = 'right'; g.font = `700 13px ${FONT}` // 디맥: 건반 아래 오른쪽에 작은 점수 글자만
-  g.fillText(String(p.score).padStart(7, '0'), lx + lw, jy + 140)
   const cw = (lw - 18) / 4, cy = jy + 156
   const chips: [string, string, string, string][] = [
     ['SPEED', p.scroll.toFixed(1), k0.chips[0], mix(k0.chips[0], '#000000', 0.4)],
-    ['COMBO', `x${p.mult.toFixed(2)}`, k0.chips[1], mix(k0.chips[1], '#000000', 0.4)]
-  ] // 체력은 필드 양옆 세로 막대가 보여 주므로 칩에서 뺐다. 남는 두 칸은 디맥의 이펙터 칸처럼 비워 둔다
-  for (const i of [2, 3]) { g.fillStyle = 'rgba(0,0,0,.35)'; chipP(g, lx + i * (cw + 6), cy, cw, 32); g.fill(); g.strokeStyle = 'rgba(255,255,255,.15)'; g.lineWidth = 1; g.stroke() }
+    ['COMBO', `x${p.mult.toFixed(2)}`, k0.chips[1], mix(k0.chips[1], '#000000', 0.4)],
+    ['HP', `${Math.round(p.hp)}%`, p.hpLow ? '#e0405f' : k0.chips[2], mix(p.hpLow ? '#e0405f' : k0.chips[2], '#000000', 0.4)],
+    ['ACC', `${p.acc.toFixed(1)}%`, mix(k0.accent, '#000000', 0.35), mix(k0.accent, '#000000', 0.65)]
+  ]
   chips.forEach(([label, value, c1, c2], i) => {
     const cx = lx + i * (cw + 6), k = g.createLinearGradient(0, cy, 0, cy + 32); k.addColorStop(0, c1); k.addColorStop(1, c2)
     g.fillStyle = k; chipP(g, cx, cy, cw, 32); g.fill()
     g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 1; g.stroke()
     g.textAlign = 'center'; g.fillStyle = 'rgba(255,255,255,.8)'; g.font = `700 11px ${FONT}`; g.fillText(label.split('').join(' '), cx + cw / 2, cy + 11)
-    g.fillStyle = '#fff'; g.font = `900 17px ${FONT}`; g.fillText(value, cx + cw / 2, cy + 27)
+    g.fillStyle = '#fff'; g.font = `900 ${value.length > 5 ? 14 : 17}px ${FONT}`; g.fillText(value, cx + cw / 2, cy + 27)
   })
   g.textAlign = 'left'
 }

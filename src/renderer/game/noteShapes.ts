@@ -18,7 +18,7 @@ const shine = (x: Ctx, y0: number, y1: number, a = 0.55) => { x.save(); x.clip()
 
 export const NOTES12: Record<string, Draw> = {
   steel(x, o, c) { // 유리 상판 패드: 어두운 강철 몸통에 색 LED 줄, 양끝 볼트
-    const p = pal(o, c), top = o ? '#4a5468' : '#ffffff', bot = o ? '#12151b' : '#a9b6c8'; glow(x, o ? p.col : '#ffffff', 11)
+    const p = pal(o, c), top = o ? '#6a7690' : '#ffffff', bot = o ? '#1a2030' : '#a9b6c8'; glow(x, o ? p.col : '#ffffff', 14)
     rr(x, 11, 9, 70, 26, 6); x.fillStyle = vg(x, 9, 35, top, bot); x.fill(); noGlow(x); x.strokeStyle = o ? p.col : '#8aa2c4'; x.lineWidth = 2; x.stroke(); shine(x, 9, 22, 0.4)
     glow(x, p.col, 6); rr(x, 19, 27, 54, 3.4, 1.7); x.fillStyle = o ? p.hi : p.col; x.fill(); noGlow(x)
     x.fillStyle = o ? '#c8d2e0' : '#6f86a8'; dot(x, 17, 22, 2.4); dot(x, 75, 22, 2.4); x.fillStyle = o ? '#10141c' : '#ffffff'; dot(x, 17, 22, 1); dot(x, 75, 22, 1)
@@ -101,11 +101,12 @@ export const NOTES12: Record<string, Draw> = {
     x.fillStyle = 'rgba(255,255,255,.55)'; x.beginPath(); x.ellipse(36, 12, 14, 3.4, -0.3, 0, 7); x.fill()
     x.fillStyle = p.col; for (const d of [-1, 1]) for (const k of [0, 1]) { poly(x, [[46 + d * (40 + k * 4), 22], [46 + d * (44 + k * 4), 19], [46 + d * (44 + k * 4), 25]]); x.fill() }
   },
-  mono(x, o) { // 피아노 건반 판: 검은 래커(바깥)·상아색(안쪽) 위에 음표
-    const k = o ? '#d8dce8' : '#6a6e7a'; glow(x, o ? '#ffffff' : '#9aa3b2', 5)
-    rr(x, 11, 9, 70, 26, 5); x.fillStyle = o ? vg(x, 9, 35, '#4a4c56', '#000000') : vg(x, 9, 35, '#ffffff', '#d4d8e2'); x.fill(); noGlow(x); x.strokeStyle = k; x.lineWidth = 2; x.stroke(); shine(x, 9, 20, o ? 0.28 : 0.6)
-    x.fillStyle = o ? '#f0f2f8' : '#1a1c22'; x.strokeStyle = x.fillStyle; x.lineWidth = 2; x.beginPath(); x.ellipse(40, 27, 5.4, 3.8, -0.4, 0, 7); x.fill(); x.beginPath(); x.moveTo(44.6, 25.6); x.lineTo(44.6, 11); x.stroke(); x.beginPath(); x.moveTo(44.6, 11); x.bezierCurveTo(51, 13, 54, 18, 51, 23); x.lineWidth = 2.6; x.stroke()
-    x.fillStyle = o ? 'rgba(255,255,255,.35)' : 'rgba(0,0,0,.3)'; for (const dx of [20, 28, 64, 72]) x.fillRect(dx, 12, 1.5, 4)
+  mono(x, o) { // 피아노 건반 판: 상아색 몸통 위에 음표. 바깥 레인은 가운데에 검은 건반이 솟아 있다
+    glow(x, o ? '#ffffff' : '#9aa3b2', 7)
+    rr(x, 11, 9, 70, 26, 5); x.fillStyle = vg(x, 9, 35, '#ffffff', '#cfd3de'); x.fill(); noGlow(x); x.strokeStyle = o ? '#ffffff' : '#8a90a0'; x.lineWidth = 2; x.stroke(); shine(x, 9, 20, 0.6)
+    x.fillStyle = 'rgba(0,0,0,.18)'; for (const dx of [22, 70]) x.fillRect(dx, 14, 1.4, 17)
+    if (o) { rr(x, 28, 9, 36, 19, 3); x.fillStyle = vg(x, 9, 28, '#3a3c46', '#050508'); x.fill(); x.strokeStyle = '#6a6e7c'; x.lineWidth = 1; x.stroke(); rr(x, 30, 10.5, 32, 3, 1.5); x.fillStyle = 'rgba(255,255,255,.3)'; x.fill() }
+    x.fillStyle = o ? '#f0f2f8' : '#1a1c22'; x.strokeStyle = x.fillStyle; x.lineWidth = 2; const ny = o ? 21 : 26; x.beginPath(); x.ellipse(43, ny, 4.6, 3.3, -0.4, 0, 7); x.fill(); x.beginPath(); x.moveTo(47, ny - 1.2); x.lineTo(47, ny - 12); x.stroke(); x.beginPath(); x.moveTo(47, ny - 12); x.bezierCurveTo(52, ny - 10, 54, ny - 6, 51, ny - 2); x.lineWidth = 2.2; x.stroke()
   },
   arcade(x, o) { // 픽셀 동전: 둥글게 깎은 도트, 위 왼쪽이 밝고 아래 오른쪽이 어둡다. 옆에 반짝이 두 개
     const p = pal(o, '#ffd22e'); glow(x, p.col, 8)

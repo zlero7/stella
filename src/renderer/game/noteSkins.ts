@@ -17,7 +17,7 @@ export const NOTE_SHAPES: Record<string, Draw> = {
     const p = pal(o, '#9fe8ff'); x.shadowColor = '#9fe8ff'; x.shadowBlur = 9
     x.beginPath(); x.moveTo(8, 22); x.quadraticCurveTo(38, 19.5, 46, 3); x.quadraticCurveTo(54, 19.5, 84, 22); x.quadraticCurveTo(54, 24.5, 46, 41); x.quadraticCurveTo(38, 24.5, 8, 22); x.closePath()
     x.fillStyle = vg(x, 3, 41, p.hi, p.col, p.lo); x.fill(); x.strokeStyle = p.lo; x.lineWidth = 1.2; x.stroke(); x.shadowBlur = 0
-    x.fillStyle = '#ffffff'; x.beginPath(); x.arc(46, 22, 5.5, 0, 7); x.fill(); x.fillStyle = p.col; x.beginPath(); x.arc(46, 22, 2.6, 0, 7); x.fill()
+    x.strokeStyle = p.hi; x.lineWidth = 1.4; x.globalAlpha = 0.8; x.beginPath(); x.arc(46, 22, 11, 0, 7); x.stroke(); x.globalAlpha = 1; x.fillStyle = '#ffffff'; x.beginPath(); x.arc(46, 22, 6.5, 0, 7); x.fill(); x.fillStyle = p.col; x.beginPath(); x.arc(46, 22, 3, 0, 7); x.fill()
     x.fillStyle = p.hi; for (const px of [21, 71]) { x.beginPath(); x.arc(px, 22, 1.7, 0, 7); x.fill() }
   },
   clockwork(x, o) { // 굴대에 낀 황동 톱니

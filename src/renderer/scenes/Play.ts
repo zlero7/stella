@@ -369,7 +369,7 @@ export const Play = (sm: SceneManager): Scene => {
         g.font = `900 ${keyLabel(k).length > 2 ? 12 : 18}px ${FONT}`; g.fillStyle = on ? '#061224' : gs.accent; g.textAlign = 'center'
         g.fillText(keyLabel(k), cx, cy + 6)
       })
-      drawConsoleFront(g, FIELD_X, fw, JUDGE_Y, { score: sk.score, scroll: settings.scroll, mult: sk.mult, hp: sk.hp, hpLow: sk.hp <= 25 }, gs)
+      drawConsoleFront(g, FIELD_X, fw, JUDGE_Y, { score: sk.score, scroll: settings.scroll, mult: sk.mult, hp: sk.hp, hpLow: sk.hp <= 25, acc: sk.accuracy }, gs)
       if (settings.hudRate === 1) drawRate()
       g.textAlign = 'left'
       // 체력 게이지: 기어 양옆 틀 안의 세로 막대 두 줄. 가득 → 하늘색, 절반 아래 → 금색, 25% 아래 → 깜빡이는 빨강
