@@ -418,7 +418,7 @@ export const Play = (sm: SceneManager): Scene => {
       g.textAlign = 'left'
       g.textAlign = 'left'
       // 곡 정보 카드: 필드와 안 겹치는 빈 쪽에 둔다 (가운데=왼쪽 끝, 왼쪽 필드=필드 오른쪽, 오른쪽 필드=점수 카드 옆)
-      const px = [FIELD_X + fw + 40, 24, 380][settings.align] ?? 24, pw = settings.align === 1 ? 340 : 400, py = 24, iw = pw - 40
+      const px = [FIELD_X + fw + 100, 24, 380][settings.align] ?? 24, pw = [400, 320, 340][settings.align] ?? 400, py = 24, iw = pw - 40
       g.save(); g.shadowColor = 'rgba(0,0,0,.9)'; g.shadowBlur = 8 // 상자 없이 영상 위에 바로
       const tag = `${data.vs ? 'VERSUS' : practice ? 'PRACTICE · 기록 안 됨' : `${LANES}B TUNES`}  ·  ${diffName(data.diff)}`
       g.font = `800 12px ${FONT}`; slant(g, px + 4, py, g.measureText(tag).width + 28, 20, 8); g.fillStyle = 'rgba(120,128,150,.75)'; g.fill(); g.fillStyle = '#fff'; g.fillText(tag, px + 18, py + 15)
